@@ -1,9 +1,3 @@
-# Este começou como um gerador de senhas.
-# Percebi que a probabilidade de ele acertar qualquer
-# uma é mínima, então serve como um gerador de
-# strings aleatórias para qualquer motivo necessário.
-
-
 from secrets import randbelow
 import string
 
