@@ -22,7 +22,7 @@ int main (int arc, char *argv[]) {
 		}
 	}
 }
-
+/*
 int main (int argc, char *argv[]) {
 
 	if (argc <= 1) {
@@ -47,3 +47,4 @@ int main (int argc, char *argv[]) {
 	}
 
 }
+*/
