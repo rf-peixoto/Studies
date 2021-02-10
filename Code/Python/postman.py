@@ -6,7 +6,7 @@ import urllib.parse
 method = 'GET' # GET / PUT / POST / OPTIONS / DELETE / MOVE
 host = sys.argv[1]
 port = 80
-user_agent = 'WallStreetBets'
+user_agent = 'AlexaBot'
 referer = 'no-referer-when-downgrade'
 cookie = ''
 payload = urllib.parse.quote('')
