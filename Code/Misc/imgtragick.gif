@@ -1,0 +1,5 @@
+GIF89a
+push graphic-context
+viewbox 0 0 640 480
+fill 'url(https://";sleep "10)'
+pop graphic-context

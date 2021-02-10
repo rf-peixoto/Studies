@@ -1,0 +1,25 @@
+# Baixando app.apk:
+https://apps.evozi.com/apk-downloader/
+
+# Verificando dados internos compilados:
+unzip -l app.apk
+
+# Compilando diretório em arquivo.apk:
+java -jar apktool b diretório -o arquivo.apk
+
+# Assinando arquivo.apk compilado:
+./desec_sign.sh arquivo.apk
+
+# Decompilando arquivo.apk:
+java -jar apktool d arquivo.apk -o output_dir
+
+# Decompilando código smali (diretamente do .apk ou arquivo classes.dex)
+java -jar baksmali.jar d app.apk/classes.dex 
+
+# Decompilando código em Java
+./dex2jar.sh app.apk -o output.jar
+
+# Decompilando código em Java(2)
+./jadx app.apk -d source_output
+
+

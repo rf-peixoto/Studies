@@ -1,0 +1,1 @@
+grep -RnisI $1 *
