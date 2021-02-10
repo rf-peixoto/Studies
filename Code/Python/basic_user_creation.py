@@ -1,10 +1,3 @@
-# Estudar o lado defensivo também é interessante. Aqui tentei simular
-# a criação de um usuário de modo seguro. Para depois tentar quebrar
-# as senhas construídas nesse esquema, claro.
-
-# Ainda não consegui. :(
-
-
 # ================================================================== #
 #  DEPENDENCIES
 # ================================================================== #
