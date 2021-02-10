@@ -1,12 +1,4 @@
-# Me interesso particularmente por vírus. Este código é parte
-# de um estudo sobre ransomwares. Achei interessante usar apenas
-# a parte de descoberta de arquivos. Pode ser útil em outras
-# situações.
-
-# Este código lista todos os arquivos com as extensões definidas
-# à partir do diretório atual.
-
-# LEMBRETE: Procurar o autor original do trecho abaixo:
+# Reminder: Look for the original creator of the self.extensions code:
 
 
 import os
