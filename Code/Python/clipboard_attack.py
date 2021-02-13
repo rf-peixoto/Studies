@@ -21,4 +21,4 @@ while True:
     text_on_clipboard = clipboard.paste()
     check_address(text_on_clipboard)
     sleep(120)
-    
+

@@ -11,8 +11,9 @@ referer = 'no-referer-when-downgrade'
 cookie = ''
 payload = urllib.parse.quote('')
 content_length = len(payload)
+response_size = 8192
 
-# REQUISITION:
+# REQUEST:
 # Change '/' to path:
 request = """{0} / HTTP/1.0\r\n
 Host: {1}\r\n
@@ -36,4 +37,4 @@ s.connect((host, port))
 
 # SEND
 s.send(request.encode())
-print(s.recv(8192).decode())
+print(s.recv(response_size).decode())

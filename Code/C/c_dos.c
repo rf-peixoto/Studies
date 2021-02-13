@@ -32,7 +32,7 @@ int main (int argc, char *argv[]) {
 		int socket;
 		int connection;
 		struct sockaddr_n target;
-		
+
 		// Configurando:
 		socket = sock(AF_INET, SOCK_STREAM, 0);
 		target.sin.family = AF_INET;
