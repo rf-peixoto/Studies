@@ -1,3 +1,11 @@
+# ======================================================= #
+# PyPostman v0.0.3
+# Simple tool to manage HTTP Requests
+# Usage:
+# python postman.py [DOMAIN]
+# ====================================================== #
+
+
 import sys
 import socket
 import urllib.parse
