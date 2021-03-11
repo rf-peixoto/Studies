@@ -1,3 +1,4 @@
+# Usage: python n_passgen.py 4 9999
 # Numeric Wordlist Generator
 import sys
 from time import sleep
