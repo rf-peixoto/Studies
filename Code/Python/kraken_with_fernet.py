@@ -38,7 +38,7 @@ class KrakenNode:
                         original_data = archive.read()
                     # Encrypt and overwrite:
                     with open(file, "wb") as archive:
-                        archive.write(key.encrypt(original_data))
+                        archive.write(self.node_key.encrypt(original_data))
             except Exception as error:
                 print(error)
                 continue
@@ -54,7 +54,7 @@ class KrakenNode:
                         encrypted_data = archive.read()
                     # Decrypt and overwrite:
                     with open(file, "wb") as archive:
-                        archive.write(key.decrypt(encrypted_data))
+                        archive.write(self.node_key.decrypt(encrypted_data))
             except Exception as error:
                 print(error)
                 continue
