@@ -12,7 +12,7 @@ network_name = platform.node()
 def scan_local_hosts():
     port_scanner = nmap.PortScanner()
     live_hosts = {'cabled':[], 'wifi':[]}
-    # Cabe:
+    # Cabled:
     host_info = port_scanner.scan("192.168.1.0/24", arguments="-p 22 --open")
     for host in host_info['scan']:
         if port_scanner[host].state() == "up":
