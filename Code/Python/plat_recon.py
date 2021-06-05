@@ -18,7 +18,7 @@ def scan_local_hosts():
         if port_scanner[host].state() == "up":
             live_hosts['cabled'].append(host)
     # Wifi:
-    host_info = port_scanner.scan("10.0.0.0/200", arguments="-p 22 --open")
+    host_info = port_scanner.scan("10.0.0.0/255", arguments="-p 22 --open")
     for host in host_info['scan']:
         if port_scanner[host].state() == "up":
             live_hosts['wifi'].append(host)
