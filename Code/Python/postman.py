@@ -1,12 +1,17 @@
 # ======================================================= #
-# PyPostman v0.0.3
+# PyPostman v0.0.4
 # Simple tool to manage HTTP Requests
 # Usage:
 # python postman.py [DOMAIN] [PATH]
+# Ex:
+# postman.py github.com rf-peixoto/Studies/edit/main/Code/Python/postman.py
 # ====================================================== #
 import sys
 import socket
 import urllib.parse
+
+# Debug:
+print("Domain: {0} | Path: {1}".format(sys.argv[1], sys.argv[2]))
 
 # CONFIG:
 method = 'GET' # GET / PUT / POST / OPTIONS / DELETE / MOVE
@@ -22,7 +27,7 @@ bytes_to_receive = 1024
 
 # REQUEST:
 # Change '/' to path:
-request = """{0} {1} HTTP/1.0\r\n
+request = """{0} /{1} HTTP/1.0\r\n
 Host: {2}\r\n
 User-Agent: {3}\r\n
 Accept: text/html, application/xhtml+xml, application/xml;q=0.9,*/*;q=0.8\r\n
