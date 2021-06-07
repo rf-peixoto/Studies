@@ -16,5 +16,5 @@ root_links = [] # Links do diretório atual
 
 for link in links:
     root_links.append(target + str(link.contents)[2:-2:])
-    
+
 

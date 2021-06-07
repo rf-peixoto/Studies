@@ -18,7 +18,7 @@ from Crypto.Cipher import AES
 # ============================================================================ #
 # INITIALIZE PROGRAM:
 # Clean prompt:
-os.system("cls")
+os.system("clear")
 # Start colorama module:
 colorama.init()
 print(Fore.GREEN + Back.BLACK)
@@ -45,7 +45,7 @@ def open_file(filename):
             return data
     except Exception as error:
     # An error ocurred. Maybe the file does not exists.
-        os.system("cls")
+        os.system("clear")
         print(Style.NORMAL + title)
         print(Style.RESET_ALL + Back.RED + "{0}".format(error) + Fore.GREEN + Back.BLACK + "\n")
 # ============================================================================ #
@@ -65,7 +65,7 @@ def encrypt_file():
     option = input(">>> ").lower()
     if option == "y":
         clipboard.copy(key.decode())
-    os.system("cls")
+    os.system("clear")
     print(Style.NORMAL + title)
 # ---------------------------------------------------------------------------- #
 def decrypt_file(nonce, tag):
@@ -83,10 +83,10 @@ def decrypt_file(nonce, tag):
         with open("new." + filename, "wb") as fl:
             fl.write(decoded_data)
             fl.close()
-        os.system("cls")
+        os.system("clear")
         print(Style.NORMAL + title)
         print(Fore.WHITE + Back.GREEN + "Success!" + Fore.GREEN + Back.BLACK + "\n")
-        
+
     except Exception as error:
         os.system("cls")
         print(Style.NORMAL + title)
@@ -111,11 +111,11 @@ while True:
     elif option == "d":
         decrypt_file(nonce, tag)
     elif option == "q":
-        os.system("cls")
+        os.system("clear")
         break
     else:
         # Update screen:
-        os.system("cls")
+        os.system("clear")
         print(Style.NORMAL + title)
         print(Fore.WHITE + Back.RED + "Invalid input. Choose your option." + Fore.GREEN + Back.BLACK)
 
