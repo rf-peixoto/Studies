@@ -7,10 +7,10 @@ from email.mime.text import MIMEText
 # =========================================================================== #
 # Config:
 # =========================================================================== #
-message_author = 'from_this@email.com'
-message_target = 'to_this@email.com'
-message_subject = 'Message Subject'
-message_body = 'Message body.'
+message_author = input("Message author: ")
+message_target = input("Target address: ")
+message_subject = input("Message subject: ")
+message_body = ""
 
 # =========================================================================== #
 # Compose:
