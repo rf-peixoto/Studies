@@ -37,7 +37,6 @@ qr.make(fit=True)
 img = qr.make_image(fill_color="black", back_color="white")
 
 # Saving:
-os.system("touch Recibo_{0}_{1}.png".format(date, unique_code))
 with open("Recibo_{0}_{1}.png".format(date, unique_code), "wb") as image:
     img.save(image)
 
