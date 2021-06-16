@@ -2,7 +2,12 @@ import hashlib
 import base64
 import os
 os.system("clear")
-print("-" * 20)
+print("# ============================================================================ #")
+print("Files in this dir:")
+print("\n")
+os.system("ls")
+print("\n")
+print("# ============================================================================ #")
 # ============================================================================ #
 # Setup:
 # ============================================================================ #
@@ -19,11 +24,8 @@ with open(file_a, "rb") as fl:
 hashed = hashlib.md5(data).hexdigest()
 splited = [hashed[:8], hashed[8:16], hashed[16:24], hashed[24:32]]
 
-print("First file data:\n")
 for part in splited:
     print(part)
-
-print("-" * 20)
 # ============================================================================ #
 # Second File Hash
 # ============================================================================ #
@@ -32,8 +34,6 @@ with open(file_b, "rb") as fl:
     data_new = base64.b64decode(fl.read())
 hashed_new = hashlib.md5(data_new).hexdigest()
 splited_new = [hashed_new[:8], hashed_new[8:16], hashed_new[16:24], hashed_new[24:32]]
-
-print("Second file data:\n")
 
 points = 0
 counter = 0
@@ -54,7 +54,7 @@ for row in splited:
     line += 1
     print("")
 
-print("-" * 20)
+print("# ---------------------------------------------------------------------------- #")
 # ============================================================================ #
 # End
 # ============================================================================ #
