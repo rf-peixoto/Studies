@@ -24,7 +24,7 @@ print("-" * 20)
 # ============================================================================ #
 # Second File Hash
 # ============================================================================ #
-data_new = "usdt"
+data_new = "Tes"
 hashed_new = hashlib.md5(data_new.encode()).hexdigest()
 splited_new = [hashed_new[:8], hashed_new[8:16], hashed_new[16:24], hashed_new[24:32]]
 
@@ -57,4 +57,4 @@ def percent(value):
     return round((value / 32) * 100, 2)
 
 percentage = percent(points)
-print("{0}/32 match. - {1}%".format(points, percentage))
+print("{0}/32 match. - {1}% similar.".format(points, percentage))
