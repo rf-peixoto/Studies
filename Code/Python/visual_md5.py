@@ -1,4 +1,5 @@
 import hashlib
+import base64
 import os
 os.system("clear")
 print("-" * 20)
@@ -12,8 +13,10 @@ colorama.init()
 # ============================================================================ #
 # First File Hash
 # ============================================================================ #
-data = "Test"
-hashed = hashlib.md5(data.encode()).hexdigest()
+file_a = input("First file: ")
+with open(file_a, "rb") as fl:
+    data = base64.b64decode(fl.read())
+hashed = hashlib.md5(data).hexdigest()
 splited = [hashed[:8], hashed[8:16], hashed[16:24], hashed[24:32]]
 
 print("First file data:\n")
@@ -24,8 +27,10 @@ print("-" * 20)
 # ============================================================================ #
 # Second File Hash
 # ============================================================================ #
-data_new = "Tes"
-hashed_new = hashlib.md5(data_new.encode()).hexdigest()
+file_b = input("Second file: ")
+with open(file_b, "rb") as fl:
+    data_new = base64.b64decode(fl.read())
+hashed_new = hashlib.md5(data_new).hexdigest()
 splited_new = [hashed_new[:8], hashed_new[8:16], hashed_new[16:24], hashed_new[24:32]]
 
 print("Second file data:\n")
