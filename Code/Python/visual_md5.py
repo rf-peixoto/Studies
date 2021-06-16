@@ -1,5 +1,4 @@
 import hashlib
-import base64
 import os
 os.system("clear")
 print("# ============================================================================ #")
@@ -18,20 +17,21 @@ colorama.init()
 # ============================================================================ #
 # First File Hash
 # ============================================================================ #
-file_a = input("First file: ")
+file_a = input("[*] First file: ")
 with open(file_a, "rb") as fl:
-    data = base64.b64decode(fl.read())
+    data = fl.read()
 hashed = hashlib.md5(data).hexdigest()
 splited = [hashed[:8], hashed[8:16], hashed[16:24], hashed[24:32]]
 
 for part in splited:
     print(part)
+#print("\n")
 # ============================================================================ #
 # Second File Hash
 # ============================================================================ #
-file_b = input("Second file: ")
+file_b = input("[*] Second file: ")
 with open(file_b, "rb") as fl:
-    data_new = base64.b64decode(fl.read())
+    data_new = fl.read()
 hashed_new = hashlib.md5(data_new).hexdigest()
 splited_new = [hashed_new[:8], hashed_new[8:16], hashed_new[16:24], hashed_new[24:32]]
 
@@ -62,4 +62,4 @@ def percent(value):
     return round((value / 32) * 100, 2)
 
 percentage = percent(points)
-print("{0}/32 match. - {1}% similar.".format(points, percentage))
+print("[*] {0}/32 match. - {1}% similar.".format(points, percentage))
