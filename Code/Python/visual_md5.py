@@ -17,7 +17,7 @@ colorama.init()
 # ============================================================================ #
 # First File Hash
 # ============================================================================ #
-file_a = input("[*] First file: ")
+file_a = input(Fore.YELLOW + "[*]" + Fore.RESET + " First file: ")
 with open(file_a, "rb") as fl:
     data = fl.read()
 hashed = hashlib.md5(data).hexdigest()
@@ -29,7 +29,7 @@ for part in splited:
 # ============================================================================ #
 # Second File Hash
 # ============================================================================ #
-file_b = input("[*] Second file: ")
+file_b = input(Fore.YELLOW + "[*]" + Fore.RESET + " Second file: ")
 with open(file_b, "rb") as fl:
     data_new = fl.read()
 hashed_new = hashlib.md5(data_new).hexdigest()
@@ -62,4 +62,5 @@ def percent(value):
     return round((value / 32) * 100, 2)
 
 percentage = percent(points)
-print("[*] {0}/32 match. - {1}% similar.".format(points, percentage))
+print(Fore.YELLOW + "[*]" + Fore.RESET + " {0}/32 match. - {1}% similar.".format(points, percentage))
+print("# ============================================================================ #")
