@@ -2,7 +2,7 @@ import hashlib
 import os
 os.system("clear")
 print("# ============================================================================ #")
-print("Files in this dir:")
+print(Fore.YELLOW + "[*]" + Fore.RESET + "Files in this dir:")
 print("\n")
 os.system("ls")
 print("\n")
