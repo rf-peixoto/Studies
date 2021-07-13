@@ -5,7 +5,7 @@ import requests
 import re
 
 # Request Header:
-header = {'user-agent': 'AlexaBot'}
+header = {'user-agent': 'Graverobber'}
 
 # URLs to look:
 targets = input("Enter URLs: ").split(" ")
