@@ -1,1 +1,3 @@
 man syscall
+nasm -f elf64 file.asm
+ld -entry _main file.o -o file
