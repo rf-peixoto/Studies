@@ -1,3 +1,15 @@
 man syscall
 nasm -f elf64 file.asm
 ld -entry _main file.o -o file
+
+
+DEBUG:
+gdb -q ./file # iniciar
+break _entry-point # definir breakpoint do debugger (_main, _start, etc)
+run # executar programa
+info registers # ver registradores
+set disassembly-flavor intel # Definir síntaxe intel
+disas # disassembly
+stepi # avança um passo na execução do código
+x/s 0x804a000 # x: examine / s: tipo (string) endereço
+
