@@ -13,3 +13,7 @@ disas # disassembly
 stepi # avança um passo na execução do código
 x/s 0x804a000 # x: examine / s: tipo (string) endereço
 
+DEBUG GDB TUI:
+gdb -q ./file -tui
+layout asm
+layout regs
