@@ -1,28 +1,19 @@
-# Cifra de Vernam (Exemplo de XOR)
-import sys
+# ref: https://stackoverflow.com/questions/68409078/differences-of-the-ord-function-between-python-2-7-and-3-9/68409604#68409604
+
 import binascii
 
-# Usage:
-#xor.py [MODO] [MENSAGEM] [CHAVE]
+def encrypt(content: str, key: str) -> bytes:
+    key_id = 0
+    xored = ""
+    for key_id, c in enumerate(content):
+        xored += chr(ord(key[key_id % len(key)]) ^ ord(c))
+        key_id += 1
+    return binascii.hexlify(xored.encode())
 
-# Argumentos:
-mode = sys.argv[1]
-key = sys.argv[3]
-key_id = 0
-xored = ''
-
-# Checando mensagem:
-if mode == "-e":
-    msg = sys.argv[2]
-elif mode == "-d":
-    msg = binascii.unhexlify(sys.argv[2])
-
-# Execução:
-for msgchar in msg:
-    xored += chr(ord(key[key_id % len(key)]) ^ ord(msgchar))
-    key_id += 1
-
-if mode == "-e":
-    print(binascii.hexlify(xored.encode()))
-elif mode == "-d":
-    print(xored)
+def decrypt(content: bytes, key: str) -> str:
+    key_id = 0
+    xored = ""
+    for key_id, c in enumerate(binascii.unhexlify(content).decode()):
+        xored += chr(ord(key[key_id % len(key)]) ^ ord(c))
+        key_id += 1
+    return xored.encode()
