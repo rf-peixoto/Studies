@@ -3,3 +3,10 @@ function example {
 }
 
 example
+
+# With args:
+function exampleb () {
+  echo "This is the example $1"
+}
+
+exampleb $RANDOM
