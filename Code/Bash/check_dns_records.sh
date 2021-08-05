@@ -1,0 +1,5 @@
+host -t mx [domain.com] (For mailing)
+host -t txt [domain.com] (For random TXT records, including SPF)
+host -t ns [domain.com] (For nameservers)
+host -t cname [domain.com] (For canonical names, or aliases)
+host -t ptr [domain.com] (For pointers)
