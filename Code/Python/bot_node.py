@@ -9,5 +9,5 @@ class Node:
         self.nodes_table = nodes_table
         self.birthtime = datetime.now().timestamp()
 
-    def set_port(self, new_port: int):
+    def set_new_port(self, new_port: int):
         self.port = new_port
