@@ -1,0 +1,4 @@
+BTC: [13]{1}[a-km-zA-HJ-NP-Z1-9]{26,33}
+BTC [SegWit]: bc1[a-z0-9]{39,59}
+XMR: [48][0-9AB][1-9A-HJ-NP-Za-km-z]{93}
+ETH: 0x[a-fA-F0-9]{40}
