@@ -8,6 +8,10 @@ class Node:
         self.node_id = node_id
         self.nodes_table = nodes_table
         self.birthtime = datetime.now().timestamp()
+        self.trust = 0.0
 
     def set_new_port(self, new_port: int):
         self.port = new_port
+
+    def update_trust(self, ammount: float):
+        self.trust += ammount
