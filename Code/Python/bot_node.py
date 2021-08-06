@@ -2,7 +2,7 @@ from datetime import datetime
 import socket
 
 class Node:
-    def __init__(self, node_id: str, nodes_table: list):
+    def __init__(self, node_id: int, nodes_table: list):
         self.local_ip = socket.gethostbyname(socket.gethostname())
         self.port = 2077
         self.node_id = node_id
