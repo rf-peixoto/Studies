@@ -1,7 +1,13 @@
+from datetime import datetime
+import socket
+
 class Node:
-    def __init__(self, id: int, sig: str, ip: str, port: int, table: list):
-        self.id = id
-        self.sig = sig
-        self.ip = ip
-        self.port = port
-        self.table = table
+    def __init__(self, node_id: str, nodes_table: list):
+        self.local_ip = socket.gethostbyname(socket.gethostname())
+        self.port = 2077
+        self.node_id = node_id
+        self.nodes_table = nodes_table
+        self.birthtime = datetime.now().timestamp()
+
+    def set_port(self, new_port: int):
+        self.port = new_port
