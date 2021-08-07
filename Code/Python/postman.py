@@ -11,7 +11,7 @@ import socket
 import urllib.parse
 
 # Debug:
-print("Domain: {0} | Path: {1}".format(sys.argv[1], sys.argv[2]))
+print("Domain: {0}/{1}".format(sys.argv[1], sys.argv[2]))
 
 # CONFIG:
 method = 'GET' # GET / PUT / POST / OPTIONS / DELETE / MOVE
