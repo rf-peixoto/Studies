@@ -1,0 +1,2 @@
++ Change all sha256 stuff, use sha3_256 instead.
++ Change MD5 to Blake2b too.
