@@ -1,0 +1,7 @@
+# Create your credentials file only with:
+username
+password
+
+# Open your .ovpn file.
+# Edit line:
+auth-user-pass [credentials filename]
