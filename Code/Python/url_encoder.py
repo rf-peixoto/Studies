@@ -11,6 +11,8 @@ def url_encode(payload):
     return urllib.parse.quote(temp_str, safe='')
 
 def normal_encode(payload):
+    # You can also use quote_plus to convert blank spaces into '+' signs.
+    # Ex: Test abc = Test+abc
     return urllib.parse.quote(payload, safe='')
 
 print(normal_encode(sys.argv[1]))
