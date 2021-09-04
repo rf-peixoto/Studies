@@ -5,3 +5,4 @@ if sys.argv[1]:
     print("[+] {0}".format(blake2b(sys.argv[1].encode()).hexdigest()))
 else:
     print("Usage: {0} [Content]".format(sys.argv[0]))
+    print("Ex: python {0} $(cat somefile)".format(sys.argv[0]))
