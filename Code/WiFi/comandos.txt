@@ -11,4 +11,4 @@ iwlist [interface] scanning | grep ESSID
 iwlist [interface] scanning | egrep "ESSID|Channel:|Address:"
 
 # Monitoramento com tcpdump:
-tcpdump -vv -i [interface] -n
+tcpdump -vv -i [interface] -n # Incluir opção -c [número] para limitar quantidade de pacotes. Ex: -c 10
