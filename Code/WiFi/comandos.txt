@@ -1,0 +1,14 @@
+# Administração da interface:
+iwconfig
+
+# Informações gerais sobre a(s) interface(s):
+ifconfig
+
+# iwlist : Informações sobre (ou acessiveis à) interface:
+
+iwlist [interface] channel
+iwlist [interface] scanning | grep ESSID
+iwlist [interface] scanning | egrep "ESSID|Channel:|Address:"
+
+# Monitoramento com tcpdump:
+tcpdump -vv -i [interface] -n
