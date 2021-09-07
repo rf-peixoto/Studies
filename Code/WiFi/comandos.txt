@@ -25,3 +25,7 @@ airodump-ng [interface monitorando]
 
 # Para travar monitoramento em canal específico:
 airodump-ng --channel [canal] --essid [SSID (Nome da Rede)] [interface]
+
+# "Quebrando" criptografia com chave compartilhada:
+# -w : Opção para criptografia wep. Ver --help.
+airdecap-ng -w [chave] [arquivo.cap]
