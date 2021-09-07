@@ -22,3 +22,6 @@ airmon-ng check	kill
 
 # Em monitoramento, visualize o tráfego com:
 airodump-ng [interface monitorando]
+
+# Para travar monitoramento em canal específico:
+airodump-ng --channel [canal] --essid [SSID (Nome da Rede)] [interface]
