@@ -24,7 +24,7 @@ airmon-ng check	kill
 airodump-ng [interface monitorando]
 
 # Para travar monitoramento em canal específico:
-# Utilizar opção -w para gerar arquivo .cap
+# Utilizar opção -w [nome do arquivo] para gerar arquivo.cap
 airodump-ng --channel [canal] --essid [SSID (Nome da Rede)] [interface]
 
 # "Quebrando" criptografia com chave compartilhada:
