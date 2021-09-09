@@ -8,6 +8,7 @@ airodump-ng [interface] --bssid [MAC] --channel [CH] -w arquivo.cap
 # : Número de pacotes para manter cliente conectado.
 # -a: BSSID
 # -e: SSID (nome da rede)
+# -y: Especificar arquivo XOR
 aireplay-ng -1 800000 -a [MAC] [interface] -e [SSID]
 
 # 3) Manter cliente falso conectado, usar número alto de pacotes.
