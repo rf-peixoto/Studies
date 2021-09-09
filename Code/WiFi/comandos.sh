@@ -30,3 +30,10 @@ airodump-ng --channel [canal] --essid [SSID (Nome da Rede)] [interface]
 # "Quebrando" criptografia com chave compartilhada:
 # -w : Opção para criptografia wep. Ver --help.
 airdecap-ng -w [chave] [arquivo.cap]
+
+
+# Ataque WEP SKA:
+# 1) Iniciar monitoramento.
+# 2) Conseguir dados da rede alvo. (-w para salvar)
+# 3) Capturar arquivo XOR forçando com ataque DeAuth
+# 4) Gerar autenticação falsa.
