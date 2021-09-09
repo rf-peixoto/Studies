@@ -37,3 +37,8 @@ airdecap-ng -w [chave] [arquivo.cap]
 # 2) Conseguir dados da rede alvo. (-w para salvar)
 # 3) Capturar arquivo XOR forçando com ataque DeAuth
 # 4) Gerar autenticação falsa.
+
+# Ataque em WPA2 PSK
+# 1) Monitoramento, identificar rede, coletar pacotes.
+# 2) Forçar deauth para coletar handshake de cliente.
+# 3) Atacar hash do handshake em arquivo.pcap com aircrack-ng.
