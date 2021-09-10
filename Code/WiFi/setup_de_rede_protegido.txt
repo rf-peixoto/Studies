@@ -1,3 +1,4 @@
 1) Desativar broadcast SSID
-2) Ativar WPA2/3
-3) Ativar filtragem por MAC
+2) Desativar WPS em todos os APs
+3) Ativar WPA2/3
+4) Ativar filtragem por MAC
