@@ -1,4 +1,5 @@
 site:*.*.com inurl:Admin/Dashboard.php
 inurl:"Index of"
 site:trello.com password
+site:trello.com ".com" ftp
 [...]
