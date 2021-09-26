@@ -10,3 +10,6 @@ env
 
 # Nmap Host Scanning:
 nmap -sn 127.0.0.1/24 -oG output.txt
+
+# Disable bash log in this session:
+unset HITSFILE #.bash_history
