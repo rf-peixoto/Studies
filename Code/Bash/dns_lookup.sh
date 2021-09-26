@@ -27,7 +27,7 @@ then
   then
     echo -e "\e[31mCould not find this host. Sorry.\e[0m"
   else
-    echo -e "\e[91mHost inaccessible.\e[0m"
+    echo -e "\e[91mThis target has security filters. Some results may be incorrect.\e[0m"
   fi
   exit
 else
