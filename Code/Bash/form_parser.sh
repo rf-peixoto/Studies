@@ -2,7 +2,7 @@
 
 # Form Parser v.1.0.0
 
-# Identifica formul[arios em arquivos HTML
+# Identifica formulários em arquivos HTML
 
 
 if [ "$1" == ""  ]
