@@ -24,3 +24,6 @@ bless [bin]
 # Search banner by string and save.
 # Save in original folder.
 # Done. :)
+
+# Change Linux Default TTL:
+/proc/sys/net/ipv4/ip_default_ttl # 
