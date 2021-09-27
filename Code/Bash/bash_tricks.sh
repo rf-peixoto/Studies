@@ -21,3 +21,6 @@ whereis [bin] # Ex: whereis sshd
 # You can check it with: strings [bin]
 # 2) Open ELF with bless:;
 bless [bin]
+# Search banner by string and save.
+# Save in original folder.
+# Done. :)
