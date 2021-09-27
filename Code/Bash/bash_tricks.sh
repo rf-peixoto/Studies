@@ -13,3 +13,11 @@ nmap -sn 127.0.0.1/24 -oG output.txt
 
 # Disable bash log in this session:
 unset HITSFILE #.bash_history
+
+
+# Change ELF banner with bless:
+# 1) Find bin with.
+whereis [bin] # Ex: whereis sshd
+# You can check it with: strings [bin]
+# 2) Open ELF with bless:;
+bless [bin]
