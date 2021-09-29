@@ -11,6 +11,9 @@ env
 # Nmap Host Scanning:
 nmap -sn 127.0.0.1/24 -oG output.txt
 
+# Try to Bypass IDS/IPS:
+nmap -v -D RND:64 -sV -T2 --top-ports=50 --open
+
 # Disable bash log in this session:
 unset HITSFILE #.bash_history
 
