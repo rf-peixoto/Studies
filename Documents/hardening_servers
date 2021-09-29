@@ -1,7 +1,7 @@
-
 Configure iptables;
 Configure snort;
 Change services ports. Ex: ssh on port 10001;
 Change services banners with bless. Ex: bless sshd;
 Setup SPF records;
 On robots.txt: User-agent: *;Disallow: /;
+Open fake ports with portsentry;
