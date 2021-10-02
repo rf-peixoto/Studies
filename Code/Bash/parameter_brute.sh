@@ -1,4 +1,5 @@
 # Wordlist at https://github.com/danielmiessler/SecLists/blob/master/Discovery/Web-Content/burp-parameter-names.txt
+# Dork: inurl:download.php?
 
 # -c: Color
 # -z: Use wordlist
