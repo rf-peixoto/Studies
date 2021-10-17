@@ -1,0 +1,11 @@
+Linux:
+/etc/passwd
+/etc/shadow
+
+Windows:
+%/SystemRoot%/system32/config/sam
+%/SystemRoot%/system32/config/system
+
+Windows Server:
+%/SystemRoot%/ntds/ntds.dit
+%/SystemRoot%/system32/config/system
