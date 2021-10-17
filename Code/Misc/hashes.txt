@@ -15,3 +15,6 @@ C:/Windows/repair
 
 reg save hklm/sam
 vssadmin
+
+[USER]:[ID]:[LM]:[NTLM]
+LM:aad3b435b51404eeaad3b435b51404ee [VAZIO]
