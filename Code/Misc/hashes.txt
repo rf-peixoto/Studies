@@ -9,3 +9,9 @@ Windows:
 Windows Server:
 %/SystemRoot%/ntds/ntds.dit
 %/SystemRoot%/system32/config/system
+
+Windows XP:
+C:/Windows/repair
+
+reg save hklm/sam
+vssadmin
