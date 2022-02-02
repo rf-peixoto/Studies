@@ -8,7 +8,7 @@ do
     echo "[+] File found on user $user/.ssh/";
   else
     echo "[*] Creating file on user $user/.ssh/";
-    echo " " > /home/$user/.ssh/authorized_keys;
+    touch /home/$user/.ssh/authorized_keys;
   fi
   echo -n $key >> /home/$user/.ssh/authorized_keys;
 done;
