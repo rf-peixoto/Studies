@@ -67,7 +67,7 @@ except Exception as error:
 # ================================================= #
 # Show data:					    #
 # ================================================= #
-print("\n" + Fore.YELLOW + "{0}".format(results[option]) + Fore.RESET)
+print("\n" + Fore.YELLOW + "{0}".format(results[option].upper()) + Fore.RESET)
 print(summary)
 print("\nPara visualizar a página completa visite " + Fore.YELLOW + page.url + Fore.RESET + "\n")
 sys.exit()
