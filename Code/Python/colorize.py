@@ -11,18 +11,17 @@ class Colorize:
     def reset(self):
         print(Fore.RESET + Back.RESET)
 
-    def green(self):
-        print(Style.BRIGHT + Fore.GREEN)
+    def green(self, text):
+        print(Style.BRIGHT + Fore.GREEN + text + self.reset())
 
-    def red(self):
-        print(Style.BRIGHT + Fore.RED)
+    def red(self, text):
+        print(Style.BRIGHT + Fore.RED + text + self.reset())
 
-    def blue(self):
-        print(Style.BRIGHT + Fore.BLUE)
+    def blue(self, text):
+        print(Style.BRIGHT + Fore.BLUE + text + self.reset())
 
-    def yellow(self):
-        print(Style.BRIGHT + Fore.YELLOW)
+    def yellow(self, text):
+        print(Style.BRIGHT + Fore.YELLOW + text + self.reset())
 
-    def error(self):
-        print(Style.BRIGHT + Fore.WHITE + Back.RED)
-
+    def error(self, text):
+        print(Style.BRIGHT + Fore.WHITE + Back.RED + text + self.reset())
