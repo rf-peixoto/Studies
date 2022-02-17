@@ -30,3 +30,6 @@ bless [bin]
 
 # Change Linux Default TTL:
 /proc/sys/net/ipv4/ip_default_ttl # 
+
+# Check subfolders size:
+du -h -max-depth=2
