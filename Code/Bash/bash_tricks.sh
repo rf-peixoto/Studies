@@ -33,3 +33,6 @@ bless [bin]
 
 # Check subfolders size:
 du -h -max-depth=2
+
+# Check files and folders size:
+du -sh *
