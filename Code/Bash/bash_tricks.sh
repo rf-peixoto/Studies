@@ -28,6 +28,13 @@ bless [bin]
 # Save in original folder.
 # Done. :)
 
+# Place holders:
+* # Any set of characters
+? # Any single character
+[a-f] # Any inside the set abcdef
+[^a-f] # Any outside the set abcdef
+
+
 # Change Linux Default TTL:
 /proc/sys/net/ipv4/ip_default_ttl # 
 
