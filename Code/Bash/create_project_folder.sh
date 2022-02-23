@@ -1,10 +1,9 @@
 #!/bin/bash
-
-project_name=$1
+# Usage: ./create_project_folder.sh project_name
 
 # Create project:
-mkdir -p $project_name/{build/,include/,results/{bin/,lib/},src/,tests/}
+mkdir -p $1/{build/,include/,results/{bin/,lib/},src/,tests/}
 
 # Create files:
-cd $project_name
+cd $1
 touch README.md CMakeLists.txt
