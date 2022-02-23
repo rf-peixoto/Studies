@@ -1,8 +1,9 @@
+# tools.cpp : example module
 # Compile modules:
-c++ -std=c++17 -c module.cpp
+c++ -std=c++17 -c tools.cpp
 
 # Turn modules into libraries:
-ar rcs libmodule.a module.o # <other_modules>
+ar rcs libtools.a module.o # <other_modules>
 
 # Compile main application:
 c++ -std=c++17 -c main.cpp
