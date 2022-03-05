@@ -1,0 +1,1 @@
+xargs -a subs.txt -I@ -P500 sh -c 'host -t mx "@"| grep "mail is handled by\|has an alias" | cut -d" " -f1 | sort -u' | xargs -I@ -P500 sh -c 'host -t txt "@" | egrep "v=|k=|no TXT record" --color=auto'
