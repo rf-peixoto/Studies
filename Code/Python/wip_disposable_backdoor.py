@@ -1,3 +1,5 @@
+# Ref: https://pypi.org/project/schedule/
+
 import socket, schedule
 from time import sleep
 from base64 import b64decode
@@ -24,7 +26,7 @@ def start():
 if __name__ == "__main__":
     # Schedule tasks:
     schedule.every(59).seconds.do(update)
-    schedule.every(1).minute.do(start)
+    schedule.every(1).minutes.do(start)
     while True:
         # Do it:
         schedule.run_pending()
