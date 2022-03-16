@@ -12,8 +12,6 @@
  $webClient = [System.Net.WebClient]::new()
  $webClient.DownloadFile($source, (Get-Location).Path + '\OpenSSH-Win64.zip')
 
- Get-ChildItem *.zip
-
 # Extract the ZIP to a temporary location
  Expand-Archive -Path .\OpenSSH-Win64.zip -DestinationPath ($env:temp) -Force
 # Move the extracted ZIP contents from the temporary location to C:\Program Files\OpenSSH\
