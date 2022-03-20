@@ -5,7 +5,7 @@
 import zipfile
 import os
 # Input folder:
-folder_name = input("Folder name: ")
+folder_name = input("Folder path: ")
 directory = os.path.abspath(folder_name)
 zip_name = "{0}.bkp.zip".format(directory)
 # Create File:
