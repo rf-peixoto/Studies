@@ -35,6 +35,7 @@ else:
     print("\033[92m[+]\033[00m Parsing comments.")
     # HTML
     comments = re.findall('<!--(.*?)-->', body)
+    comments = list(dict.fromkeys(comments))
     if len(comments) > 0:
         print("\n\033[94m<!----- HTML ----->\033[00m")
         for comm in comments:
@@ -44,6 +45,7 @@ else:
 
     # CSS & Js
     comments = re.findall('(\/\*[\w\'\s\r\n\*]*\*\/)|(\/\/[\w\s\']*)', body)
+    comments = list(dict.fromkeys(comments))
     if len(comments) > 0:
         print("\n\033[94m/*----- CSS & JS -----*/\033[00m")
         for comm in comments:
