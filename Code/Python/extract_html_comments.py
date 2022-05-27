@@ -1,13 +1,19 @@
 import sys, re
 import requests
 
+# Prepare input:
+if sys.argv[1].startswith("http"):
+    input = sys.argv[1]
+else:
+    input = "https://" + sys.argv[1]
+
 # Request Page:
-print("\033[92m[*]\033[00m Requesting data.")
+print("\033[92m[*]\033[00m Requesting data from {0}".format(input))
 headers = {
     'User-Agent':'Mozilla/5.0 (Windows NT 10.0; rv:91.0) Gecko/20100101 Firefox/91.0'
     }
 try:
-    page = requests.get(sys.argv[1], headers=headers)
+    page = requests.get(input, headers=headers)
 except Exception as error:
     print("\n\033[31m[x] Error while requesting page:")
     print("\033[31m{0}\033[00m".format(error))
