@@ -6,12 +6,16 @@ print("\033[92m[*]\033[00m Requesting data...")
 headers = {
     'User-Agent':'Mozilla/5.0 (Windows NT 10.0; rv:91.0) Gecko/20100101 Firefox/91.0'
     }
-
-page = requests.get(sys.argv[1], headers=headers)
+try:
+    page = requests.get(sys.argv[1], headers=headers)
+except Exception as error:
+    print("\n\033[31m[-] Error while requesting page:")
+    print("\033[31m{0}\033[00m".format(error))
+    sys.exit()
 
 # Verify Request:
 if page.status_code != 200:
-    print("\033[31m[-] Error while getting page:")
+    print("\n\033[31m[-] Error while getting page:")
     print("\033[31mStatus Code: {0} Reason: {1}\033[00m".format(page.status_code, page.reason))
 else:
     # Parsing Response:
