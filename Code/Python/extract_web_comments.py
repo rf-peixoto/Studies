@@ -32,13 +32,24 @@ else:
         body = str(page.content)
 
     # Searching comments:
-    print("\033[92m[+]\033[00m Parsing comments.\n")
+    print("\033[92m[+]\033[00m Parsing comments.")
+    # HTML
     comments = re.findall('<!--(.*?)-->', body)
     if len(comments) > 0:
+        print("\n\033[94m<!----- HTML ----->\033[00m")
         for comm in comments:
             print("\033[94m[*]\033[0m {0}".format(comm))
     else:
-        print("\033[31m[x] Something went wrong. No comment was found.")
+        print("\n\033[31m[x] Something went wrong. No HTML comment was found.")
+
+    # CSS & Js
+    comments = re.findall('(\/\*[\w\'\s\r\n\*]*\*\/)|(\/\/[\w\s\']*)', body)
+    if len(comments) > 0:
+        print("\n\033[94m/*----- CSS & JS -----*/\033[00m")
+        for comm in comments:
+            print("\033[94m[*]\033[0m {0}".format(comm))
+    else:
+        print("\n\033[31m[x] Something went wrong. No CSS or JS comment was found.")
 
 # Finish program:
 print("\n\033[92m[*]\033[00m Done.")
