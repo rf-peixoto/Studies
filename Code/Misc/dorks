@@ -1,5 +1,12 @@
 site:*.*.com inurl:Admin/Dashboard.php
-inurl:"Index of"
+inurl:"Index of" or inurl:admin
 site:trello.com password
 site:trello.com ".com" ftp
-[...]
+filetype:log intext:password intext:(@gmail.com | @yahoo.com | @hotmail.com)
+"Budget report" filetype:pdf
+intitle:"Live View / - AXIS" | inurl:/mjpg/video.mjpg?timestamp
+filetype:xls inurl:"email.xls"
+intext:"index of" inurl:ftp
+inurl:".php?id=" intext:(error AND sql)
+intitle:report (nessus | qualys) filetype:pdf
+intitle:"index of" "dump.sql"
