@@ -36,7 +36,7 @@ if __name__ == "__main__":
 import shutil, sys, schedule, time, webbrowser, os
 
 def persist():
-    os.system("crontab -e @reboot /tmp/{0}".foprmat(sys.argv[0]))
+    os.system("crontab -e @reboot /tmp/{0}".format(sys.argv[0]))
 
 def do_stuff():
     webbrowser.open("https://www.youtube.com/watch?v=dQw4w9WgXcQ", new=2)
