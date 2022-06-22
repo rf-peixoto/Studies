@@ -13,4 +13,4 @@ do
   tcpdump -vv -i $1 -c 10 | grep "Beacon" | awk '{print $12, - CH $24}'
   echo "\n"
 done
-  
+
