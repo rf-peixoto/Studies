@@ -1,6 +1,6 @@
 import secrets, sys
 
-sizes = [8, 16, 24, 48, 64, 96, 128, 256, 512, 1024, 2048, 4096]
+sizes = [8, 16, 24, 32, 48, 64, 96, 128, 256, 512, 1024, 2048, 4096]
 
 if len(sys.argv) != 2:
     print("Usage: hermes.py KEY-SIZE")
