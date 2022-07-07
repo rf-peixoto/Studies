@@ -8,5 +8,5 @@ intitle:"Live View / - AXIS" | inurl:/mjpg/video.mjpg?timestamp
 filetype:xls inurl:"email.xls"
 intext:"index of" inurl:ftp
 inurl:".php?id=" intext:(error AND sql)
-intitle:report (nessus | qualys) filetype:pdf
+intitle:report (nessus | qualys | acunetix | arachini) filetype:pdf
 intitle:"index of" "dump.sql"
