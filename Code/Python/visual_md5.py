@@ -39,6 +39,7 @@ splited_new = [hashed_new[:8], hashed_new[8:16], hashed_new[16:24], hashed_new[2
 points = 0
 counter = 0
 line = 0
+# To do: change this sh** to https://github.com/rf-peixoto/Studies/blob/main/Code/Python/ripstr.py
 for row in splited:
     for ch in row:
         if splited_new[line][counter] != splited[line][counter]:
