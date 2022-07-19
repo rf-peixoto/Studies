@@ -1,0 +1,2 @@
+// Intel x86 encoded NOP:
+rep nop [eax+0x66909090]
