@@ -3,3 +3,10 @@
 1) Check the program's directory and verify if it lets unprivileged users to write there.
 2) If so, replace one of the binaries or code in that directory.
 3) Reboot the system. Next time, your exploit will be executed as root or SYSTEM.
+
+# Look for specific permissions o *Unix:
+find /directory -perm +4000 # For SUID files
+find /directory -perm +8000 # For SGID files
+
+# On Windows:
+icacls folder/file
