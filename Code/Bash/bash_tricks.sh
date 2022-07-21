@@ -17,6 +17,9 @@ nmap -v -D RND:64 -sV -T2 --top-ports=50 --open
 # Disable bash log in this session:
 unset HITSFILE #.bash_history
 
+# Remote GUI program with ssh:
+ssh -fX user@host program
+# Ex: ssh -fX user@host wireshark
 
 # Change ELF banner with bless:
 # 1) Find bin with.
