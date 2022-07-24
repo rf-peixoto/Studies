@@ -1,0 +1,39 @@
+#Ref: https://medium.com/coreshield/malware-analysis-dissecting-pdf-file-a95a0ffa0dce
+A PDF (Portable Document Format) file is made of:
+
+1. One-line header ou Header
+2. Body
+3. Cross-reference table
+4. Trailer
+
+What I describe here is the physical structure of a PDF file. The header identifies that this is a PDF file (specifying the PDF file format version), the trailer points to the cross reference table (starting at byte position 642 into the file), and the cross reference table points to each object (1 to 7) in the file (byte positions 12 through 518). 
+The objects are ordered in the file: 1, 2, 3, 4, 5, 6 and 7. The logical structure of a PDF file is a hierarchical structure, the root object is identified in the trailer. 
+
+Header identification:
+
+pdfid file.pdf
+
+/Encrypt: password or DRM.
+/ObjStm: Number of Object Streams. Possible obfuscation.
+/AA and/or /OpenAction: Automatic action when file is viewed.
+/Js and/or /JavScript: js code. High alert, but not always malicious. (Check stream sizes.)
+/JBIG2Decode: Compression, investigate further more.
+/Launch: Actions to perform.
+/XFA: XML form architecture.
+
+Technical Analysis:
+
+pdf-parser --raw file.pdf
+pdf-parser --raw --search JavaScript file.pdf
+
+pdftk file.pdf output file.output.txt uncompress
+
+TIPS
+
+The first line is a header. Ex: %PDF-1.3
+Malicious files, usually, have jus one page.
+Files with JavaScript/JS and AA/OpenAction are very suspect.
+If wireshark include too much noise; open the pdf file on BurpSuite's browser, intercept ON.
+If found obfuscated Js code, open it on html to check overwriting the eval method:
+<html><script> ...;document.write(First code argument.) </script></html>
+You can also find XOR encryption (use XORSearch), unicode encryption, etc.
