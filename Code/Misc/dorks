@@ -10,3 +10,5 @@ intext:"index of" inurl:ftp
 inurl:".php?id=" intext:(error AND sql)
 intitle:report (nessus | qualys | acunetix | arachini) filetype:pdf
 intitle:"index of" "dump.sql"
+intitle:"index of /" .lzh
+filetype:LZH
