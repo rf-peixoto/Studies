@@ -9,7 +9,7 @@ A PDF (Portable Document Format) file is made of:
 What I describe here is the physical structure of a PDF file. The header identifies that this is a PDF file (specifying the PDF file format version), the trailer points to the cross reference table (starting at byte position 642 into the file), and the cross reference table points to each object (1 to 7) in the file (byte positions 12 through 518). 
 The objects are ordered in the file: 1, 2, 3, 4, 5, 6 and 7. The logical structure of a PDF file is a hierarchical structure, the root object is identified in the trailer. 
 
-Header identification:
+Header identification: (also try peepdf)
 
 pdfid file.pdf
 
