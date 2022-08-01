@@ -9,3 +9,4 @@ readelf -h $1 >> $1_scan.txt
 #strace $1 #System calls
 nm $1 >> $1_scan.txt #Extract symbols
 #gdb $1 #Debug
+tcpdump # Packets
