@@ -1,12 +1,26 @@
-#!/bin/bash
-file $1 > $1_scan.txt #General info
-ldd $1 >> $1_scan.txt #Shared object dependencies. Ex: file.so
-#ltrace $1 #libraries
-#hexdump $1 #Dump hex
-#strings $1 #Extract strings
-readelf -h $1 >> $1_scan.txt
-#objdump -d $1 #Disassembly
-#strace $1 #System calls
-nm $1 >> $1_scan.txt #Extract symbols
-#gdb $1 #Debug
-tcpdump # Packets
+# Informações gerais:
+file $1 
+# Tamanho:
+du -h $1 || ls -lh $1
+# Número de linhas:
+wc -l $1
+# Dependências de shared object (file.so)
+ldd $1 
+# Bibliotecas:
+ltrace $1
+# Hexdump:
+hexdump $1
+# Extrair strings:
+strings $1 
+# Extrair informações detalhadas:
+readelf -h $1
+# Extrair informações e/ou fazer disassembly:
+objdump -d $1
+# Extrair system calss:
+strace $1
+# Extrair symbols do assembly:
+nm $1 
+# Debug:
+gdb $1
+# Interceptar pacotes:
+tcpdump
