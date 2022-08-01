@@ -13,9 +13,9 @@ hexdump $1
 # Extrair strings:
 strings $1 
 # Extrair informações detalhadas:
-readelf -h $1
+readelf $1
 # Extrair informações e/ou fazer disassembly:
-objdump -d $1
+objdump $1
 # Extrair system calss:
 strace $1
 # Extrair symbols do assembly:
@@ -23,4 +23,8 @@ nm $1
 # Debug:
 gdb $1
 # Interceptar pacotes:
-tcpdump
+tcpdump 
+# Executáveis embutidos:
+binwalk
+# Analisar memória:
+volatility
