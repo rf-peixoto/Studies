@@ -4,3 +4,6 @@ gt: >
 lt: <
 gte: >=
 lte: <=
+ Example:
+ 
+ {"username":"admin", "password":{"$gt":""}}
