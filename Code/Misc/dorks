@@ -12,4 +12,5 @@ intitle:report (nessus | qualys | acunetix | arachini) filetype:pdf
 intitle:"index of" "dump.sql"
 intitle:"index of /" .lzh
 filetype:LZH
+inurl:jwks.json or well-known/jwks.jsonjson
 inurl: "UserSelect"
