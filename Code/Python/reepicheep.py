@@ -32,5 +32,10 @@ try:
         client.send(cmd.encode())
         response = client.rcv(1024))
         print("\033[92m[R]\033[00m {0}".format(response.decode()))
+    # Close & Quit:
+    print("\033[92m[*] Closing connections.\033[00m")
+    skt.close()
+    print("\033[92m[*] Quiting.\033[00m")
+    quit()
 except Exception as error:
     print(error)
