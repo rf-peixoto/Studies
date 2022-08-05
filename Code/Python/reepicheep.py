@@ -7,7 +7,7 @@ def show_logo():
     print("           / _`>")
     print("   _)     / _)=")
     print("  (      / _/   [reepicheep]")
-    print("   `-.__(___)_     v1.0.0")
+    print("   `-.__(___)_     v1.0.8")
     print("\033[00m")
 
 # Main menu:
