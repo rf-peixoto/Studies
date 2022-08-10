@@ -1,6 +1,12 @@
 # Downloading app.apk:
 https://apps.evozi.com/apk-downloader/
 
+# Or identify app with:
+adb shell ps
+
+# Unpack app from android device:
+adb pull /data/app/com.app.apk
+
 # Verifying internal data:
 unzip -l app.apk
 
