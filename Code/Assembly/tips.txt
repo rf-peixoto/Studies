@@ -7,3 +7,6 @@ mov cr0, eax
 
 mov eax, 1
 mov dr0, eax
+
+// Create a infinity loop:
+0xEB 0xFE (jmp call to itself)
