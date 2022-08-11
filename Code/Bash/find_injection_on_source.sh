@@ -1,1 +1,1 @@
-grep 'passsthru()|exec()|eval()' *
+grep 'passsthru(|exec(|eval(' *
