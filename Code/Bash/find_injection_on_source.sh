@@ -1,0 +1,1 @@
+grep 'passsthru()|exec()|eval()' *
