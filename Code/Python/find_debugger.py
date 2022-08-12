@@ -1,7 +1,7 @@
 import psutil
 
 # Define list of debuggers:
-debuggers = ['debugger', 'debug', 'ida', 'ghidra', 'rizin', 'cutter', 'gdb']
+debuggers = ['debugger', 'debug', 'ida', 'ghidra', 'rizin', 'cutter', 'gdb', 'tcpdump', 'wireshark']
 # Get PIDs:
 pids = psutil.pids()
 # Look for debuggers:
