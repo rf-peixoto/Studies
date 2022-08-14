@@ -1,3 +1,6 @@
+# Enviar saída do microfone para áudio de máquina externa:
+arecord -f dat | ssh user@host aplay -f dat
+
 # Enviar arquivo criptografado:
 cat $1 | openssl aes-256-cbc -a -e -pass pass:password | netcat -l -p 8080
 
