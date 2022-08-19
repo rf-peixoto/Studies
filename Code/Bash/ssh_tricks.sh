@@ -29,3 +29,12 @@ ssh user@host 'tshark -f "port !22" -w -' | wireshark -k -i - # Alternativa.
 
 # Proxy Bridge:
 ssh -t host1 ssh host2
+
+# Start with:
+ssh [IP]
+
+# Get the methods and use:
+ssh [IP] -oKexAlgorithms=+[METHOD]
+
+# Get and include cipher:
+ssh [IP] -oKexAlgorithms=+[METHOD] -c [CIPHER]
