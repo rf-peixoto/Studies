@@ -30,7 +30,7 @@ try:
     while cmd != "--quit":
         cmd = input("\033[92m[>] \033[00m")
         client.send(cmd.encode())
-        response = client.rcv(1024))
+        response = client.rcv(1024)
         print("\033[92m[R]\033[00m {0}".format(response.decode()))
     # Close & Quit:
     print("\033[92m[*] Closing connections.\033[00m")
