@@ -62,3 +62,36 @@ xset dpms force standby
 
 # Checar IPv4 externo:
 curl iifconfig.me
+
+# Você pode usar padrões ao passar uma url para o curl:
+# Exemplos tirados direto do man curl
+curl "http://sub.{domain1,domain2,domain3}.com"
+curl "ftp://ftp.domain.com/file[1-99].txt"
+curl "http://domain.com/logs/[a-z].txt"
+
+# Para visualizar headers ao usar o wget use o argumento --debug
+# O --max-redirect é pra evitar ruídos de redirecionamento.
+wget --max-redirect 0 --debug $1
+
+# O framework do metasploit vem com dois programas
+# para análise de binários:
+msfelfscan || msfpescan
+msfbinscan # Misto, podendo analisar vários tipos.
+
+# É comum deixarmos o netcat aguardando uma conexão para enviar
+# um comando automaticamente. Porém, se o socket for descoberto,
+# alguém pode injetar comandos ao manipular a conexão. Evite isto
+# fazendo com que o netcat ignore dados recebidos:
+nc --send-only [...]
+
+# Tornar arquivo imutável / impedir edições:
+sudo chattr +i $1
+
+# Enviar mensagens para outros usuários da máquina:
+wall "Texto"
+
+# Executar um comando quando um arquivo for modificado:
+while inotifywait -e modify /pathto/file; do [COMMAND]; done
+
+# Descobrir modelo da máquina:
+sudo dmidecode | grep Product
