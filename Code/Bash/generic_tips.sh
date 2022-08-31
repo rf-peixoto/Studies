@@ -61,7 +61,7 @@ pdftotext $1 | grep <filtros>
 xset dpms force standby
 
 # Checar IPv4 externo:
-curl iifconfig.me
+curl ifconfig.me
 
 # Você pode usar padrões ao passar uma url para o curl:
 # Exemplos tirados direto do man curl
