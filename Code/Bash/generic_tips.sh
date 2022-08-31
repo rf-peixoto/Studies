@@ -95,3 +95,32 @@ while inotifywait -e modify /pathto/file; do [COMMAND]; done
 
 # Descobrir modelo da máquina:
 sudo dmidecode | grep Product
+
+# Verificar se há outros sistemas instalados na máquina:
+sudo os-prober
+
+# Alternativa ao traceroute || ping:
+mtr $1
+
+# Visualizar árvore de processos ativos:
+tree || pstree
+
+# Colocar um espaço antes de um comando faz com
+# que eles não sejam registrados no histórico:
+ echo "Find me if you can."
+
+# Visualizar metadados de arquivo. (permissões, tamanho, data de criação, etc)
+stat $1
+
+# Executar comando em determinado horário:
+# Ex: ping 8.8.8.8 at midnight
+[COMMDAND] at [TIME]
+
+# Consultar dados geográficos de IP:
+curl ipinfo.io
+
+# Filtrar arquivos por usuário:
+find . -user $1
+
+# Filtrar processos por usuário:
+ps -LF -u $1
