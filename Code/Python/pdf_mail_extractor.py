@@ -14,9 +14,8 @@ n_pages = parser.getNumPages()
 for i in range(n_pages):
     # Open page:
     page = parser.getPage(i)
-    content = page.extractText()
     # Extract:
-    tmp = re.findall("([a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+)", content)
+    tmp = re.findall("([a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+)", page.extractText())
     # Save:
     for mail in tmp:
         if mail.lower() not in emails:
@@ -27,5 +26,5 @@ doc.close()
 
 # Output:
 print("Found {0} address(es) in {1} pages.".format(len(emails), n_pages))
-for i in emails:
-    print(i)
+for mail in emails:
+    print(mail)
