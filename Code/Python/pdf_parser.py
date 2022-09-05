@@ -1,10 +1,14 @@
 import PyPDF2
-import sys
 
-doc = open(sys.argv[1], "rb")
+doc = open"File.pdf", "rb")
 parser = PyPDF2.PdfFileReader(doc)
-page = parser.getPage(0)
 
-print(page.extractText())
+print(parser.pdf_header)
+print(parser.documentInfo)
+print(parser.is_encrypted)
+
+for i in parser.getNumPages():
+    page = parser.getPage(i)
+    print(page.extractText())
 
 doc.close()
