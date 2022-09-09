@@ -124,3 +124,9 @@ find . -user $1
 
 # Filtrar processos por usuário:
 ps -LF -u $1
+
+# Testar servidor SMTP:
+swaks --to [EMAIL] # --server smtp.gmail.com
+
+# Checar registros SSL:
+sslscan domain.com:443 || sslyzer domain.com
