@@ -131,5 +131,32 @@ swaks --to [EMAIL] # --server smtp.gmail.com
 # Checar registros SSL:
 sslscan domain.com:443 || sslyzer domain.com
 
+  GNU nano 6.0                          tips.sh                                    
 # Baixar todo o conteúdo de um FTP:
 wget -r ftp://user:pass@server.com/
+
+# Alternativa ao iptables:
+ufw
+
+# Monitorar tráfego visualizando a quantidade de dados:
+iftop [Interface] # Ex: sudo iftop eth0
+
+# Checar estado do SELinux:
+sestatus
+
+# Bloquear USBs (para máquinas fisicamente expostas):
+touch /etc/modprobe.d/usb_block.conf
+echo "install usb-storage /bin/false" > /etc/modprobe.d/usb_block.conf
+
+# Configurar políticas de senhas no /etc/login.defs
+PASS_MAX_DAYS 90
+PASS_MIN_DAYS 1
+PASS_MIN_LENTH 16
+PASS_WARN_AGE 30
+
+# Utilitário para detectar alguns rootkits e backdoors:
+sudo rkhunter --check
+
+# Encontrar arquivos que não pertecem à nenhum usuário/grupo:
+find /dir -xdev \( -nouser -o -nogroup \) -print
+
