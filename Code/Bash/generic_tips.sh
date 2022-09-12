@@ -130,3 +130,6 @@ swaks --to [EMAIL] # --server smtp.gmail.com
 
 # Checar registros SSL:
 sslscan domain.com:443 || sslyzer domain.com
+
+# Baixar todo o conteúdo de um FTP:
+wget -r ftp://user:pass@server.com/
