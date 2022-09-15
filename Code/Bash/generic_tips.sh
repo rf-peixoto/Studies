@@ -1,3 +1,6 @@
+# Informaç
+hostnamectl
+
 # Enviar saída do microfone para áudio de máquina externa:
 arecord -f dat | ssh user@host aplay -f dat
 
