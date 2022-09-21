@@ -13,3 +13,7 @@ if req.status_code == 301:
     print(req.url)
 else:
     print(req)
+
+
+# Alternativa pelo cURL:
+# curl -Ls -w %{url_effective} -o /dev/null $1
