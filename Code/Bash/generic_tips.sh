@@ -1,4 +1,7 @@
-# Informaç
+# Verificar quais opções como sudo o usuário pode usar:
+sudo -l
+
+# Informações detalhadas sobre o Host:
 hostnamectl
 
 # Enviar saída do microfone para áudio de máquina externa:
