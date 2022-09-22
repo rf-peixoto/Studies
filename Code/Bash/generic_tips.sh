@@ -1,3 +1,32 @@
+# Verificar diretório onde um processo foi iniciado:
+pwdx [PID]
+
+# Alternativa ao tcpdump e wireshark:
+wash [Interface]
+
+# Leitor de tela para pessoas com problemas na visão.
+# Pode ser usado para capturar informações sobre a sessão. Ex:
+orca -l # Lista aplicações abertas.
+
+# Codificadores incomuns para comandos:
+# Todos possuem codificação e decodificação;
+morse [String] # Código morse
+ppt [String] # Paper tape
+bcd [String] # Punched cards
+
+# Aletrnativa ao Hydra:
+medusa [args]
+
+# Alternativa ao openssl para gerar certificados:
+makecert [args]
+
+# Mostrar ranges de memória disponíveis:
+lsmem
+
+# Incluir mensagens no log do sistema.
+# Útil para injetar false-flags em um sistema comprometido:
+logger [args]
+
 # Verificar quais opções como sudo o usuário pode usar:
 sudo -l
 
