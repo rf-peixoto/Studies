@@ -1,5 +1,5 @@
 # Create shell:
-cat [FILE.txt] | ppt | base64 -d
+echo ["COMMAND"] | ppt | base64 -d
 
-# Run shell
+# Run:
 echo [CODE] | base64 -d | ppt -d | sh
