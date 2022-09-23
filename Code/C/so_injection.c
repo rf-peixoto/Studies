@@ -1,3 +1,7 @@
+
+// gcc -shared -fPIC 0o output.so so_injection.c
+// Remember to save with the same file you are trying to hijack.
+
 #include <stdio.h>
 #include <stdlib.h>
 
