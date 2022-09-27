@@ -1,4 +1,4 @@
-import ctypes, platform, subprocess
+import ctypes, subprocess
 from elevate import elevate # pip install elevate
 
 # Elevate:
