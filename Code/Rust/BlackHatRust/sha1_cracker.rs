@@ -12,7 +12,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Check args list:
     let args: Vec<String> = env::args().collect();
     if args.len() != 3 {
-        println!("[*] Usage:");
+        println!("[i] Usage:");
         println!("sha1_cracker <wordlist.txt> <hash.txt>");
         return Ok(());
     }
