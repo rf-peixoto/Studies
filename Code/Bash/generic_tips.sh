@@ -97,6 +97,7 @@ xset dpms force standby
 
 # Checar IPv4 externo:
 curl ifconfig.me
+curl wtfismyip.com/json
 
 # Você pode usar padrões ao passar uma url para o curl:
 # Exemplos tirados direto do man curl
