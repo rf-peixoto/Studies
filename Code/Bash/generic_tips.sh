@@ -195,3 +195,29 @@ sudo rkhunter --check
 # Encontrar arquivos que não pertecem à nenhum usuário/grupo:
 find /dir -xdev \( -nouser -o -nogroup \) -print
 
+# Monitorar conexões TCP/UDP com informações do processo e do usuário:
+watch ss -stplu
+
+# Alterar tamanho do MTU:
+ifconfig [INTERFACE] mtu [SIZE]
+# * Maximun transmission unit é o tamanho máximo de um pacote de rede à ser transmitido pelo sistema.
+# Pacotes acima deste limite serão descartados ou subdividos em pacotes menores. Reduzir muito o tamanho
+# pode deixar o host incomunicável. Pode-se usar como método de neutralizar um host em uma rede sem levantar
+# suspeitas.
+
+# Bloquear acesso de uma máquina à determinado host:
+tcpkill -9 host [domain.com]
+
+# Atalho para alterar senha de um usuário:
+echo "user:passwd" | chpasswd
+
+# Pesquisar padrões dentro de arquivos compactos. Como exemplo,
+# pesquisa por PATTERN dentro de arquivos de log:
+zgrep 'PATTERN' /var/log/*.gz
+
+# Converter quebras de linha do Windows (\r\n) para Linux (\n)
+dos2unix
+
+# Criar arquivo copiando os metadados de criação (timestamp) de outro arquivo:
+touch -r source.file new.file
+# * Útil para esconder arquivos persistentes.
