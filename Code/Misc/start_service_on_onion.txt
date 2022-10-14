@@ -7,3 +7,5 @@
 3. Your service. For testing, apache: apt/dnf/yum install apache2
 4. systemctl start apache2
 5. Edit /etc/tor/torrc Uncoment HiddenServiceDir and HiddenServicePort
+6. systemctl restart tor
+7. Get tour url on /var/lib/tor/hidden_service/hostname
