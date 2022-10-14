@@ -3,4 +3,7 @@
 
 
 1. apt/dnf/yum install tor
-2. systemctl start/status tor
+2. systemctl start/status tor [Port 9050]
+3. Your service. For testing, apache: apt/dnf/yum install apache2
+4. systemctl start apache2
+5. Edit /etc/tor/torrc Uncoment HiddenServiceDir and HiddenServicePort
