@@ -1,0 +1,2 @@
+1. Download Tor Browser: https://www.torproject.org/download/
+2. Start Tor Browser.
