@@ -1,0 +1,19 @@
+# Install tools:
+apt/dnf/yum install tor proxychains
+
+# Config:
+nano /etc/proxychains4.conf
+
+In the end of the file:
+socks4 127.0.0.1 9050
+socks5 127.0.0.1 9050
+
+# Setup tor:
+systemctl start tor
+
+# Test chain:
+proxychains [command]
+proxychains ping 8.8.8.8
+proxychains firefox
+proxychains nmap
+etc...
