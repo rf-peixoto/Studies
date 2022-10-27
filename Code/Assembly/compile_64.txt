@@ -1,0 +1,6 @@
+# ASM:
+nasm -f elf64 shell64.asm -o shell64.o
+ld -m elf_x86_64 -s -o shell64 shell64.o
+
+# C:
+gcc -m64 –z execstack –fno-stack-protector -o shell64code shellcode.c
