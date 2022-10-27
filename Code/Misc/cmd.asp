@@ -1,12 +1,10 @@
 <!--
-
 ASP_KIT
 
 cmd.asp = Command Execution
 
 by: Maceo
 modified: 25/06/2003
-
 -->
 
 <%
