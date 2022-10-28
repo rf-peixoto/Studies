@@ -20,6 +20,11 @@ int main () {
     printf("\n");
 
   // View a arbitrary address including %s. In this case: 0x08480110 (little endian)
-  printf("\x10\x01\x48\x08_%08x.%08x.%08x.%08x.%08x|%s|");
+    printf("\x10\x01\x48\x08_%08x.%08x.%08x.%08x.%08x|%s|");
   
+  /* Sample payloads
+  %400s : "%497d\x3c\xd3\xff\xbf<nops><shellcode>"
+  
+  
+  */
 }
