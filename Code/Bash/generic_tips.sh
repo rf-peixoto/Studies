@@ -222,6 +222,35 @@ dos2unix
 touch -r source.file new.file
 # * Útil para esconder arquivos persistentes.
 
+# Verificar proteções configuradas em um executável:
+checksec --file=FILENAME
+
+# Wildchars para burlar filtros de proteção:
+cat /??c/p??swd
+
+# Executar comando anterior substituindo argumentos:
+echo 123	# 123
+^123^abc	# abc
+
+# Listar arquivos em uso por processo:
+lsof +p [PID]
+
+# [POWESHELL ⇩]
+# Checar IP externo:
+(Invoke-RestMethod ipinfo.io/json).ip
+
+# Checar serviços iniciados:
+Get-Service | Where-Object {$_.status -eq "Started"}
+
+# Equivalente ao tail -f:
+Get-Content [FILE] -Tail 5 –Wait
+
+# Listar usuários desativados em AD:
+Search-ADAccount -UsersOnly -AccountDisabled
+
+# Checar subredes configuradas, mas não utilizadas:
+Get-EC2Subnet | ? SubnetId -notin (Get-EC2Instance).Instances.SubnetId | select AvailabilityZone, VpcId, SubnetId, CidrBlock
+
 
 # Listar servidores não-Windows conectados ao AD nos últimos N dias:
 Get-ADComputer -Filter { OperatingSystem -notlike "Windows Server*" } -Properties PasswordLastSet | ? { (((Get-Date) – $_.PasswordLastSet).Days) -gt 30} | Select Name,>
