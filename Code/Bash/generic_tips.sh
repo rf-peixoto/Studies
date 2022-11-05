@@ -221,3 +221,7 @@ dos2unix
 # Criar arquivo copiando os metadados de criação (timestamp) de outro arquivo:
 touch -r source.file new.file
 # * Útil para esconder arquivos persistentes.
+
+
+# Listar servidores não-Windows conectados ao AD nos últimos N dias:
+Get-ADComputer -Filter { OperatingSystem -notlike "Windows Server*" } -Properties PasswordLastSet | ? { (((Get-Date) – $_.PasswordLastSet).Days) -gt 30} | Select Name,>
