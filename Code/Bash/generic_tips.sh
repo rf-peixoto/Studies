@@ -1,6 +1,9 @@
 # Verificar diretório onde um processo foi iniciado:
 pwdx [PID]
 
+# Listar arquivos usados por um processo:
+lsof +p PID
+
 # Alternativa ao tcpdump e wireshark:
 wash [Interface]
 
