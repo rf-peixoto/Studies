@@ -2,7 +2,7 @@
 pwdx [PID]
 
 # Listar arquivos usados por um processo:
-lsof +p PID
+lsof +p [PID]
 
 # Alternativa ao tcpdump e wireshark:
 wash [Interface]
