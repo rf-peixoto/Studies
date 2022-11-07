@@ -1,7 +1,7 @@
 import discord
 
 # Credentials:
-token = "Bot Secret"
+token = "Bot Secret Token"
 owner_id = "Admin Discord ID"
 
 # Proxy setup:
