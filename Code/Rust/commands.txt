@@ -20,3 +20,6 @@ cargo clippy
 # Update:
 rustup update stable
 rustup self update
+
+# Update dependencies on Cargo.toml:
+cargo update
