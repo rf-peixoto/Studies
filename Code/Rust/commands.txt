@@ -1,0 +1,22 @@
+# Create new projetc:
+cargo new project_name
+
+# Check for erros:
+cargo check
+
+# Build:
+cargo build
+
+# Build & run (with/out args):
+cargo run -- args
+cargo run
+
+# Auto format code:
+cargo ftm
+
+# Check for bad patterns:
+cargo clippy
+
+# Update:
+rustup update stable
+rustup self update
