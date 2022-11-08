@@ -23,3 +23,7 @@ rustup self update
 
 # Update dependencies on Cargo.toml:
 cargo update
+
+# Check for common/found vulnerabilities:
+cargo install -f cargo-audit
+cargo audit
