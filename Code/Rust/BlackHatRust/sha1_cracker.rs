@@ -20,7 +20,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Get hash:
     let hash_to_crack = args[2].trim();
     if hash_to_crack.len() != SHA1_HEX_STRING_LENGTH {
-        return Err("[!] Hash not valid!".into());
+        return Err("[!] Wrong hash!".into());
     }
 
     // Prepare wordlist:
