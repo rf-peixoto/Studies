@@ -10,3 +10,7 @@ tokio::spawn(async move {
 
 // Sleep:
 tokio::time::sleep(Duration::from_millis(sleep_ms)).await;
+
+// Timeout exmaple:
+tokio::time::timeout(Duration::from_secs(3),
+    TcpStream::connect(socket_address)).await
