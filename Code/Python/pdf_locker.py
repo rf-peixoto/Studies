@@ -9,14 +9,16 @@ print(" +-+-+-+ +-+-+-+-+\n")
 # Get file:
 target = input(" PDF to protect:\033[00m ")
 if not target.endswith(".pdf"):
-    print("\033[93m You must select a PDF file.\033[00m")
+    print("\033[91m You must select a PDF file.\033[00m")
+    quit()
 
 # Try to open:
 try:
     print("\033[93m Reading file.")
     pdf = PdfFileReader(target)
 except Exception as error:
-    print("\033[93m{0}\033[00m".format(error))
+    print("\033[91m{0}\033[00m".format(error))
+    quit()
 
 # Writer:
 print("\033[93m Preparing to write.")
