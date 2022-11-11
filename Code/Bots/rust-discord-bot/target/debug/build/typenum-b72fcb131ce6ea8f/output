@@ -1,0 +1,2 @@
+cargo:rustc-env=TYPENUM_BUILD_CONSTS=/home/rfpeixoto/Code/Rust/discord-bot/target/debug/build/typenum-b72fcb131ce6ea8f/out/consts.rs
+cargo:rustc-env=TYPENUM_BUILD_OP=/home/rfpeixoto/Code/Rust/discord-bot/target/debug/build/typenum-b72fcb131ce6ea8f/out/op.rs

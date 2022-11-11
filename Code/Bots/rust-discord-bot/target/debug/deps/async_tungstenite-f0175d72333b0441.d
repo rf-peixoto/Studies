@@ -1,0 +1,10 @@
+/home/rfpeixoto/Code/Rust/discord-bot/target/debug/deps/async_tungstenite-f0175d72333b0441.rmeta: /home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/async-tungstenite-0.17.2/src/lib.rs /home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/async-tungstenite-0.17.2/src/compat.rs /home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/async-tungstenite-0.17.2/src/handshake.rs /home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/async-tungstenite-0.17.2/src/stream.rs /home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/async-tungstenite-0.17.2/src/tokio.rs /home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/async-tungstenite-0.17.2/src/tokio/rustls.rs
+
+/home/rfpeixoto/Code/Rust/discord-bot/target/debug/deps/async_tungstenite-f0175d72333b0441.d: /home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/async-tungstenite-0.17.2/src/lib.rs /home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/async-tungstenite-0.17.2/src/compat.rs /home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/async-tungstenite-0.17.2/src/handshake.rs /home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/async-tungstenite-0.17.2/src/stream.rs /home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/async-tungstenite-0.17.2/src/tokio.rs /home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/async-tungstenite-0.17.2/src/tokio/rustls.rs
+
+/home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/async-tungstenite-0.17.2/src/lib.rs:
+/home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/async-tungstenite-0.17.2/src/compat.rs:
+/home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/async-tungstenite-0.17.2/src/handshake.rs:
+/home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/async-tungstenite-0.17.2/src/stream.rs:
+/home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/async-tungstenite-0.17.2/src/tokio.rs:
+/home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/async-tungstenite-0.17.2/src/tokio/rustls.rs:

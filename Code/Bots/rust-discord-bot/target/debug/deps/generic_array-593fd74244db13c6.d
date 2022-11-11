@@ -1,0 +1,11 @@
+/home/rfpeixoto/Code/Rust/discord-bot/target/debug/deps/generic_array-593fd74244db13c6.rmeta: /home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/generic-array-0.14.6/src/lib.rs /home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/generic-array-0.14.6/src/hex.rs /home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/generic-array-0.14.6/src/impls.rs /home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/generic-array-0.14.6/src/arr.rs /home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/generic-array-0.14.6/src/functional.rs /home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/generic-array-0.14.6/src/iter.rs /home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/generic-array-0.14.6/src/sequence.rs
+
+/home/rfpeixoto/Code/Rust/discord-bot/target/debug/deps/generic_array-593fd74244db13c6.d: /home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/generic-array-0.14.6/src/lib.rs /home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/generic-array-0.14.6/src/hex.rs /home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/generic-array-0.14.6/src/impls.rs /home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/generic-array-0.14.6/src/arr.rs /home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/generic-array-0.14.6/src/functional.rs /home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/generic-array-0.14.6/src/iter.rs /home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/generic-array-0.14.6/src/sequence.rs
+
+/home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/generic-array-0.14.6/src/lib.rs:
+/home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/generic-array-0.14.6/src/hex.rs:
+/home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/generic-array-0.14.6/src/impls.rs:
+/home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/generic-array-0.14.6/src/arr.rs:
+/home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/generic-array-0.14.6/src/functional.rs:
+/home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/generic-array-0.14.6/src/iter.rs:
+/home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/generic-array-0.14.6/src/sequence.rs:

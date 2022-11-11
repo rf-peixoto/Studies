@@ -1,0 +1,12 @@
+/home/rfpeixoto/Code/Rust/discord-bot/target/debug/deps/base64-cc6634e4ee627628.rmeta: /home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/base64-0.10.1/src/lib.rs /home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/base64-0.10.1/src/chunked_encoder.rs /home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/base64-0.10.1/src/display.rs /home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/base64-0.10.1/src/tables.rs /home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/base64-0.10.1/src/write/mod.rs /home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/base64-0.10.1/src/write/encoder.rs /home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/base64-0.10.1/src/encode.rs /home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/base64-0.10.1/src/decode.rs
+
+/home/rfpeixoto/Code/Rust/discord-bot/target/debug/deps/base64-cc6634e4ee627628.d: /home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/base64-0.10.1/src/lib.rs /home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/base64-0.10.1/src/chunked_encoder.rs /home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/base64-0.10.1/src/display.rs /home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/base64-0.10.1/src/tables.rs /home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/base64-0.10.1/src/write/mod.rs /home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/base64-0.10.1/src/write/encoder.rs /home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/base64-0.10.1/src/encode.rs /home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/base64-0.10.1/src/decode.rs
+
+/home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/base64-0.10.1/src/lib.rs:
+/home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/base64-0.10.1/src/chunked_encoder.rs:
+/home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/base64-0.10.1/src/display.rs:
+/home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/base64-0.10.1/src/tables.rs:
+/home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/base64-0.10.1/src/write/mod.rs:
+/home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/base64-0.10.1/src/write/encoder.rs:
+/home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/base64-0.10.1/src/encode.rs:
+/home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/base64-0.10.1/src/decode.rs:

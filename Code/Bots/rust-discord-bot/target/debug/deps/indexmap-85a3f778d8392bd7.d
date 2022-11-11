@@ -1,0 +1,13 @@
+/home/rfpeixoto/Code/Rust/discord-bot/target/debug/deps/indexmap-85a3f778d8392bd7.rmeta: /home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/indexmap-1.9.1/src/lib.rs /home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/indexmap-1.9.1/src/macros.rs /home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/indexmap-1.9.1/src/equivalent.rs /home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/indexmap-1.9.1/src/mutable_keys.rs /home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/indexmap-1.9.1/src/util.rs /home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/indexmap-1.9.1/src/map.rs /home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/indexmap-1.9.1/src/map/core.rs /home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/indexmap-1.9.1/src/map/core/raw.rs /home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/indexmap-1.9.1/src/set.rs
+
+/home/rfpeixoto/Code/Rust/discord-bot/target/debug/deps/indexmap-85a3f778d8392bd7.d: /home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/indexmap-1.9.1/src/lib.rs /home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/indexmap-1.9.1/src/macros.rs /home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/indexmap-1.9.1/src/equivalent.rs /home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/indexmap-1.9.1/src/mutable_keys.rs /home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/indexmap-1.9.1/src/util.rs /home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/indexmap-1.9.1/src/map.rs /home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/indexmap-1.9.1/src/map/core.rs /home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/indexmap-1.9.1/src/map/core/raw.rs /home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/indexmap-1.9.1/src/set.rs
+
+/home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/indexmap-1.9.1/src/lib.rs:
+/home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/indexmap-1.9.1/src/macros.rs:
+/home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/indexmap-1.9.1/src/equivalent.rs:
+/home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/indexmap-1.9.1/src/mutable_keys.rs:
+/home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/indexmap-1.9.1/src/util.rs:
+/home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/indexmap-1.9.1/src/map.rs:
+/home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/indexmap-1.9.1/src/map/core.rs:
+/home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/indexmap-1.9.1/src/map/core/raw.rs:
+/home/rfpeixoto/.cargo/registry/src/github.com-1ecc6299db9ec823/indexmap-1.9.1/src/set.rs:

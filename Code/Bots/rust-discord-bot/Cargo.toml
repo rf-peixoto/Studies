@@ -1,0 +1,21 @@
+[package]
+name = "discord-bot"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies.serenity]
+git = "https://github.com/serenity-rs/serenity"
+branch = "current"
+features = [
+    "builder",
+    "cache",
+    "framework",
+    "model",
+    "standard_framework",
+    "rustls_backend",
+    "utils",
+]
+[dependencies]
+ron = "0.5.1"
