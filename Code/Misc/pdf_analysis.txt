@@ -1,5 +1,5 @@
 #Ref: https://medium.com/coreshield/malware-analysis-dissecting-pdf-file-a95a0ffa0dce
-A PDF (Portable Document Format) file is made of:
+A PDF (Portable Document Format) file is made of this:
 
 1. One-line header ou Header
 2. Body
