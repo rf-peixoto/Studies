@@ -1,3 +1,5 @@
+// Ref: Black Hat Rust
+
 use ron::{ser, de};
 use serde::{Serialize, Deserialize};
 #[derive(Debug, Serialize, Deserialize)]
