@@ -12,6 +12,7 @@ intitle:report (nessus | qualys | acunetix | arachini) filetype:pdf
 intitle:"index of" "dump.sql"
 intitle:"index of /" .lzh
 filetype:LZH
+password ext:properties
 inurl:jwks.json or well-known/jwks.jsonjson
 inurl: "UserSelect"
 intitle:"Zimbra Web Client Sign" (for https://attackerkb.com/topics/1DDTvUNFzH/cve-2022-41352/rapid7-analysis )
