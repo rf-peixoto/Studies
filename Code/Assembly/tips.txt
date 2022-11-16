@@ -1,4 +1,4 @@
-// Intel x86 encoded NOP:
+// Intel x86 Encoded NOP:
 rep nop [eax+0x66909090]
 
 // Some privileged registers:
