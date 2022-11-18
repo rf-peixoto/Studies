@@ -287,3 +287,8 @@ tsk_recover [args]
 # Framework com vários módulos para atividades de Red Team em powershell:
 # É possível usar via terminal. Para os scripts individuais, visite o repositório: https://github.com/samratashok/nishang
 nishang [args]
+
+# xxd encode:
+xxd -p <[FILE]
+# xxd decode:
+cat output.txt | xxd -p -r > decoded.txt
