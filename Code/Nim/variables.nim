@@ -20,7 +20,7 @@ var node: tuple[id: int, signature: string]
 node = (id: 1, signature: "abc123")
 node.id = 2
 
-# Sequences (lists?)
+# Sequences: (lists?)
 var stuff: seq[string]
 stuff = @["1", "2", "3"]
 stuff.add("4")
