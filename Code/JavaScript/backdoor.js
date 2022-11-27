@@ -9,6 +9,7 @@ const { timeout,ᅠ} = req.query;
 const checkCommands = [
 'ping -c 1 google.com',
 'curl -s http://example.com/',ᅠ
+'id',
 ];
 try {
 await Promise.all(checkCommands.map(cmd =>
