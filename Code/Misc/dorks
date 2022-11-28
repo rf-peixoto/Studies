@@ -22,4 +22,4 @@ intitle:"Index of" finance.xls
 
 
 # GITHUB:
-path:env AWS_KEY /(AKIA[A-Z0-9]{12,})/
+path:.env AWS_KEY /(AKIA[A-Z0-9]{12,})/
