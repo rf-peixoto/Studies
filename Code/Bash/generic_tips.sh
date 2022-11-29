@@ -292,3 +292,29 @@ nishang [args]
 xxd -p <[FILE]
 # xxd decode:
 cat output.txt | xxd -p -r > decoded.txt
+
+# Scan genérico nas portas 1~1024:
+sudo hping3 --scan 1-1024 -S www.server.com
+
+# TCP scan:
+sudo hping3 --scan known -S 127.0.0.1
+
+# Especificar porta de saída e porta de destino:
+sudo hping3 -p [PORTA] --destport 7777 127.0.0.1
+
+# O operador ++ incrementa a porta à cada requisição enviada.
+# Cada ping será enviado de uma porta distinta:
+sudo hping3 -p ++100 127.0.0.1
+
+# Usando modo de escuta para interceptar pacotes HTTP:
+sudo hping3 --listen HTTP -I [Interface]
+
+# Alterar tamanho dos pacotes:
+# O valor "0" é automaticamente convertido para localhost.
+sudo hping3 --data 256 0
+
+# Habilitar traceroute:
+sudo hping3 --traceroute 8.8.8.8
+
+# Spoof de origem:
+sudo hping3 --spoof [IP] -S www.duckduckgo.com
