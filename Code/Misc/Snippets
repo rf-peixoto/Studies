@@ -7,3 +7,7 @@ Teste de Antivírus: X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-F
 inurl:/wp-content/uploads/pdf-invoices
 inurl /wp-content/uploads/db-backup
 inurl /wp-content/uploads/database-backup
+
+Baixar usuários de Wordpress:
+https://xxxxxx/wp-json/wp/v2/users
+https://xxxxxx/feed/rdf/
