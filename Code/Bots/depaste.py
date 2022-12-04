@@ -97,3 +97,4 @@ while True:
                 save_data("{0}.txt".format(tk), raw_data)
         except Exception as error:
             print(error)
+    sleep(DELAY)
