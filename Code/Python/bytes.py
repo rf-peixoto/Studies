@@ -42,6 +42,7 @@ print(bit_mask & bytesB)
 
 # ============================================================================ #
 # Note: try to remember why tf this is between \'s
+# Update to note: No idea yet :(
 # Comparing files with bitwise operations:
 '''
 with open('file.txt', 'rb') as fl1, open('file2.txt', 'rb') as fl2:
