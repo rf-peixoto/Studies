@@ -1,1 +1,1 @@
-grep 'passsthru(|exec(|eval(|gets(|innerHTML(|system(|open(|load(|loads(' *
+grep -ro 'passsthru(|exec(|eval(|gets(|innerHTML(|system(|open(|load(|loads(' *
