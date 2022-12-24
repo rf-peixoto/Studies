@@ -19,7 +19,7 @@ inurl: "UserSelect"
 intitle:"Zimbra Web Client Sign" (for https://attackerkb.com/topics/1DDTvUNFzH/cve-2022-41352/rapid7-analysis )
 intitle:"Roundcube Webmail"
 intitle:"Index of" finance.xls
-
+intitle:"keyword" + site:anonfiles.com
 
 # GITHUB:
 path:.env AWS_KEY /(AKIA[A-Z0-9]{12,})/
