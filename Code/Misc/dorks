@@ -20,6 +20,7 @@ intitle:"Zimbra Web Client Sign" (for https://attackerkb.com/topics/1DDTvUNFzH/c
 intitle:"Roundcube Webmail"
 intitle:"Index of" finance.xls
 intitle:combolist site:( anonfiles.com | bayfiles.com | filechan.org | justpaste.it | pastebin.com | dataism-x.org )
+intitle:( combolist | dehashed | stealer ) site:anonfiles.com
 
 # GITHUB:
 path:.env AWS_KEY /(AKIA[A-Z0-9]{12,})/
