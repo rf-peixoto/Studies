@@ -8,6 +8,9 @@ wash [Interface]
 # Pode ser usado para capturar informações sobre a sessão. Ex:
 orca -l # Lista aplicações abertas.
 
+# Atalho para ps aux | grep PROCESS:
+pgrep PROCESS
+
 # Codificadores incomuns para comandos:
 # Todos possuem codificação e decodificação;
 morse [String] # Código morse
