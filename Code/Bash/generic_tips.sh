@@ -9,7 +9,7 @@ wash [Interface]
 orca -l # Lista aplicações abertas.
 
 # Atalho para ps aux | grep PROCESS:
-pgrep PROCESS
+pgrep -a PROCESS
 
 # Codificadores incomuns para comandos:
 # Todos possuem codificação e decodificação;
