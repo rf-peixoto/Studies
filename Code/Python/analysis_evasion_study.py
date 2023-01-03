@@ -1,4 +1,5 @@
 import psutil
+import atexit # https://docs.python.org/3/library/atexit.html
 import sys, os
 from pathlib import Path
 from hashlib import blake2b
@@ -38,4 +39,15 @@ with open("Note.txt", "w") as fl:
 
 print("[2211] Error loading Python lib '/tmp/_MEItsJHyk/libpython3.10.so.1.0': dlopen: /lib/x86_64-linux-gnu/libm.so.6: version `GLIBC_2.35' not found (required by /tmp/_MEItsJHyk/libpython3.10.so.1.0)")
 sys.exit(1)
+
+atexit.register(function_name)
+atexit.register(function_name, arg1, arg2)
+
+# Use as decorator (only for functions without arguments):
+@atextir.register
+def thing():
+    print("do stuff")
+
+
+
 #-----#
