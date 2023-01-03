@@ -2,7 +2,9 @@ import psutil
 import sys, os
 from pathlib import Path
 from hashlib import blake2b
+
 # Check the hash of the file it self!
+# md5sum sys.argv[0]
 
 #from datetime import datetime # schedule execution
 #-----#
