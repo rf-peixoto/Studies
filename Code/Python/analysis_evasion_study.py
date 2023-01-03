@@ -1,8 +1,10 @@
 import psutil
 import atexit # https://docs.python.org/3/library/atexit.html
 import sys, os
+from time import sleep
 from pathlib import Path
 from hashlib import blake2b
+from secrets import token_hex
 
 #from datetime import datetime # schedule execution
 #-----#
@@ -57,6 +59,14 @@ atexit.register(function_name, arg1, arg2)
 def thing():
     print("do stuff")
 
+
+# Stack flooding:
+stack = [0, 1]
+counter = 1
+while len(stack) <= 5:
+    counter *= 2
+    stack.append([*str(token_hex(counter))])
+    sleep(0.1)
 
 
 #-----#
