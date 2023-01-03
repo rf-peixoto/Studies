@@ -61,7 +61,7 @@ def thing():
 
 
 # Stack flooding:
-stack = [0, 1]
+stack = []
 counter = 1
 while len(stack) <= 5:
     counter *= 2
