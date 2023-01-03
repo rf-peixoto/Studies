@@ -2,6 +2,8 @@ import psutil
 import sys, os
 from pathlib import Path
 from hashlib import blake2b
+# Check the hash of the file it self!
+
 #from datetime import datetime # schedule execution
 #-----#
 if len(sys.argv) == 2:
