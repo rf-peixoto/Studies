@@ -40,6 +40,15 @@ with open("Note.txt", "w") as fl:
 print("[2211] Error loading Python lib '/tmp/_MEItsJHyk/libpython3.10.so.1.0': dlopen: /lib/x86_64-linux-gnu/libm.so.6: version `GLIBC_2.35' not found (required by /tmp/_MEItsJHyk/libpython3.10.so.1.0)")
 sys.exit(1)
 
+
+# Functions thus registered are automatically executed upon normal interpreter termination.
+# atexit runs these functions in the reverse order in which they were registered; if you
+# register A, B, and C, at interpreter termination time they will be run in the order C, B, A.
+
+# Note: The functions registered via this module are not called when the program is killed
+# by a signal not handled by Python, when a Python fatal internal error is detected, or
+# when os._exit() is called.
+
 atexit.register(function_name)
 atexit.register(function_name, arg1, arg2)
 
