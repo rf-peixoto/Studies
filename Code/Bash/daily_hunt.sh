@@ -7,7 +7,7 @@ do
   echo "    Now scanning $user";
   python3 sherlock/sherlock/sherlock.py $user --nsfw --proxy localhost:9050 --folderoutput tmp/ >> results/client_results.txt 2>/dev/null;
 done
-cat results/client_results.txt | sort -u > results/usernames.txt 2>/dev/null
+cat results/client_results.txt | uniq | grep -v Results | grep -v | Checking | grep -v Results > results/usernames.txt 2>/dev/null
 rm tmp/*.txt results/client_username_results.txt
 
 
