@@ -1,3 +1,7 @@
+# Realçar termo em saída do man:
+man stuff
+/pattern # Ex: man echo;/echo
+
 # Verificar diretório onde um processo foi iniciado:
 pwdx [PID]
 
