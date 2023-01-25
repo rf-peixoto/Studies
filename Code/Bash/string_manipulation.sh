@@ -56,3 +56,15 @@ echo ${vQ@A}
 echo ${vQ@Q}
 
 echo ${vT}s
+
+# Function:
+stuff(){
+
+  echo "First stuff: $1"
+  echo "Second stuff: $2"
+}
+
+# Concatenate all args:
+stuff "$*"
+# Separate args:
+stuff "$@"
