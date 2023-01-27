@@ -12,6 +12,24 @@ wash [Interface]
 # Pode ser usado para capturar informações sobre a sessão. Ex:
 orca -l # Lista aplicações abertas.
 
+# See background tasks:
+jobs -l
+
+# Take process from background:
+fg +[JOB ID]
+
+# Put process on background:
+bg +[JOB ID]
+
+# Stop process:
+kill -STOP [PID]
+
+# Continue process:
+kill -CONT [PID]
+
+# See processes using file/path:
+fuser [FILE or PATH]
+
 # Atalho para ps aux | grep PROCESS:
 pgrep -a PROCESS
 
