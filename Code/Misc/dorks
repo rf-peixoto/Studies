@@ -24,6 +24,7 @@ intitle:"Index of" finance.xls
 intitle:combolist site:( anonfiles.com | bayfiles.com | filechan.org | justpaste.it | pastebin.com | dataism-x.org )
 intitle:( combolist | dehashed | stealer ) site:anonfiles.com
 inurl:adfs/portal/updatepassword
+allintext:password ext:log after:2020
 
 # GITHUB:
 path:.env AWS_KEY /(AKIA[A-Z0-9]{12,})/
