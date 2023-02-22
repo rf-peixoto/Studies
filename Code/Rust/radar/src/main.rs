@@ -20,5 +20,5 @@ fn main() -> std::io::Result<()> {
     for stream in listener.incoming() {
         client_manager(stream?);
     }
-    return Ok(());
+    return Ok(()); // This is intentional. The correct would be Ok(())
 }
