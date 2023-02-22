@@ -15,7 +15,7 @@ fn client_manager(stream: TcpStream) {
 // Main loop:
 fn main() -> std::io::Result<()> {
     // Listen:
-    let listener = TcpListener::bind("127.0.0.1:8040")?;
+    let listener = TcpListener::bind("0.0.0.0:8040")?;
     // Accept and process:
     for stream in listener.incoming() {
         client_manager(stream?);
