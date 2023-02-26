@@ -17,7 +17,7 @@ if len(sys.argv) != 2:
     print("[\033[94m*\033[00m] Usage:")
     print("    \033[92m{0}\033[00m [KEYWORD]    Ex:".format(sys.argv[0]))
     print("    \033[92m{0}\033[00m login".format(sys.argv[0]))
-    print("[\033[94m*\033[00m] Check \033[92mphishstats.info\033[00m fore more data.")
+    print("[\033[94m*\033[00m] Check \033[92mhttps://phishstats.info\033[00m fore more data.")
     print("\033[00m")
     sys.exit()
 
@@ -38,4 +38,4 @@ for i in range(1, len(data)):
     print("  [\033[92m+\033[00m] " + data[i]['url'])
 
 # Reset and quit:
-print("\n[\033[94m*\033[00m] Check \033[92mphishstats.info\033[00m fore more data.\033[0m")
+print("\n[\033[94m*\033[00m] Check \033[92mhttps://phishstats.info\033[00m fore more data.\033[0m")
