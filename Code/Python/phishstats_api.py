@@ -26,7 +26,7 @@ keyword = sys.argv[1]
 base_url = "https://phishstats.info:2096/api/phishing?_where=(url,like,~{0}~)&_sort=-id".format(keyword)
 
 # Retrive data:
-print("[\033[94m*\033[00m] Retrievening data...")
+print("\033[94m*\033[00m] Retrievening data...")
 try:
     data = requests.get(base_url).json()
 except Exception as error:
