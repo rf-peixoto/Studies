@@ -10,7 +10,7 @@ print(" |  ___/| '_ \| / __| '_ \ \___ \| __/ _` | __/ __|")
 print(" | |    | | | | \__ \ | | |____) | || (_| | |_\__ \ ")
 print(" |_|    |_| |_|_|___/_| |_|_____/ \__\__,_|\__|___/.info")
 print("                            unofficial  API-Searcher")
-print("\033[91m  Please do not use this script for scraping phishstats!!\033[00m\n")
+print("\033[91m  Please do not use this script for scraping!!!\033[00m\n")
 
 # Verify usage:
 if len(sys.argv) != 2:
