@@ -12,6 +12,7 @@ let size: int = 320
 # Constants are computed at compile time. This provides performance and is useful in compile time expressions.
 const  debug: bool = true 
 
+# Showing values:
 echo "X equals to: ", x
 echo "This is a ", y
 
