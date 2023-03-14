@@ -25,4 +25,13 @@ docker run -it --rm [--name custom-name] -v "/path/to/dir:path/inside/docker/" i
 
 # Share local port:
 docker run -it [--name custom-name] -p "ExternalPort:PortInsideImage" image-name bash
-Ex: -p "9050:80"
+# Ex: -p "9050:80"
+
+# Installing stuff: run yout image;
+# Common apt-get/dnf/pacman update & upgrade
+# Install stuff.
+# In a shell outside your image, commit the results in a new image:
+# container-id: running image.
+# new-custom: new image name.
+docker commit container-id new-custom
+
