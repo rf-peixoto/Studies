@@ -1,0 +1,28 @@
+# See installed images:
+docker images
+
+# Download & install image:
+docker pull image-name # See name on hub.docker.com
+
+# See images running:
+docker ps -a
+
+# Run in interative mode. Here, 'bash' is the command to be executed:
+# --name is optional.
+docker run [--name custom-name] -it --rm image-name bash # Quit with 'exit'
+
+# Stop docker image:
+docker stop container-id
+
+# Remove image:
+docker rm container-id
+
+# Stop and remove all images:
+docker stop $(docker ps -a -q) && docker rm $(docker ps -a -q)
+
+# Share local directory with image:
+docker run -it --rm [--name custom-name] -v "/path/to/dir:path/inside/docker/" image-name bash
+
+# Share local port:
+docker run -it [--name custom-name] -p "ExternalPort:PortInsideImage" image-name bash
+Ex: -p "9050:80"
