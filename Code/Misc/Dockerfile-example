@@ -1,0 +1,16 @@
+# This file must be named Dockerfile
+# Find more on https://docs.docker.com/engine/reference/builder
+
+# Who created this image:
+MAINTAINER name-or-nickname
+
+# From wich image will be this one created? Check locally or on hub.docker.com
+FROM image-name:latest
+
+# This command create dirs:
+WORKDIR /pasta_a
+WORKDIR /pasta_b
+
+# This one runs commands inside, after building
+RUN apt-get update
+RUN apt-get install nmap
