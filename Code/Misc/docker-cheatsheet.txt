@@ -11,6 +11,9 @@ docker ps -a
 # --name is optional.
 docker run [--name custom-name] -it --rm image-name bash # Quit with 'exit'
 
+# Delete image:
+docker rmi image-id
+
 # Stop docker image:
 docker stop container-id
 
