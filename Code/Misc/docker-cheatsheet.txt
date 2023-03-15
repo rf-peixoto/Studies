@@ -9,6 +9,15 @@ docker image build -t [CUSTOM-TAG]:[VERSION or TAG] .
 # Download & install image:
 docker pull image-name # See name on hub.docker.com
 
+# Create from docker-compose.yml:
+docker-compose -f docker-compose.yml up # Start service. Include -d to run it in background.
+docker-compose -f docker-compose.yml down # Stop service.
+
+# Run commands on running image:
+# -it: interactive, optional
+# bash: command to run
+docker exec -it container-id bash
+
 # See images running:
 docker ps -a
 
