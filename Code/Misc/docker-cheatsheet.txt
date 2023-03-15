@@ -1,6 +1,11 @@
 # See installed images:
 docker images
 
+# Create from Dockerfile:
+# VERSION ex: 1.0, 2.4, etc
+# TAG: new, dev, etc
+docker image build -t [CUSTOM-TAG]:[VERSION or TAG] .
+
 # Download & install image:
 docker pull image-name # See name on hub.docker.com
 
