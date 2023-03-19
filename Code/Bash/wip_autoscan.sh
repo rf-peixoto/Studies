@@ -34,7 +34,7 @@ echo -e "    Found ${BLUE}$(wc -l subdomains.txt)${CLEAR} targets."
 
 # Nuclei:
 echo -e "[${BLUE}*${CLEAR}] Now scanning. This can take a while."
-proxychains -q nuclei -env-vars -no-meta -scan-all-ips -silent -l subdomains.txt -o nuclei.txt
+proxychains -q nuclei -env-vars -scan-all-ips -silent -l subdomains.txt -o nuclei.txt
 
 # Print results:
 echo -e "[${BLUE}*${CLEAR}] Results:"
