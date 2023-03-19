@@ -1,7 +1,21 @@
 #!/bin/bash
 
-# Work in progress
+# Usage:
+usage() {
+  cat <<EOF
+    Usage ${0##*/} domain
 
+    Ex: ${0##*/} domain.com
+
+EOF
+}
+
+
+# Check args:
+if [[ -z $1 || $1 = @(-h|--help) ]]; then
+  usage
+  exit $(( $# ? 0 : 1 ))
+fi
 clear
 
 # SETUP:
@@ -19,8 +33,8 @@ assetfinder $1 | sort -u > subdomains.txt
 echo -e "    Found ${BLUE}$(wc -l subdomains.txt)${CLEAR} targets."
 
 # Nuclei:
-echo -e "[${BLUE}*${CLEAR}] Now scanning..."
-proxychains nuclei -silent -l subdomains.txt -o nuclei.txt
+echo -e "[${BLUE}*${CLEAR}] Now scanning. This can take a while."
+proxychains -q nuclei -env-vars -no-meta -scan-all-ips -silent -l subdomains.txt -o nuclei.txt
 
 # Print results:
 echo -e "[${BLUE}*${CLEAR}] Results:"
@@ -36,8 +50,6 @@ echo -e "[${GREEN}unknow${CLEAR}]"
 grep -r '\[unknow\]' nuclei.txt
 echo -e "[${GREEN}cve${CLEAR}]"
 grep -r '\[cve\]' nuclei.txt
-
-
 
 # Remove tmp files:
 rm *.txt
