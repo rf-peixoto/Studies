@@ -34,7 +34,7 @@ echo -e "    Found ${BLUE}$(wc -l subdomains.txt)${CLEAR} targets."
 # Nuclei:
 echo -e "[${BLUE}*${CLEAR}] Now scanning. This can take a while."
 proxychains -q nuclei -env-vars -silent -l subdomains.txt -o nuclei.txt
-proxychains -q sudo nmap --spoof-mac -sV -Pn --reason -f --data-length 16 --script=vuln -D RND:16 -iL subdomains.txt -oG nmap.txt
+sudo nmap --spoof-mac=6 -sV -Pn --reason -f --data-length 16 --script=vuln -D RND:16 -iL subdomains.txt -oG nmap.txt
 
 # ZAP main URL:
 # curl "http://localhost:8080/JSON/ascan/action/scan/?apikey=APIKEY&url=$1&recurse=true&inScopeOnly=&scanPolicyName=&method=&postData=&contextId="
