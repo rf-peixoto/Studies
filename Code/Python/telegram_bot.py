@@ -34,5 +34,5 @@ if __name__ == '__main__':
                     process_message(parse_update(up))
                     updates_received.append(up.update_id)
             sleep(5)
-    except KeyBoardInterrupt:
+    except KeyboardInterrupt:
         pass
