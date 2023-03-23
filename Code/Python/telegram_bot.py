@@ -4,6 +4,7 @@ from time import sleep
 import telegram
 
 # SETUP
+authorized = [USERID,USERID]
 bot = telegram.Bot(token='TOKEN')
 
 # Get raw updates from API:
@@ -20,7 +21,13 @@ def parse_update(update) -> list:
 
 # Proccess data on message:
 def process_message(data: list):
-    pass
+    # Check if user is allowed to call this bot:
+    if data[0] in authorized:
+        # Ping:
+        if data[1].startswith("%ping"):
+            bot.sendMessage(data[0], "200")
+
+        # Command A
 
 # Run:
 if __name__ == '__main__':
