@@ -1,11 +1,19 @@
 # pip install python-telegram-bot==3.1.0
+# pip install python-dotenv
 
+from dotenv import load_dotenv # or load_dotenv('/full/path/to/.env')
 from time import sleep
-import telegram
+import telegram, os
+
+# Load .env vars:
+load_dotenv()
 
 # SETUP
+# There is no API token hardcoded. You must create a .env file
+# and create a line TG_TOKEN=YOURAPITOKEN
+
 authorized = [USERID,USERID]
-bot = telegram.Bot(token='TOKEN')
+bot = telegram.Bot(token=os.getenv('TG_TOKEN'))
 
 # Get raw updates from API:
 def get_updates() -> list:
