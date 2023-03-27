@@ -28,13 +28,19 @@ YELLOW='\033[1;32m'
 echo -e "[${BLUE}*${CLEAR}] Running on ${GREEN}$1${CLEAR}"
 
 # Subdomains:
-assetfinder $1 | sort -u > subdomains.txt
+echo $1 > subdomains.txt
+assetfinder $1 | sort -u >> subdomains.txt
 echo -e "    Found ${BLUE}$(wc -l subdomains.txt)${CLEAR} targets."
 
 # Nuclei:
 echo -e "[${BLUE}*${CLEAR}] Now scanning. This can take a while."
 proxychains -q nuclei -env-vars -silent -l subdomains.txt -o nuclei.txt
-sudo nmap --spoof-mac=6 -sV -Pn --reason -f --data-length 16 --script=vuln -D RND:16 -iL subdomains.txt -oG nmap.txt
+
+# nmap:
+# sudo nmap --spoof-mac=6 -sV -Pn --reason -f --data-length 16 --script=vuln -D RND:16 -iL subdomains.txt -oG nmap.txt 2>/dev/null
+
+# sqlmap:
+sqlmap -u 'http://$1/' --random-agent --forms --crawl 10 --batch --skip-waf --dbs --level 5
 
 # ZAP main URL:
 # curl "http://localhost:8080/JSON/ascan/action/scan/?apikey=APIKEY&url=$1&recurse=true&inScopeOnly=&scanPolicyName=&method=&postData=&contextId="
@@ -57,4 +63,4 @@ echo -e "[${GREEN}cve${CLEAR}]"
 grep --color='auto' -r '\[cve\]' nuclei.txt
 
 # Remove tmp files:
-#rm *.txt
+rm *.txt
