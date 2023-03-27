@@ -1,1 +1,1 @@
-python sqlmap.py -u URL --random-agent --forms --crawl 10 --batch --skip-waf --dbs
+python sqlmap.py -u URL --random-agent --forms --crawl 10 --batch --skip-waf --dbms --level 5
