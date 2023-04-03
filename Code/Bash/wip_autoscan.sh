@@ -30,6 +30,8 @@ echo -e "[${BLUE}*${CLEAR}] Running on ${GREEN}$1${CLEAR}"
 # Subdomains:
 echo $1 > subdomains.txt
 assetfinder $1 | sort -u >> subdomains.txt
+#assetfinder $1 | alterx -silent | sort -u >> subdomains.txt
+
 echo -e "    Found ${BLUE}$(wc -l subdomains.txt)${CLEAR} targets."
 
 # Nuclei:
