@@ -27,6 +27,7 @@ intitle:"Index of" finance.xls
 intitle:combolist site:( anonfiles.com | bayfiles.com | filechan.org | justpaste.it | pastebin.com | dataism-x.org )
 intitle:( combolist | dehashed | stealer ) site:anonfiles.com
 inurl:adfs/portal/updatepassword
+inurl:id= | inurl:pid= | inurl:category= | inurl:cat= | inurl:action= | inurl:sid= | inurl:dir= inurl:& site:example[.]com
 allintext:password ext:log after:2020
 site: inurl:shell | inurl:backdoor | inurl:wso | inurl:cmd | shadow | passwd | boot.ini | inurl:backdoor
 site: inurl:login | inurl:signin | intitle:Login | intitle: signin | inurl:auth
