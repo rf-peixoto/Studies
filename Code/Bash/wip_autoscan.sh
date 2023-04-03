@@ -39,7 +39,7 @@ echo -e "[${BLUE}*${CLEAR}] Now scanning. This can take a while."
 nuclei -follow-host-redirects -passive -env-vars -silent -l subdomains.txt -o nuclei.txt
 
 # nmap:
- sudo nmap --spoof-mac=6 -sV -Pn --reason -f --data-length 16 --script=vuln -D RND:16 -iL subdomains.txt -oG nmap.txt 2>/dev/null
+sudo nmap --spoof-mac=6 -sV -Pn --reason -f --data-length 16 --script=vuln -D RND:16 -iL subdomains.txt -oG nmap.txt 2>/dev/null
 
 # sqlmap:
 sqlmap -u 'http://$1/' --random-agent --forms --crawl 10 --batch --skip-waf --dbs --level 5
