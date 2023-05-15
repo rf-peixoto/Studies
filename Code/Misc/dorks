@@ -1,5 +1,6 @@
 # Some ref are from: https://dorks.faisalahmed.me/#
 
+related:<stuff>
 site:*.*.com inurl:Admin/Dashboard.php
 inurl:"Index of" or inurl:admin
 site:trello.com password
