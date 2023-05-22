@@ -1,6 +1,9 @@
 # Monitorar tamanho de arquivo:
 watch -n60 du /path/to/file
 
+# Executar v
+sudo -s <<< 'apt update -y && apt upgrade -y'
+
 # Backup com dd:
 sudo dd if=/dev/sda of=/media/disk/backup/sda.backup
 
