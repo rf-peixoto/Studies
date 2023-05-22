@@ -1,6 +1,9 @@
 # Monitorar tamanho de arquivo:
 watch -n60 du /path/to/file
 
+# Enviar via ICMP:
+hping3 <ip alvo> --icmp --sign MSGID1 -d 50 -c 1 --file <file>
+
 # Deletar arquivos mais antigos que 90 dias:
 find <directory path> -mtime +90 -and -not -type d -delete
 
