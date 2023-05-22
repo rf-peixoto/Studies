@@ -1,6 +1,9 @@
 # Monitorar tamanho de arquivo:
 watch -n60 du /path/to/file
 
+# Deletar arquivos mais antigos que 90 dias:
+find <directory path> -mtime +90 -and -not -type d -delete
+
 # Executar v
 sudo -s <<< 'apt update -y && apt upgrade -y'
 
