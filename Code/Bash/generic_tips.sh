@@ -1,3 +1,15 @@
+# Monitorar tamanho de arquivo:
+watch -n60 du /path/to/file
+
+# Criar e salvar imagem do sistema:
+readom dev=/dev/scd0 f=/path/to/image.iso
+
+# Executar script em DEBUG:
+bash -x ./post_to_commandlinefu.sh
+
+# Notificar no GNOME depois de executar script:
+./my-really-long-job.sh && notify-send "Job finished"
+
 # Realçar termo em saída do man:
 man stuff
 /pattern # Ex: man echo;/echo
