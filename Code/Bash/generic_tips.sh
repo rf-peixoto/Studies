@@ -1,6 +1,12 @@
 # Monitorar tamanho de arquivo:
 watch -n60 du /path/to/file
 
+# Backup com dd:
+sudo dd if=/dev/sda of=/media/disk/backup/sda.backup
+
+# Criar ISO de determinado diretório:
+mkisofs -J -allow-lowercase -R -V "OpenCD8806" -iso-level 4 -o OpenCD.iso ~/OpenCD
+
 # Criar e salvar imagem do sistema:
 readom dev=/dev/scd0 f=/path/to/image.iso
 
