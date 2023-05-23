@@ -14,7 +14,7 @@ def encode_file(filename):
     hex_data = file_data.hex()
 
     # Break the hexadecimal data into chunks (adjust the chunk size as needed)
-    chunk_size = 256  # Each chunk will be 32 characters (16 bytes)
+    chunk_size = 256  # This is the number of characteres in the chunk
     chunks = [hex_data[i:i + chunk_size] for i in range(0, len(hex_data), chunk_size)]
 
     # Send each chunk as an ICMP packet
