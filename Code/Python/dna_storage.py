@@ -60,17 +60,17 @@ if len(sys.argv) < 3:
 
 command = sys.argv[1]
 file_path = sys.argv[2]
-output_file_path = 'decoded_file.bin'
+output_file_path = 'decoded_{0}'.format(file_path)
 
 if command == '-e':
     # Encode the file into DNA sequence
     dna_sequence = encode_to_dna(file_path)
 
     # Write the DNA sequence to a text file
-    with open(output_file_path, 'w') as output_file:
+    with open("{0}_DNA".format(sys.argv[2]), 'w') as output_file:
         output_file.write(dna_sequence)
 
-    print(f"The file '{file_path}' has been encoded into DNA sequence and saved as '{output_file_path}'.")
+    print(f"The file '{file_path}' has been encoded into DNA sequence and saved as '{sys.argv[2]}_DNA'.")
 elif command == '-d':
     # Read the DNA sequence from the specified file
     with open(file_path, 'r') as input_file:
