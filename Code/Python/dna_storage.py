@@ -60,23 +60,26 @@ if len(sys.argv) < 3:
 
 command = sys.argv[1]
 file_path = sys.argv[2]
-output_file_path = 'decoded_{0}'.format(file_path)
+output_file_path = f'encoded_{file_path}'
 
 if command == '-e':
     # Encode the file into DNA sequence
     dna_sequence = encode_to_dna(file_path)
 
+    # Add line breaks every 80 characters in the DNA sequence
+    dna_sequence = '\n'.join([dna_sequence[i:i+80] for i in range(0, len(dna_sequence), 80)])
+
     # Write the DNA sequence to a text file
-    with open("{0}_DNA".format(sys.argv[2]), 'w') as output_file:
+    with open(output_file_path, 'w') as output_file:
         output_file.write(dna_sequence)
 
-    print(f"The file '{file_path}' has been encoded into DNA sequence and saved as '{sys.argv[2]}_DNA'.")
+    print(f"The file '{file_path}' has been encoded into DNA sequence and saved as '{output_file_path}'.")
 elif command == '-d':
     # Read the DNA sequence from the specified file
     with open(file_path, 'r') as input_file:
-        dna_sequence = input_file.read()
+        dna_sequence = input_file.read().replace('\n', '')
 
     # Decode the DNA sequence into a file
-    decode_to_file(dna_sequence, output_file_path)
+    decode_to_file(dna_sequence, f'recovered_{file_path}')
 else:
     print("Invalid command-line argument. Please use -e <filename> to encode a file or -d <filename> to decode the DNA sequence.")
