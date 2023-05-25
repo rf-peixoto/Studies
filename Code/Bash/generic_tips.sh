@@ -1,6 +1,12 @@
 # Monitorar tamanho de arquivo:
 watch -n60 du /path/to/file
 
+# Manipular tokens jwt:
+jwt <command>
+
+# Solicitar novo IP:
+dhclient -r
+
 # Enviar via ICMP:
 hping3 <ip alvo> --icmp --sign MSGID1 -d 50 -c 1 --file <file>
 
