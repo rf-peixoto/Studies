@@ -62,7 +62,7 @@ echo -e "    Found ${BLUE}$(wc -l $1/subdomains.txt | cut -d ' ' -f 1)${CLEAR} t
 # Scan with nuclei:
 # ------------------------------------------------------- #
 echo -e "[${BLUE}*${CLEAR}] Scanning web with nuclei."
-nuclei -follow-host-redirects -env-vars -silent -l $1/subdomains.txt -o $1/nuclei.txt
+nuclei -follow-host-redirects -env-vars -silent -l $1/subdomains.txt > $1/nuclei.txt
 
 # ------------------------------------------------------- #
 # Port scan with naabu and nmap:
@@ -75,12 +75,13 @@ naabu -silent -list $1/subdomains.txt -sD -display-cdn -scan-all-ips | sort -u >
 # Analyze SSL/TLS:
 # ------------------------------------------------------- #
 echo -e "[${BLUE}*${CLEAR}] Scanning SSL/TLS."
-python -m sslyze --targets_in $1/subdomains.txt --quiet --json_out $1/sslyze.json
+python -m sslyze --targets_in $1/subdomains.txt > $1/sslyze.json
 
 # ------------------------------------------------------- #
 # SQLMap scan:
 # ------------------------------------------------------- #
-# sqlmap -u 'http://$1/' --random-agent --forms --crawl 10 --batch --skip-waf --dbs --level 5 --no-logging --output-dir=$1/sqlmap.txt
+echo -e "[${BLUE}*${CLEAR}] Looking for Code Injection."
+sqlmap -u 'http://$1/' --random-agent --forms --crawl 10 --batch --skip-waf --dbs --level 5 --no-logging --output-dir=$1/sqlmap.txt
 
 # ------------------------------------------------------- #
 # Webscan with ZAP:
