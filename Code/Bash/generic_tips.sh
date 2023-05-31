@@ -7,6 +7,9 @@ last  | grep -v "^$" | awk '{ print $1 }' | sort -nr | uniq -c
 # Manipular tokens jwt:
 jwt <command>
 
+# tail -f com timestamp:
+tail -f file | while read; do echo "$(date +%T.%N) $REPLY"; done
+
 # Solicitar novo IP:
 dhclient -r
 
