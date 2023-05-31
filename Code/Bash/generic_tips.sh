@@ -1,6 +1,9 @@
 # Monitorar tamanho de arquivo:
 watch -n60 du /path/to/file
 
+# Mostrar calendário de data específica:
+cal M ANO
+
 # Ver usuários conectados recentemente:
 last  | grep -v "^$" | awk '{ print $1 }' | sort -nr | uniq -c
 
