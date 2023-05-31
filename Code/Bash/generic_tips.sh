@@ -4,6 +4,9 @@ watch -n60 du /path/to/file
 # Ver usuários conectados recentemente:
 last  | grep -v "^$" | awk '{ print $1 }' | sort -nr | uniq -c
 
+# pipe output para clipboard:
+some command|xsel --clipboard
+
 # Manipular tokens jwt:
 jwt <command>
 
