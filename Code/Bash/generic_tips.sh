@@ -1,3 +1,7 @@
+# Executar comando direto de página man: (ou último registro do comando no hist
+!ping
+!echo
+
 # Monitorar tamanho de arquivo:
 watch -n60 du /path/to/file
 
