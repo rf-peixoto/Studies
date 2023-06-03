@@ -1,6 +1,9 @@
 # Broadcast shell nas seguintes portas:
 script -qf | tee >(nc -kl 5000) >(nc -kl 5001) >(nc -kl 5002)
 
+# Mostrar árvore de subdiretórios no diretório atual:
+ls -R | grep ":$" | sed -e 's/:$//' -e 's/[^-][^\/]*\//--/g' -e 's/^/ /' -e 's/-/|/'
+
 # Executar comando direto de página man: (ou último registro do comando no histórico?)
 !ping
 !echo
