@@ -29,6 +29,9 @@ tail -f file | while read; do echo "$(date +%T.%N) $REPLY"; done
 # Solicitar novo IP:
 dhclient -r
 
+# Monitorar queries mysql:
+watch -n 1 mysqladmin --user=<user> --password=<password> processlist
+
 # Enviar via ICMP:
 hping3 <ip alvo> --icmp --sign MSGID1 -d 50 -c 1 --file <file>
 
