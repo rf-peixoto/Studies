@@ -1,4 +1,7 @@
-# Executar comando direto de página man: (ou último registro do comando no hist
+# Broadcast shell nas seguintes portas:
+script -qf | tee >(nc -kl 5000) >(nc -kl 5001) >(nc -kl 5002)
+
+# Executar comando direto de página man: (ou último registro do comando no histórico?)
 !ping
 !echo
 
