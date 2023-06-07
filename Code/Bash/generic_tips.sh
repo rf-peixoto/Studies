@@ -103,6 +103,9 @@ bcd [String] # Punched cards
 # Aletrnativa ao Hydra:
 medusa [args]
 
+# Descobrir qual shell está executando:
+echo $0
+
 # Alternativa ao openssl para gerar certificados:
 makecert [args]
 
