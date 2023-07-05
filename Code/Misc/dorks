@@ -1,5 +1,6 @@
 # Some ref are from: https://dorks.faisalahmed.me/#
 
+inurl:sftp-config.json | '"password": '
 related:<stuff>
 site:*.*.com inurl:Admin/Dashboard.php
 inurl:"Index of" or inurl:admin
