@@ -16,3 +16,7 @@ cp /proc/[PID]/ /[destination]/[PID]/
 # Verificar o que o processo está acessando:
 ls -al /proc/[PID]/fd
 cat /proc/[PID]/maps
+
+#Dump Memory
+dd if=/dev/kmem of=/root/kmem
+dd if=/dev/mem of=/root/mem
