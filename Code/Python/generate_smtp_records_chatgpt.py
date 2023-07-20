@@ -3,12 +3,14 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
 
+# Define valid options for the DKIM policy record
+policy_options = ["quarantine", "reject", "none"]
 # Define user questions
 questions = [
     "What is your domain?",
     "What is the IP address of your mail server?",
     "What is the DKIM key length? (e.g., 2048)",
-    f"What is the DMARC policy? (Options: quarantine, reject, none)",
+    f"What is the DMARC policy? (Options: {' '.join(policy_options)})",
 ]
 
 def get_user_input(question):
