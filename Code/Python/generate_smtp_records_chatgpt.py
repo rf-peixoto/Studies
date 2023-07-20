@@ -57,7 +57,7 @@ if __name__ == "__main__":
     spf_record, dmarc_record, dkim_record, public_key, private_key = generate_records()
 
     # Print the records
-    print("SPF Record:", spf_record)
+    print("\nSPF Record:", spf_record)
     print("DMARC Record:", dmarc_record)
     print("DKIM Record:", dkim_record)
 
