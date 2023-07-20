@@ -5,6 +5,7 @@ from cryptography.hazmat.primitives import serialization
 
 # Define valid options for the DKIM policy record
 policy_options = ["quarantine", "reject", "none"]
+
 # Define user questions
 questions = [
     "What is your domain?",
