@@ -1,3 +1,5 @@
+// This thing only retrieves IPv4 addresses;
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <netdb.h>
