@@ -1,0 +1,5 @@
+Email:[REMOVED]:        ^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}:\[REMOVED\]$
+Email:                  ^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$
+Nome:                   ^(?:\b[A-Za-z]+\b(?:\s|$)){1,3}
+Line size:              ^(.{1,20})$
+Line ended with:        .*2000$
