@@ -4,7 +4,7 @@
 # a.k.a Corvo
 # ------------------------------------------------------- #
 
-VERSION="v1.0.0"
+VERSION="v1.1.0"
 
 # Setup colors:
 CLEAR='\033[0m'
@@ -47,7 +47,7 @@ echo -e "${CLEAR}"
 # Start:
 # ------------------------------------------------------- #
 echo ""
-echo -e "[${BLUE}*${CLEAR}] Preparing output directoy for ${GREEN}$1${CLEAR}"
+echo -e "[${BLUE}*${CLEAR}] Preparing output directory for ${GREEN}$1${CLEAR}"
 mkdir $1
 
 # ------------------------------------------------------- #
@@ -62,14 +62,18 @@ echo -e "    Found ${BLUE}$(wc -l $1/subdomains.txt | cut -d ' ' -f 1)${CLEAR} t
 # Scan with nuclei:
 # ------------------------------------------------------- #
 echo -e "[${BLUE}*${CLEAR}] Scanning web with nuclei."
-nuclei -follow-host-redirects -env-vars -silent -l $1/subdomains.txt > $1/nuclei.txt
+nuclei -env-vars -silent -l $1/subdomains.txt > $1/nuclei.txt
 
 # ------------------------------------------------------- #
-# Port scan with naabu and nmap:
+# Port scan with naabu, nmap and internetdb:
 # ------------------------------------------------------- #
-echo -e "[${BLUE}*${CLEAR}] Scanning ports with naabu."
+echo -e "[${BLUE}*${CLEAR}] Searching on InternetDB."
+curl https://internetdb.shodan.io/$($1 | head -n 1 | cut -d " " -f 4) > $1/internetdb.json
+
+echo -e "[${BLUE}*${CLEAR}] Scanning ports with naabu. Nmap is current at WIP."
 naabu -silent -list $1/subdomains.txt -sD -display-cdn -scan-all-ips | sort -u > $1/naabu.txt
-# sudo nmap --spoof-mac=6 -sV -Pn --reason -f --data-length 16 --script=vuln,malware -D RND:16 -iL $1/subdomains.txt -oG $1/nmap.txt 2>/dev/null
+#sudo nmap -sV -Pn --reason -f --data-length 16 --script=vuln,malware -D RND:16 $1 -oG $1/nmap.txt 2>/dev/null
+#sudo nmap --spoof-mac=6 -sV -Pn --reason -f --data-length 16 --script=vuln,malware -D RND:16 -iL $1/subdomains.txt -oG $1/nmap.txt 2>/dev/null
 
 # ------------------------------------------------------- #
 # Analyze SSL/TLS:
@@ -86,24 +90,13 @@ sqlmap -u 'http://$1/' --random-agent --forms --crawl 10 --batch --skip-waf --db
 # ------------------------------------------------------- #
 # Webscan with ZAP:
 # ------------------------------------------------------- #
-# curl "http://localhost:8080/JSON/ascan/action/scan/?apikey=API&url=$1&recurse=true&inScopeOnly=&scanPolicyName=&method=&postData=&contextId="
-# curl "http://localhost:8080/JSON/core/view/alerts/?apikey=API&baseurl=$1&start=0&count=10"
+curl "http://localhost:8080/JSON/ascan/action/scan/?apikey=<TOKEN>&url=$1&recurse=true&inScopeOnly=&scanPolicyName=&method=&postData=&contextId=" 2>/dev/null
+curl "http://localhost:8080/JSON/core/view/alerts/?apikey=<TOKEN>&baseurl=$1&start=0&count=10" 2>/dev/null
 
-# Print results:
-#echo ""
-#echo -e "[${BLUE}*${CLEAR}] Results:"
-#echo -e "[${BLUE}low${CLEAR}]"
-#grep --color='auto' -r '\[low\]' $1/nuclei.txt
-#echo -e "[${YELLOW}medium${CLEAR}]"
-#grep --color='auto' -r '\[medium\]' $1/nuclei.txt
-#echo -e "[${RED}high${CLEAR}]"
-#grep --color='auto' -r '\[high\]' $1/nuclei.txt
-#echo -e "[${RED}critical${CLEAR}]"
-#grep --color='auto' -r '\[critical\]' $1/nuclei.txt
-#echo -e "[${GREEN}unknow${CLEAR}]"
-#grep --color='auto' -r '\[unknow\]' $1/nuclei.txt
-#echo -e "[${GREEN}cve${CLEAR}]"
-#grep --color='auto' -r '\[cve\]' $1/nuclei.txt
+# ------------------------------------------------------- #
+# Compressing results:
+# ------------------------------------------------------- #
+#tar -vzf '$1_"`date +"%d%m%Y"`"' "$1"
 
 # Remove tmp files:
 rm *.txt 2>/dev/null && rm ~/.config/nuclei/*.cfg 2>/dev/null
