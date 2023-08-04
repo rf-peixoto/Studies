@@ -68,7 +68,7 @@ nuclei -env-vars -silent -l $1/subdomains.txt > $1/nuclei.txt
 # Port scan with naabu, nmap and internetdb:
 # ------------------------------------------------------- #
 echo -e "[${BLUE}*${CLEAR}] Searching on InternetDB."
-curl https://internetdb.shodan.io/$($1 | head -n 1 | cut -d " " -f 4) > $1/internetdb.json
+curl -s https://internetdb.shodan.io/$($1 | head -n 1 | cut -d " " -f 4) > $1/internetdb.json
 
 echo -e "[${BLUE}*${CLEAR}] Scanning ports with naabu. Nmap is current at WIP."
 naabu -silent -list $1/subdomains.txt -sD -display-cdn -scan-all-ips | sort -u > $1/naabu.txt
