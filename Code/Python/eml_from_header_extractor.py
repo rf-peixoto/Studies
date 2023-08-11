@@ -32,6 +32,18 @@ def extract_domain_from_eml(eml_file_path):
                 domain = sender_email.split('@')[-1]
                 return domain
         
+        from_header = msg.get('From')
+        if from_header:
+            decoded_header = decode_header(from_header)[0]
+            if isinstance(decoded_header[0], bytes):
+                sender_email = decoded_header[0].decode(encoding or 'utf-8', errors='replace')
+            else:
+                sender_email = decoded_header[0]
+
+            if is_valid_email_address(sender_email):
+                domain = sender_email.split('@')[-1]
+                return domain
+
     return None
 
 def process_eml_folder(folder_path):
@@ -45,6 +57,8 @@ def process_eml_folder(folder_path):
                 sender_domain = extract_domain_from_eml(eml_file_path)
                 if sender_domain and sender_domain != 'pot':
                     domains_count[sender_domain] += 1
+                else:
+                    error_log.append(f"No valid sender found in {filename}")
             except Exception as e:
                 error_log.append(f"Error processing {filename}: {str(e)}")
 
