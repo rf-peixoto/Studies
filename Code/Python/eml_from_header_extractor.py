@@ -11,7 +11,7 @@ def extract_domain_from_eml(eml_file_path):
         result = chardet.detect(raw_email)
         encoding = result['encoding']
 
-        msg = email.message_from_bytes(raw_email, policy=email.policy.default)
+        msg = email.message_from_bytes(raw_email)
         from_header = msg.get('From')
         if from_header:
             decoded_header = decode_header(from_header)[0]
