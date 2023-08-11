@@ -38,6 +38,7 @@ def process_eml_folder(folder_path):
 
     return domains_count
 
+
 def main():
     folder_path = 'path/to/your/eml/folder'
     domains_count = process_eml_folder(folder_path)
@@ -47,8 +48,10 @@ def main():
 
     print(f"Total unique domains found: {total_domains}")
     print(f"Total EML files processed: {total_files}")
-    print("Domain distribution:")
-    for domain, count in domains_count.items():
+
+    sorted_domains = sorted(domains_count.items(), key=lambda x: x[1], reverse=True)
+    print("Domain distribution (sorted by file count):")
+    for domain, count in sorted_domains:
         print(f"{domain}: {count} files")
 
 if __name__ == "__main__":
