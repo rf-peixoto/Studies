@@ -4,8 +4,8 @@ from email.header import decode_header
 from collections import defaultdict
 
 def extract_domain_from_eml(eml_file_path):
-    with open(eml_file_path, 'r', encoding='utf-8') as eml_file:
-        msg = email.message_from_file(eml_file)
+    with open(eml_file_path, 'rb') as eml_file:
+        msg = email.message_from_bytes(eml_file.read())
 
         from_header = msg.get('From')
         if from_header:
