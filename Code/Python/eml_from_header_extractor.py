@@ -19,9 +19,10 @@ def extract_domain_from_eml(eml_file_path):
         encoding = result['encoding']
 
         msg = email.message_from_bytes(raw_email)
-        from_header = msg.get('From')
-        if from_header:
-            decoded_header = decode_header(from_header)[0]
+        
+        reply_to_header = msg.get('Reply-To')
+        if reply_to_header:
+            decoded_header = decode_header(reply_to_header)[0]
             if isinstance(decoded_header[0], bytes):
                 sender_email = decoded_header[0].decode(encoding or 'utf-8', errors='replace')
             else:
