@@ -68,5 +68,7 @@ def main():
             for error in error_log:
                 error_file.write(error + '\n')
 
+        print(f"Total errors encountered: {len(error_log)}")
+
 if __name__ == "__main__":
     main()
