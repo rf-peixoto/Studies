@@ -2,16 +2,21 @@ import os
 import email
 from email.header import decode_header
 from collections import defaultdict
+import chardet
 
 def extract_domain_from_eml(eml_file_path):
     with open(eml_file_path, 'rb') as eml_file:
-        msg = email.message_from_bytes(eml_file.read())
+        raw_email = eml_file.read()
 
+        result = chardet.detect(raw_email)
+        encoding = result['encoding']
+
+        msg = email.message_from_bytes(raw_email, policy=email.policy.default)
         from_header = msg.get('From')
         if from_header:
             decoded_header = decode_header(from_header)[0]
             if isinstance(decoded_header[0], bytes):
-                sender_email = decoded_header[0].decode(decoded_header[1] or 'utf-8')
+                sender_email = decoded_header[0].decode(encoding or 'utf-8', errors='replace')
             else:
                 sender_email = decoded_header[0]
 
