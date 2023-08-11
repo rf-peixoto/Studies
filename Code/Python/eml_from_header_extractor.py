@@ -31,24 +31,28 @@ def extract_domain_from_eml(eml_file_path):
             if is_valid_email_address(sender_email):
                 domain = sender_email.split('@')[-1]
                 return domain
-
+        
     return None
 
 def process_eml_folder(folder_path):
     domains_count = defaultdict(int)
+    error_log = []
 
     for filename in os.listdir(folder_path):
         if filename.endswith('.eml'):
             eml_file_path = os.path.join(folder_path, filename)
-            sender_domain = extract_domain_from_eml(eml_file_path)
-            if sender_domain and sender_domain != 'pot':
-                domains_count[sender_domain] += 1
+            try:
+                sender_domain = extract_domain_from_eml(eml_file_path)
+                if sender_domain and sender_domain != 'pot':
+                    domains_count[sender_domain] += 1
+            except Exception as e:
+                error_log.append(f"Error processing {filename}: {str(e)}")
 
-    return domains_count
+    return domains_count, error_log
 
 def main():
     folder_path = 'path/to/your/eml/folder'
-    domains_count = process_eml_folder(folder_path)
+    domains_count, error_log = process_eml_folder(folder_path)
 
     total_domains = len(domains_count)
     total_files = sum(domains_count.values())
@@ -58,6 +62,11 @@ def main():
     print("Domain distribution (sorted by file count):")
     for domain, count in sorted(domains_count.items(), key=lambda x: x[1], reverse=True):
         print(f"{domain}: {count} files")
+
+    if error_log:
+        with open('error.log', 'w') as error_file:
+            for error in error_log:
+                error_file.write(error + '\n')
 
 if __name__ == "__main__":
     main()
