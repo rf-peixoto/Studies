@@ -1,9 +1,9 @@
 import os
-import re
 import email
 from email.header import decode_header
 from collections import defaultdict
 import chardet
+import re
 
 def is_valid_email_address(address):
     try:
@@ -29,7 +29,7 @@ def extract_domain_from_eml(eml_file_path):
             else:
                 sender_email = decoded_header[0]
 
-            # Validate email address format
+            # Validate email address format using a more permissive regex
             if re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', sender_email) and is_valid_email_address(sender_email):
                 domain = sender_email.split('@')[-1]
                 return domain
@@ -42,7 +42,7 @@ def extract_domain_from_eml(eml_file_path):
             else:
                 sender_email = decoded_header[0]
 
-            # Validate email address format
+            # Validate email address format using a more permissive regex
             if re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', sender_email) and is_valid_email_address(sender_email):
                 domain = sender_email.split('@')[-1]
                 return domain
