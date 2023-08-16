@@ -20,13 +20,36 @@ def drake_equation(params):
     
     return estimated_civilizations
 
+def is_prime(n):
+    if n <= 1:
+        return False
+    if n <= 3:
+        return True
+    if n % 2 == 0 or n % 3 == 0:
+        return False
+    i = 5
+    while i * i <= n:
+        if n % i == 0 or n % (i + 2) == 0:
+            return False
+        i += 6
+    return True
+
+def highest_prime(value):
+    prime = value
+    while not is_prime(prime):
+        prime -= 1
+    return prime
+
 def custom_hash(average_value, ascii_list):
     num_params = len(ascii_list)
-    params = [ord(str(char)[0]) for char in sorted(ascii_list, reverse=True)]
+    params = [ord(char) for char in ascii_list]
     params.append(average_value)
     
-    # Use the Drake Equation with positional ASCII values as parameters
-    custom_result = drake_equation(params)
+    # Replace values with highest prime numbers
+    prime_params = [highest_prime(value) for value in params]
+    
+    # Use the Drake Equation with prime numbers and average value as parameters
+    custom_result = drake_equation(prime_params)
     
     return custom_result
 
