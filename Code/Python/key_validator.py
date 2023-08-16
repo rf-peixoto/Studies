@@ -22,7 +22,7 @@ def drake_equation(params):
 
 def custom_hash(average_value, ascii_list):
     num_params = len(ascii_list)
-    params = [ord(str(char)) for char in sorted(ascii_list, reverse=True)]
+    params = [ord(str(char)[0]) for char in sorted(ascii_list, reverse=True)]
     params.append(average_value)
     
     # Use the Drake Equation with positional ASCII values as parameters
