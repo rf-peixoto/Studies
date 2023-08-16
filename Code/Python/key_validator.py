@@ -69,7 +69,7 @@ def hash_to_ascii_list(hash_hex):
 def calculate_average(ascii_list):
     total = sum(ascii_list)
     average = round(total / len(ascii_list))
-    return average
+    return average * (len(ascii_list) + total * (ascii_list[0] * ascii_list[1]))
 
 # Input string
 input_string = input("Enter the string: ")
