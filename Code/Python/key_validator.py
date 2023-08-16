@@ -1,5 +1,11 @@
 import hashlib
 
+def custom_hash(average_value, ascii_list):
+    combined_values = [average_value] + ascii_list
+    modified_values = [(value + index) % 256 for index, value in enumerate(combined_values)]
+    final_hash = sum(modified_values) % 256
+    return final_hash
+
 def generate_blake2b_hash(input_string):
     # Create a Blake2b hash object
     blake2b_hash = hashlib.blake2b(input_string.encode(), digest_size=64)  # 64-byte hash
@@ -32,3 +38,7 @@ print("ASCII List:", ascii_list)
 # Calculate and print the average value
 average_value = calculate_average(ascii_list)
 print(f"Average Value: {average_value}")
+
+# Calculate and print the custom hash
+custom_result = custom_hash(average_value, ascii_list)
+print(f"Custom Hash: {custom_result}")
