@@ -42,7 +42,7 @@ def highest_prime(value):
 
 def custom_hash(average_value, ascii_list):
     num_params = len(ascii_list)
-    params = [ord(char) for char in ascii_list]
+    params = [ord(str(char)[0]) for char in ascii_list]
     params.append(average_value)
     
     # Replace values with highest prime numbers
