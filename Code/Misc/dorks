@@ -52,3 +52,288 @@ site:pastebin.com | site:paste2.org | site:pastehtml.com | site:slexy.org | site
 path:.env AWS_KEY /(AKIA[A-Z0-9]{12,})/
 /ssh:\/\/.*:.*@.*target\.com/
 /ftp:\/\/.*:.*@.*target\.com/ 
+
+
+inurl:".php?cat="+intext:"Paypal"+site:UK
+inurl:".php?cat="+intext:"/Buy Now/"+site:.net
+inurl:".php?cid="+intext:"online+betting"
+
+inurl:".php?id=" intext:"View cart"
+inurl:".php?id=" intext:"Buy Now"
+inurl:".php?id=" intext:"add to cart"
+inurl:".php?id=" intext:"shopping"
+inurl:".php?id=" intext:"boutique"
+inurl:".php?id=" intext:"/store/"
+inurl:".php?id=" intext:"/shop/"
+inurl:".php?id=" intext:"toys"
+
+inurl:".php?cid="
+inurl:".php?cid=" intext:"shopping"
+inurl:".php?cid=" intext:"add to cart"
+inurl:".php?cid=" intext:"Buy Now"
+inurl:".php?cid=" intext:"View cart"
+inurl:".php?cid=" intext:"boutique"
+inurl:".php?cid=" intext:"/store/"
+inurl:".php?cid=" intext:"/shop/"
+inurl:".php?cid=" intext:"Toys"
+
+inurl:".php?cat="
+inurl:".php?cat=" intext:"shopping"
+inurl:".php?cat=" intext:"add to cart"
+inurl:".php?cat=" intext:"Buy Now"
+inurl:".php?cat=" intext:"View cart"
+inurl:".php?cat=" intext:"boutique"
+inurl:".php?cat=" intext:"/store/"
+inurl:".php?cat=" intext:"/shop/"
+inurl:".php?cat=" intext:"Toys"
+
+inurl:".php?catid="
+inurl:".php?catid=" intext:"View cart"
+inurl:".php?catid=" intext:"Buy Now"
+inurl:".php?catid=" intext:"add to cart"
+inurl:".php?catid=" intext:"shopping"
+inurl:".php?catid=" intext:"boutique"
+inurl:".php?catid=" intext:"/store/"
+inurl:".php?catid=" intext:"/shop/"
+inurl:".php?catid=" intext:"Toys"
+
+inurl:”.php?cat=”+intext:”Paypal”+site:UK
+inurl:”.php?cat=”+intext:”/Buy Now/”+site:.net
+inurl:”.php?cid=”+intext:”online+betting”
+inurl:”.php?id=” intext:”View cart”
+inurl:”.php?id=” intext:”Buy Now”
+inurl:”.php?id=” intext:”add to cart”
+inurl:”.php?id=” intext:”shopping”
+inurl:”.php?id=” intext:”boutique”
+inurl:”.php?id=” intext:”/store/”
+inurl:”.php?id=” intext:”/shop/”
+inurl:”.php?id=” intext:”toys”
+inurl:”.php?cid=”
+inurl:”.php?cid=” intext:”shopping”
+inurl:”.php?cid=” intext:”add to cart”
+inurl:”.php?cid=” intext:”Buy Now”
+inurl:”.php?cid=” intext:”View cart”
+inurl:”.php?cid=” intext:”boutique”
+inurl:”.php?cid=” intext:”/store/”
+inurl:”.php?cid=” intext:”/shop/”
+inurl:”.php?cid=” intext:”Toys”
+inurl:”.php?cat=”
+inurl:”.php?cat=” intext:”shopping”
+inurl:”.php?cat=” intext:”add to cart”
+inurl:”.php?cat=” intext:”Buy Now”
+inurl:”.php?cat=” intext:”View cart”
+inurl:”.php?cat=” intext:”boutique”
+inurl:”.php?cat=” intext:”/store/”
+inurl:”.php?cat=” intext:”/shop/”
+inurl:”.php?cat=” intext:”Toys”
+inurl:”.php?catid=”
+inurl:”.php?catid=” intext:”View cart”
+inurl:”.php?catid=” intext:”Buy Now”
+inurl:”.php?catid=” intext:”add to cart”
+inurl:”.php?catid=” intext:”shopping”
+inurl:”.php?catid=” intext:”boutique”
+inurl:”.php?catid=” intext:”/store/”
+inurl:”.php?catid=” intext:”/shop/”
+inurl:”.php?catid=” intext:”Toys”
+Just type in “inurl:” before these dorks:
+merchandise/index.php?cat=
+productlist.asp?catalogid=
+Category.asp?category_id=
+Category.cfm?category_id=
+category.asp?cid=
+category.cfm?cid=
+category.asp?cat=
+category.cfm?cat=
+category.asp?id=
+index.cfm?pageid=
+category.asp?catid=
+Category.asp?c=
+Category.cfm?c=
+productlist.cfm?catalogid=
+productlist.asp?catalogid=
+viewitem.asp?catalogid=
+viewitem.cfm?catalogid=
+catalog.cfm?catalogId=
+catalog.asp?catalogId=
+department.cfm?dept=
+department.asp?dept=
+itemdetails.cfm?catalogId=
+itemdetails.asp?catalogId=
+product_detail.asp?catalogid=
+product_detail.cfm?catalogid=
+product_list.asp?catalogid=
+product_list.cfm?catalogid=
+ShowProduct.cfm?CatID=
+ShowProduct.asp?CatID=
+search_results.cfm?txtsearchParamCat=
+search_results.asp?txtsearchParamCat=
+itemdetails.cfm?catalogId=
+itemdetails.asp?catalogId=
+store-page.cfm?go=
+store-page.asp?go=
+Detail.cfm?CatalogID=
+Detail.asp?CatalogID=
+browse.cfm?category_id=
+view.cfm?category_id=
+products.cfm?category_id=
+index.cfm?Category_ID=
+detail.cfm?id=
+category.cfm?id=
+showitems.cfm?category_id=
+ViewProduct.asp?PID=
+ViewProduct.cfm?PID=
+shopdisplayproducts.asp?catalogid=
+shopdisplayproducts.cfn?catalogid=
+displayproducts.cfm?category_id=
+displayproducts.asp?category_id=
+DisplayProducts.asp?prodcat=
+DisplayProducts.cfm?prodcat=x
+productDetail.cfm?ProductID=
+products.php?subcat_id=
+showitem.cfm?id=21
+productdetail.cfm?pid=
+default.cfm?action=46
+products_accessories.asp?CatId=
+Store_ViewProducts.asp?Cat=
+category.cfm?categoryID=
+category.asp?category=
+tepeecart.cfm?shopid=
+view_product.asp?productID=
+ProductDetails.asp?prdId=12
+products.cfm?ID=
+detail.asp?product_id=
+product_detail.asp?product_id=
+products.php?subcat_id=
+product.php?product_id=
+view_product.cfm?productID=
+product_details.asp?prodid=
+shopdisplayproducts.cfm?id=
+displayproducts.cfm?id=
+inurl:int/es.php?keyword=Windows
+inurl:component/content/article/1253-sozdanie-internet-portala?showall=1
+inurl:viewtopic.php?id=63
+inurl:?mod=news&id=60379
+inurl:docs/index-26572.html?page=42
+inurl:archive/exhibitions/index.php?id=133
+inurl:kartgotrab.asp?id=-5865
+inurl:index.php?productID=321&discuss=yes
+inurl:index.php?topic=16746.0
+inurl:practices/immigrant.cfm?t2=2
+inurl:index.html?author=Jos---Wetzels
+inurl:cgi/viewcontent.cgi?article=1233&context=gse_pubs
+inurl:ru/english-words.cfm?sortby=7
+inurl:drugoe.html?start=51
+inurl:index.asp?action=213&NewLang=RU
+inurl:checkout_error.php?e=1
+inurl:sol3/cf_dev/AbsByAuth.cfm?per_id=2191019
+inurl:support/tech_refs.cfm?ISOCountryCode=RU
+inurl:wiki/File:Coat_of_Arms_of_the_Russian_Federation_bw.svg?uselang=ru
+inurl:ru-RU/Shop/Shop.aspx?GroupIdx=9
+inurl:c-851-test-solutions.php?p=2
+inurl:detskieshkafi.cfm?PageNum_qvikos=2
+inurl:product/ssf-100dp-24-24v-2/?lang=ru
+inurl:getfile.php?file=Oyle.Bir.Gecer.Zaman.Ki.s1
+inurl:about_us.php?p=2
+inurl:viewer.php?file=57648249766964962028.jpg
+inurl:index.php?productID=971&discuss=yes
+inurl:archive/index.php/t-1335691.html?pda=1
+inurl:FStorage/Download.aspx?id=47e43262-172c-4c1c-9381-bb3104d24cf2
+inurl:ru/english-lesson.cfm?lessonID=24
+inurl:index.php?file=library&page=ratingVedun
+inurl:estudy/help.php?file=coursestartdate.html
+inurl:print_bug_page.php?bug_id=1833
+inurl:tb/lmo.php?file=pes16_III_eul.l98&action=program
+inurl:node/493?page=6
+inurl:intl/ru/evernote/index.php?file=Win&
+inurl:index.php?file=vulkanstavka
+inurl:custom_routes.php?p=faq_seo&s=496
+inurl:download.php?file=710552923be7664276206f6420217af1
+inurl:org.php?file=read&org_id=232
+inurl:fotogalerie?func=detail&id=517
+inurl:literature/download.php?file=58914
+inurl:download.php?file=34707616&song=%D0%B2%D1%80%D0%B5%D0%BC%D1%8F
+inurl:index.php?file=muzhchina_massazhist_po_vyzovu
+inurl:webapps/include/GetDoc.aspx?ObjectId=&filepath=productsafety/pdfs/noreg/233-00333.pdf&pdf=&Referrer=
+inurl:pedagogam/lessons/file.php?file=14189
+inurl:dev_blog/?p=1880&lang=en-us
+inurl:img/polozenie2016/save_jpg.php?file=HotelReservatioin2016.doc
+inurl:mntr/apps/babylon/1.3.2/tlbr.htm?v=1
+inurl:content.php?pgID=293
+inurl:index-it.php?frameset=43
+inurl:index.php?topic=13118.0
+inurl:read.php?id=78475&p=160
+inurl:download.php?file=1540
+inurl:index.php?option=com_content&view=article&id=60&Itemid=294
+inurl:docs/index-133446.html?page=11
+inurl:index.php?id=182&doc=vysokonapornye_cfh
+inurl:archive/history/?date=2001-03-22
+inurl:docs/index-21971.html?page=13
+inurl:blog/mt-comments.cgi?entry_id=250
+inurl:articles/art56.html?_user_account_=e38d543b5c10d679c6729504f2a4274d
+inurl:articles/art60.html?_user_account_=a56dd05a44a625535062c6bee0c512d9
+inurl:index.cgi?index=towns&multitag=lviv
+inurl:objavlenia/list.html?user=1569
+inurl:gamebase/?letter=T&sortby=0&onpage=0&page=0&emul=1&login=yes&page=17
+inurl:news.php?id_new=49
+inurl:News/NoticeView.aspx?BoardIDX=7945
+inurl:view-user-profile.html?user=540
+inurl:bras.net/filepage.aspx?id_doc=725b0a4b-838c-4997-af05-b9d1886b4ab8&filename=725b0a4b-838c-4997-af05-b9d1886b4ab8.pdf
+inurl:rus/blog/tags/768/144482.html?user=pranky
+inurl:index.cgi?index=towns&id=lviv
+inurl:index.php/View-user-profile.html?user=1264
+inurl:wi?q=profumo per lavatrice&sc=s
+inurl:News-Center/News-Article.php?page=20151109
+inurl:portal/domainchecker.php?search=bulkregister
+inurl:viewtopic.php?id=148&p=2
+inurl:mod/resource/view.php?id=49
+inurl:new.aspx?uil=ru-RU
+inurl:obyavleniya.html?user=2488&view=list&start=120
+inurl:index.php?productID=146&discuss=yes
+inurl:speedclicks/in.php?pid=44599&spaceid=213505&site=EroAdvertising
+inurl:apps/pbcs.dll/gallery?site=bn_date=20140811_category=photogalleries_artno=811009993_ref=ph
+inurl:mw/index.php?title=GreenPolicy360-eOS&action=edit
+inurl:cgi/viewcontent.cgi?article=1459&context=aabfj
+inurl:fish.php?start=28&type=Deep-sea%20fish
+inurl:show_cat.php?catid=100&page=2
+inurl:store/item.php?ID=419
+inurl:cgi/viewcontent.cgi?article=1130&context=pomona_theses
+inurl:index.php?section=INT&ai=47&sub=86
+inurl:bg/phrasebook/bg_frasi.asp?tipo=0&lo=BG&ld=IT
+inurl:turist.php?turist=5
+inurl:index.php?option=com_expose&Itemid=192
+inurl:download-thank-you.aspx?dl=1
+inurl:product/products/rac.php?m=7724
+inurl:cgi/viewcontent.cgi?article=1310&context=lcp
+inurl:eng/carte.php?cat=9
+inurl:Game/play.php?ID=215
+inurl:index.php?option=com_content&view=article&id=373:pontecchio-polesine-musica-a-fumetti-a-scuola&catid=25:scuola-secondaria-pontecchio-polesine&Itemid=114
+inurl:index.php?option=com_k2&view=itemlist&task=user&id=10892
+inurl:results.php?county=Buncombe County&r_id=30820&r_type=Judgments&state=North Carolina&search=record&search=record
+inurl:?shunter=1467165686350
+inurl:site/index.php?id=6
+inurl:userad.php?userid=24646
+inurl:index.php?showtopic=119
+inurl:?p=1
+inurl:place-interes/one-place/5867/?q=497&plint=5867
+inurl:place-interes/one-place/5870/?q=497&plint=5870
+inurl:user/user.php?userid=362028
+inurl:cgi/viewcontent.cgi?article=1309&context=cjil
+inurl:journals.php?userid=57691&show=compact
+inurl:?CID=PPC-MSNDK&lang=dk
+inurl:index.php?route=product/search&search=gioco%20indomimando%20party
+inurl:?p=113
+inurl:users/detail.php?USER_ID=17&print=Y
+inurl:journals.php?userid=38590&page=6
+inurl:user.php?user_id=591331
+inurl:archives.asp?newsandcommentary=yes
+inurl:cgi/viewcontent.cgi?article=1199&context=yjlf
+inurl:blog_showinfo.php?userid=5186
+inurl:archive/lit.book.library.ebookaccess/thread/?pos=99
+inurl:profile.php?userid=13973
+inurl:Moscow/special.asp?sec=1725&id=734482
+inurl:viewtopic.php?id=418
+inurl:view_post.php?id=50
+inurl:event/?id=716
+inurl:lv.php?month=8&news=34
+inurl:item=43651
+inurl:en-us/community/liveupdates/live_updat
