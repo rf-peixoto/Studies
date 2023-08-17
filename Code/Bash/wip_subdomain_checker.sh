@@ -1,9 +1,10 @@
 #!/bin/bash
 
 # Get subdomain list; todo
+assetfinder $1 | sort -u >> subdomains.txt
 
 # Check each one of then:
-for sub in $(cat $1);
+for sub in $(cat subdomains.txt);
 do
-  echo $i - $(curl -s -o /dev/null -w %{http_code}" $i) >> sub-checked.txt;
+  echo $sub - $(curl -s -o /dev/null -w %{http_code}" $ub) >> sub-checked.txt;
 done
