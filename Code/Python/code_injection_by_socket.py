@@ -12,7 +12,7 @@ data = "".encode()
 # Start
 # -------------------------------------------- #
 if __name__ == "__main__":
-    skt = socket.socket(socket.AF_INET, socket.SOCK_STREAM) # Change to IPv6
+    skt = socket.socket(socket.AF_INET, socket.SOCK_STREAM) # Change to IPv6*
     skt.bind(SKT_ADDRESS)
     # Start:
     skt.listen()
