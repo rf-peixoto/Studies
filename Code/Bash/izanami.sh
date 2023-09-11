@@ -4,7 +4,7 @@
 # a.k.a Corvo
 # ------------------------------------------------------- #
 
-VERSION="v1.2.0"
+VERSION="v1.3.0"
 
 # Setup colors:
 CLEAR='\033[0m'
@@ -72,37 +72,48 @@ curl -s https://internetdb.shodan.io/$(host $1 | head -n 1 | cut -d " " -f 4) | 
 
 echo -e "[${BLUE}*${CLEAR}] Scanning ports."
 naabu -silent -list $1/subdomains.txt -sD -display-cdn -scan-all-ips | sort -u > $1/naabu.txt
-sudo nmap -sV -Pn --reason -f --data-length 16 --script=vuln,malware -D RND:16 $1 -oG $1/nmap.txt > /dev/null
+echo -e "    Found ${BLUE}$(wc -l $1/naabu.txt | cut -d ' ' -f 1)${CLEAR} ports."
+
+
+#sudo nmap -sV -Pn -f --data-length 16 --script=vuln,malware -D RND:16 $1 -oG $1/nmap.txt > /dev/null
 #sudo nmap --spoof-mac=6 -sV -Pn --reason -f --data-length 16 --script=vuln,malware -D RND:16 -iL $1/subdomains.txt -oG $1/nmap.txt > /dev/null
+
+# ------------------------------------------------------- #
+# Get links with katana::
+# ------------------------------------------------------- #
+echo -e "[${BLUE}*${CLEAR}] Collecting visible links."
+katana -d 3 -silent -u http://$1 > $1/katana.txt
+echo -e "    Found ${BLUE}$(wc -l $1/katana.txt | cut -d ' ' -f 1)${CLEAR} links."
+
 
 # ------------------------------------------------------- #
 # Analyze SSL/TLS:
 # ------------------------------------------------------- #
 echo -e "[${BLUE}*${CLEAR}] Scanning SSL/TLS."
-python -m sslyze --targets_in $1/subdomains.txt > $1/sslyze.json
+python -m sslyze --targets_in $1/subdomains.txt > $1/sslyze.json 2>/dev/null
 
 # ------------------------------------------------------- #
 # SQLMap scan:
 # ------------------------------------------------------- #
 echo -e "[${BLUE}*${CLEAR}] Looking for injection."
-sqlmap -u 'http://$1/' --random-agent --forms --crawl 10 --batch --skip-waf --dbs --level 5 --no-logging --output-dir=$1/sqlmap.txt
+# sqlmap -u 'http://$1/' --random-agent --forms --crawl 10 --batch --skip-waf --dbs --level 5 --no-logging --output-dir=$1/sqlmap.txt
 
 # ------------------------------------------------------- #
 # Webscan with ZAP:
 # ------------------------------------------------------- #
 echo -e "[${BLUE}*${CLEAR}] Starting scan on OWASP ZAP."
-# curl "http://localhost:8080/JSON/ascan/action/scan/?apikey=<KEY>&url=$1&recurse=true&inScopeOnly=&scanPolicyName=&method=&postData=&contextId="
-# curl "http://localhost:8080/JSON/core/view/alerts/?apikey=<KEY>&baseurl=$1&start=0&count=10"
+# curl "http://localhost:8080/JSON/ascan/action/scan/?apikey=APIKEY&url=$1&recurse=true&inScopeOnly=&scanPolicyName=&method=&postData=&contextId="
+# curl "http://localhost:8080/JSON/core/view/alerts/?apikey=APIKEY&baseurl=$1&start=0&count=10"
 
 # ------------------------------------------------------- #
 # Compressing results:
 # ------------------------------------------------------- #
 echo -e "[${BLUE}*${CLEAR}] Packing results."
 #7z a '$1_"`date +"%d%m%Y"`".7z' $1/* > /dev/null
-7z a '$1.7z' $1/* > /dev/null
+7z a $1.7z $1/* > /dev/null
 
 # Remove tmp files:
-rm *.txt > /dev/null && rm ~/.config/nuclei/*.cfg > /dev/null
+rm *.txt 2>/dev/null && rm ~/.config/nuclei/*.cfg 2>/dev/null
 echo ""
 
 # Notify on GNOME:
