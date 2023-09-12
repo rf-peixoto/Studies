@@ -82,7 +82,7 @@ echo -e "    Found ${BLUE}$(wc -l $1/naabu.txt | cut -d ' ' -f 1)${CLEAR} ports.
 # Get links with katana::
 # ------------------------------------------------------- #
 echo -e "[${BLUE}*${CLEAR}] Collecting visible links."
-katana -d 3 -silent -u http://$1 | sort -u > $1/katana.txt
+katana -d 3 -silent -u http://$1 > $1/katana.txt
 echo -e "    Found ${BLUE}$(wc -l $1/katana.txt | cut -d ' ' -f 1)${CLEAR} links."
 
 
