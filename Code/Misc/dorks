@@ -10,6 +10,12 @@ site:trello.com password
 ("keyword" | "keyword2") ext:tmp | ext:bkp | ext:bak | ext:old | ext:txt | ext:doc | ext:docx | ext:odt | ext:csv | ext:xls | ext:xlsx | ext:zip | ext:rar | ext:7z
 site:trello.com ".com" ftp
 site:.com inurl:"php?id="
+inurl:”id=” & intext:”Warning: getimagesize()
+inurl:”id=” & intext:”Warning: mysql_result()
+inurl:”id=” & intext:”Warning: preg_match()
+inurl:”id=” & intext:”Warning: ilesize()
+inurl:”id=” & intext:”Warning: filesize()
+inurl:”id=” & intext:”Warning: mysql_query()
 site:t.me "cc" ("live" | "approved")
 filetype:log intext:password intext:(@gmail.com | @yahoo.com | @hotmail.com)
 "Budget report" filetype:pdf
