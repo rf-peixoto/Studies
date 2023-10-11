@@ -38,8 +38,8 @@ try:
             # Create a dictionary with the required structure
             json_obj = {
                 "id": last_id,
-                "stuff": parts[0],
-                "another": parts[1]
+                "email": parts[0],
+                "password": parts[1]
             }
 
             # Increment the ID for the next object
