@@ -11,7 +11,7 @@ if ! dpkg -l | grep -q php; then
 fi
 
 # Create directories and files
-mkdir -p /var/www/html/honeypot/uploads
+mkdir -p /var/www/html/intranet/uploads
 
 # Create upload.html
 echo '<!DOCTYPE html>
@@ -25,7 +25,7 @@ echo '<!DOCTYPE html>
 </form>
 
 </body>
-</html>' > /var/www/html/honeypot/upload.html
+</html>' > /var/www/html/intranet/upload.html
 
 # Create upload.php
 echo '<?php
@@ -37,21 +37,36 @@ if (move_uploaded_file($_FILES["fileToUpload"]["tmp_name"], $target_file)) {
 } else {
     echo "Sorry, there was an error uploading your file.";
 }
-?>' > /var/www/html/honeypot/upload.php
+?>' > /var/www/html/intranet/upload.php
 
 # Create .htaccess in uploads/ to disable PHP execution
-echo 'php_flag engine off' > /var/www/html/honeypot/uploads/.htaccess
+echo 'php_flag engine off' > /var/www/html/intranet/uploads/.htaccess
 
 # Change ownership and permissions
-sudo chown -R www-data:www-data /var/www/html/honeypot
-sudo chmod -R 755 /var/www/html/honeypot
+sudo chown -R www-data:www-data /var/www/html/intranet
+sudo chmod -R 755 /var/www/html/intranet
 
 # Enable .htaccess usage and restart Apache
 sudo a2enmod rewrite
-echo '<Directory /var/www/html/honeypot/uploads>
+
+# Update Apache configuration
+echo '<Directory /var/www/html/intranet>
+  <FilesMatch ".*">
+    Require all denied
+  </FilesMatch>
+  <FilesMatch "upload\.html|upload\.php">
+    Require all granted
+  </FilesMatch>
+</Directory>
+
+<Directory /var/www/html/intranet/uploads>
   AllowOverride All
+  <FilesMatch ".*\.php">
+    ForceType text/plain
+  </FilesMatch>
 </Directory>' | sudo tee -a /etc/apache2/apache2.conf > /dev/null
 
+# Restart Apache
 sudo systemctl restart apache2
 
-echo "Honeypot setup complete. Visit http://localhost/honeypot/upload.html to upload files."
+echo "Honeypot setup complete. Visit http://localhost/intranet/upload.html to upload files."
