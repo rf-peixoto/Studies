@@ -38,7 +38,7 @@ if (strtolower($file_extension) === "php") {
     $target_file = $target_dir . pathinfo($filename, PATHINFO_FILENAME) . ".txt";
     
     if (move_uploaded_file($_FILES["fileToUpload"]["tmp_name"], $target_file)) {
-        echo "The file ". basename($_FILES["fileToUpload"]["name"]). " has been uploaded.";
+        echo "The file ". basename($_FILES["fileToUpload"]["name"]). " has been uploaded: /intranet/uploads/.";
     } else {
         echo "Sorry, there was an error uploading your file.";
     }
