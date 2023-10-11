@@ -1,0 +1,1 @@
+entity:domain <keyword> AND NOT parent_domain:"WEBSITE.com"
