@@ -1,1 +1,2 @@
 entity:domain <keyword> AND NOT parent_domain:"WEBSITE.com"
+entity:url <keyword> AND NOT parent_domain:"WEBSITE.com"
