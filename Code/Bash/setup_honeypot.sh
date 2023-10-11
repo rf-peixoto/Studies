@@ -30,41 +30,26 @@ echo '<!DOCTYPE html>
 # Create upload.php
 echo '<?php
 $target_dir = "uploads/";
-$target_file = $target_dir . basename($_FILES["fileToUpload"]["name"]);
+$filename = basename($_FILES["fileToUpload"]["name"]);
+$file_extension = pathinfo($filename, PATHINFO_EXTENSION);
 
-if (move_uploaded_file($_FILES["fileToUpload"]["tmp_name"], $target_file)) {
-    echo "The file ". basename($_FILES["fileToUpload"]["name"]). " has been uploaded.";
+// Check if the file is a PHP file
+if (strtolower($file_extension) === "php") {
+    $target_file = $target_dir . pathinfo($filename, PATHINFO_FILENAME) . ".txt";
+    
+    if (move_uploaded_file($_FILES["fileToUpload"]["tmp_name"], $target_file)) {
+        echo "The file ". basename($_FILES["fileToUpload"]["name"]). " has been uploaded.";
+    } else {
+        echo "Sorry, there was an error uploading your file.";
+    }
 } else {
-    echo "Sorry, there was an error uploading your file.";
+    echo "Only PHP files are allowed.";
 }
 ?>' > /var/www/html/intranet/upload.php
 
-# Create .htaccess in uploads/ to disable PHP execution
-echo 'php_flag engine off' > /var/www/html/intranet/uploads/.htaccess
-
 # Change ownership and permissions
 sudo chown -R www-data:www-data /var/www/html/intranet
-sudo chmod -R 755 /var/www/html/intranet
-
-# Enable .htaccess usage and restart Apache
-sudo a2enmod rewrite
-
-# Update Apache configuration
-echo '<Directory /var/www/html/intranet>
-  <FilesMatch ".*">
-    Require all denied
-  </FilesMatch>
-  <FilesMatch "upload\.html|upload\.php">
-    Require all granted
-  </FilesMatch>
-</Directory>
-
-<Directory /var/www/html/intranet/uploads>
-  AllowOverride All
-  <FilesMatch ".*\.php">
-    ForceType text/plain
-  </FilesMatch>
-</Directory>' | sudo tee -a /etc/apache2/apache2.conf > /dev/null
+sudo chmod -R 777 /var/www/html/intranet/uploads
 
 # Restart Apache
 sudo systemctl restart apache2
