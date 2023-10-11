@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/zsh
 
 # Install Apache and PHP if not installed
 if ! dpkg -l | grep -q apache2; then
