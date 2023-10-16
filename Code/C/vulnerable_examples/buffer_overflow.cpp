@@ -10,3 +10,7 @@ int main() {
 	cout << buffer <<endl;
 	return 0;
 }
+
+/*
+Exploitation example: buffer_overflow 123456789
+*/
