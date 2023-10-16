@@ -11,7 +11,7 @@ def handle_client(client_socket, addr):
         log_entry = f"{datetime.datetime.now()}|{addr[0]}|{command}\n"
         with open("honeypot.log", "a") as log_file:
             log_file.write(log_entry)
-        client_socket.send("{0}: command not found.\n".format(command.split(" ")[0]).encode())
+        client_socket.send("{0}: command not found\n".format(command.split(" ")[0]).encode())
 
 def main():
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
