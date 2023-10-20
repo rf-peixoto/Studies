@@ -5,13 +5,13 @@
 //otr = "0.3.4"
 //tokio = { version = "1", features = ["full"] }
 
-// Handler:
+use std::io::{Read, Write, stdin, stdout, Write};
+use std::thread;
 use otr::Otr;
-use tokio::net::TcpStream;
-use std::io::{Read, Write};
+use tokio::net::{TcpListener, TcpStream};
 
 async fn handle_client(mut stream: TcpStream) {
-    let mut otr = Otr::new("alice".into(), "bob".into());
+    let mut otr = Otr::new("alice".into(), "bob".into()); // Replace with actual usernames
     let mut buffer = [0; 512];
 
     loop {
@@ -19,24 +19,18 @@ async fn handle_client(mut stream: TcpStream) {
         if bytes_read == 0 {
             break;
         }
-
+        
         let decrypted = otr.decrypt(&buffer[0..bytes_read]).unwrap();
         println!("Received: {:?}", std::str::from_utf8(&decrypted).unwrap());
     }
 }
 
-// Node:
-use tokio::net::{TcpListener, TcpStream};
-use std::thread;
-use std::io::{Read, Write};
-use otr::Otr;
-
-#[tokio::main]
-async fn main() {
-    let listener = TcpListener::bind("127.0.0.1:12345").await.unwrap();
-
-    thread::spawn(move || {
-        tokio::runtime::Runtime::new().unwrap().block_on(async {
+fn main() {
+    // Server
+    thread::spawn(|| {
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        rt.block_on(async {
+            let listener = TcpListener::bind("127.0.0.1:12345").await.unwrap();
             loop {
                 let (stream, _) = listener.accept().await.unwrap();
                 tokio::spawn(handle_client(stream));
@@ -44,14 +38,25 @@ async fn main() {
         });
     });
 
+    // Client
     loop {
-        let receiver_address = "127.0.0.1:12346"; // Replace with the desired receiver address
+        let mut input = String::new();
+        print!("Enter the receiver's address (e.g., 127.0.0.1:12346): ");
+        stdout().flush().unwrap();
+        stdin().read_line(&mut input).unwrap();
+        let receiver_address = input.trim();
+
         let mut stream = TcpStream::connect(receiver_address).unwrap();
-        let mut otr = Otr::new("alice".into(), "bob".into()); // Replace names accordingly
+        let mut otr = Otr::new("alice".into(), "bob".into()); // Replace with actual usernames
 
-        let to_send = "Hello, Bob!".as_bytes(); // Replace with the message you want to send
+        print!("Enter your message: ");
+        stdout().flush().unwrap();
+        input.clear();
+        stdin().read_line(&mut input).unwrap();
+
+        let to_send = input.trim().as_bytes();
         let encrypted = otr.encrypt(to_send).unwrap();
-
+        
         stream.write_all(&encrypted).unwrap();
 
         let mut buffer = [0; 512];
