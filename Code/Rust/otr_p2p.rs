@@ -1,4 +1,6 @@
 // Example made by GPT.
+// The "otr" crate is a placeholder.
+
 
 // Cargo.toml:
 //[dependencies]
