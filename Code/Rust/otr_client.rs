@@ -1,4 +1,6 @@
 // Example made by GPT.
+// The "otr" crate may be a placeholder.
+
 // Cargo.toml:
 //[dependencies]
 //otr = "0.3.4"
