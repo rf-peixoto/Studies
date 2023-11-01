@@ -74,7 +74,6 @@ echo -e "[${BLUE}*${CLEAR}] Scanning ports."
 naabu -silent -list $1/subdomains.txt -sD -display-cdn -scan-all-ips | sort -u > $1/naabu.txt
 echo -e "    Found ${BLUE}$(wc -l $1/naabu.txt | cut -d ' ' -f 1)${CLEAR} ports."
 
-
 #sudo nmap -sV -Pn -f --data-length 16 --script=vuln,malware -D RND:16 $1 -oG $1/nmap.txt > /dev/null
 #sudo nmap --spoof-mac=6 -sV -Pn --reason -f --data-length 16 --script=vuln,malware -D RND:16 -iL $1/subdomains.txt -oG $1/nmap.txt > /dev/null
 
@@ -96,7 +95,7 @@ python -m sslyze --targets_in $1/subdomains.txt > $1/sslyze.json 2>/dev/null
 # SQLMap scan:
 # ------------------------------------------------------- #
 echo -e "[${BLUE}*${CLEAR}] Looking for injection."
-# sqlmap -u 'http://$1/' --random-agent --forms --crawl 10 --batch --skip-waf --dbs --level 5 --no-logging --output-dir=$1/sqlmap.txt
+sqlmap -u 'http://$1/' --random-agent --forms --crawl 10 --batch --skip-waf --dbs --level 5 --no-logging --output-dir=$1/sqlmap.txt
 
 # ------------------------------------------------------- #
 # Webscan with ZAP:
