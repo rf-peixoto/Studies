@@ -344,3 +344,6 @@ inurl:event/?id=716
 inurl:lv.php?month=8&news=34
 inurl:item=43651
 inurl:en-us/community/liveupdates/live_updat
+
+Classified docs:
+site:DOMAIN ext:pdf ("internal use" | "confidential" | "redacted" | "classified") 
