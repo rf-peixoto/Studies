@@ -347,3 +347,4 @@ inurl:en-us/community/liveupdates/live_updat
 
 Classified docs:
 site:DOMAIN ext:pdf ("internal use" | "confidential" | "redacted" | "classified" | "secret") 
+("uso interno" | "confidencial") site:com.br ext:pdf
