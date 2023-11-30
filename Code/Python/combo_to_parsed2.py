@@ -48,7 +48,7 @@ try:
             if len(rest) == 2:
                 json_obj = {
                     "id": last_id,
-                    "url": url,
+                    "user": url,
                     "email": rest[0],
                     "password": rest[1]
                 }
