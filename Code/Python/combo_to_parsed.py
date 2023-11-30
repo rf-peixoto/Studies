@@ -35,12 +35,23 @@ try:
             # Split the line based on the ':' delimiter
             parts = line.strip().split(':')
 
-            # Create a dictionary with the required structure
-            json_obj = {
-                "id": last_id,
-                "email": parts[0],
-                "password": parts[1]
-            }
+            # Check the number of parts and create the JSON object accordingly
+            if len(parts) == 3:
+                # If there are three parts, it includes URL
+                json_obj = {
+                    "id": last_id,
+                    "url": parts[0],
+                    "email": parts[1],
+                    "password": parts[2]
+                }
+            else:
+                # If there are only two parts, it excludes URL
+                json_obj = {
+                    "id": last_id,
+                    "url": "",
+                    "email": parts[0],
+                    "password": parts[1]
+                }
 
             # Increment the ID for the next object
             last_id += 1
@@ -61,3 +72,4 @@ with open(id_file_path, 'w') as id_file:
     id_file.write(str(last_id))
 
 print("Conversion completed. JSON objects are saved in 'output.json'.")
+
