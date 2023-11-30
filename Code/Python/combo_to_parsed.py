@@ -32,6 +32,8 @@ json_objects = []
 try:
     with open(file_path, 'r') as file:
         for line in file:
+            # Remove blank spaces:
+            #line = line.strip().replace(' ', ':')
             # Split the line based on the ':' delimiter
             parts = line.strip().split(':')
 
