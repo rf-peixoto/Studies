@@ -43,7 +43,7 @@ try:
                 json_obj = {
                     "id": last_id,
                     "url": parts[0],
-                    "email": parts[1],
+                    "user": parts[1],
                     "password": parts[2]
                 }
             else:
