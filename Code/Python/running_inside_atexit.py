@@ -1,5 +1,6 @@
 import atexit
 import json
+from pathlib import Path
 import platform
 import socket
 import requests
@@ -9,7 +10,7 @@ def collect_system_info():
         "OS": platform.system(),
         "Arch": platform.architecture(),
         "Username": platform.node(),
-        "Home": platform.home(),
+        "Home": str(Path.home()),
         "Local IP": socket.gethostbyname(socket.gethostname()),
         "External IP": requests.get("https://api64.ipify.org?format=json").json()["ip"]
     }
@@ -17,7 +18,7 @@ def collect_system_info():
 
 def send_info_to_server(json_data):
     # Replace the following URL with the actual endpoint you want to send the data to
-    server_url = "https://127.0.0.1:8080"
+    server_url = "http://127.0.0.1:8080"
     response = requests.post(server_url, data=json_data, headers={'Content-Type': 'application/json'})
     if response.status_code == 200:
         print("System info sent successfully.")
