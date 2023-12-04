@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"sync"
 	"time"
 )
 
@@ -33,14 +34,37 @@ func main() {
 			lastLoggedMonth = time.Now().Month()
 		}
 
-		time.Sleep(1 * time.Second)
+		time.Sleep(100 * time.Millisecond) // Reduced sleep duration for more frequent checks
 	}
 }
 
 func isConnected() bool {
-	_, err := net.DialTimeout("tcp", "8.8.8.8:53", 1*time.Second)
-	return err == nil
+	var wg sync.WaitGroup
+	servers := []string{"8.8.8.8:53", "1.1.1.1:53", "9.9.9.9:53"}
+	status := make(chan bool, len(servers))
+
+	for _, server := range servers {
+		wg.Add(1)
+		go func(server string) {
+			defer wg.Done()
+			_, err := net.DialTimeout("tcp", server, 1*time.Second)
+			status <- err == nil
+		}(server)
+	}
+
+	go func() {
+		wg.Wait()
+		close(status)
+	}()
+
+	for isConnected := range status {
+		if isConnected {
+			return true
+		}
+	}
+	return false
 }
+
 
 func logConnectionEvent(lostTime, returnTime time.Time, downtime time.Duration) {
 	message := fmt.Sprintf("Connection lost at: %s\nConnection returned at: %s\nTotal downtime: %s\n",
