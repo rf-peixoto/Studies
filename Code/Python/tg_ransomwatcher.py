@@ -35,7 +35,7 @@ class DataFetcher:
 
 # Define monitor:
 monitor = DataFetcher("https://raw.githubusercontent.com/joshhighet/ransomwatch/main/posts.json")
-bot = telegram.Bot("6689757541:AAE4kNHi9meOdHnPQ6S4gHxHpeQ0RZhwE6w")
+bot = telegram.Bot("TG TOKEN")
 
 # Run:
 if __name__ == '__main__':
@@ -44,7 +44,7 @@ if __name__ == '__main__':
             # Fetch new itens:
             for i in monitor.get_new_items():
                 msg = '❗️ Alerta de Ransomware ❗️\nPost: "{0}"\nGrupo: {1}\nIdentificado em: {2}'.format(i['post_title'], i['group_name'], i['discovered'].split(" ")[0])
-                bot.sendMessage("-1001777122802", msg)
+                bot.sendMessage("CHANNEL or PROFILE ID", msg)
                 sleep(30)
             print("{0} cases indexed and reported.".format(len(monitor.indexed_items)))
             sleep(3600)
