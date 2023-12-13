@@ -14,26 +14,21 @@ def fetch_and_compare_vulnerabilities(url, local_file='vulnerabilities.json'):
     response = requests.get(url)
     if response.status_code != 200:
         raise Exception("Failed to fetch data from the URL")
-
     latest_data = response.json()
-
     # Load the local JSON file if it exists
     if os.path.exists(local_file):
         with open(local_file, 'r') as file:
             local_data = json.load(file)
     else:
         local_data = {}
-
     # Compare the new data with the local data
     new_items = []
     for item in latest_data.get('vulnerabilities', []):
         if item not in local_data.get('vulnerabilities', []):
             new_items.append(item)
-
     # Update the local JSON file
     with open(local_file, 'w') as file:
         json.dump(latest_data, file, indent=4)
-
     return new_items
 
 class DataFetcher:
