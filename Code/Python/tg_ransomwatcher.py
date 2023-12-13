@@ -8,6 +8,34 @@ import os
 # Configure logging
 logging.basicConfig(filename='app.log', level=logging.ERROR, format='%(asctime)s - %(levelname)s - %(message)s')
 
+# Cisa Feed:
+def fetch_and_compare_vulnerabilities(url, local_file='vulnerabilities.json'):
+    # Fetch the latest data from the URL
+    response = requests.get(url)
+    if response.status_code != 200:
+        raise Exception("Failed to fetch data from the URL")
+
+    latest_data = response.json()
+
+    # Load the local JSON file if it exists
+    if os.path.exists(local_file):
+        with open(local_file, 'r') as file:
+            local_data = json.load(file)
+    else:
+        local_data = {}
+
+    # Compare the new data with the local data
+    new_items = []
+    for item in latest_data.get('vulnerabilities', []):
+        if item not in local_data.get('vulnerabilities', []):
+            new_items.append(item)
+
+    # Update the local JSON file
+    with open(local_file, 'w') as file:
+        json.dump(latest_data, file, indent=4)
+
+    return new_items
+
 class DataFetcher:
     def __init__(self, url, local_file, chat_id, bot_token):
         self.url = url
@@ -27,7 +55,7 @@ class DataFetcher:
                 json.dump(initial_data, file)
         except requests.RequestException as e:
             logging.error(f"Error downloading initial data: {e}")
-            self.send_error_alert(f"Error downloading initial data: {e}")
+            self.send_error_alert(f"Erro ao baixar a base inicial:\n{e}")
 
     def fetch_data(self):
         try:
@@ -36,7 +64,7 @@ class DataFetcher:
             return response.json()
         except requests.RequestException as e:
             logging.error(f"Error fetching data: {e}")
-            self.send_error_alert(f"Error fetching data: {e}")
+            self.send_error_alert(f"Falha na requisição do arquivo JSON:\n{e}")
             return None
 
     def read_local_data(self):
@@ -70,14 +98,16 @@ class DataFetcher:
         return new_items
 
     def send_error_alert(self, message):
-        self.bot.sendMessage(self.chat_id, f"❌ Error Alert: {message}")
+        self.bot.sendMessage(self.chat_id, f"❌ Erro na execução:\n{message}")
 
+# CISA url:
+cisa_url = 'https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json'
 # Define monitor:
 monitor = DataFetcher(
     url="https://raw.githubusercontent.com/joshhighet/ransomwatch/main/posts.json",
     local_file="local_data.json",
-    chat_id="YOUR_CHAT_ID",
-    bot_token="YOUR_TOKEN"
+    chat_id="CHANNELID",
+    bot_token="TGTOKEN"
 )
 
 # Run:
@@ -88,7 +118,7 @@ if __name__ == '__main__':
             if first_run:
                 monitor.download_initial_data()
                 first_run = False
-                sleep(1800)  # Wait for 30 minutes before the next run
+                #sleep(1800)  # Wait for 30 minutes before the next run
                 continue
 
             # Fetch new items:
@@ -97,8 +127,17 @@ if __name__ == '__main__':
                 monitor.bot.sendMessage(monitor.chat_id, msg)
                 sleep(30)
             logging.info("{0} cases indexed and reported.".format(len(monitor.indexed_items)))
+            
+            # Fetch new CISA Alerts:
+            for i in fetch_and_compare_vulnerabilities(cisa_url):
+                msg = '🚨 Exploitation in the Wild! 🚨\nID: {0}\n{1}\nSuggestion: {2}'.format(i['cveID'], i['shortDescription'], i['requiredAction'])
+                monitor.bot.sendMessage(monitor.chat_id, msg)
+                sleep(30)
+            logging.info("CISA alerts checked.")
             sleep(1800)
+            continue
         except Exception as error:
             logging.error(f"An error occurred: {error}")
-            monitor.send_error_alert(f"An error occurred: {error}")
+            monitor.send_error_alert(f"Um erro não identificado ocorreu:\n{error}")
             sleep(15)
+            continue
