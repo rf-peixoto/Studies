@@ -55,6 +55,7 @@ site:pastebin.com | site:paste2.org | site:pastehtml.com | site:slexy.org | site
 
 # Palo Alto Cortex:
 site:xdr.us.paloaltonetworks.com /action-center/all
+site:xdr.*.paloaltonetworks.com
 
 # GITHUB:
 path:.env AWS_KEY /(AKIA[A-Z0-9]{12,})/
