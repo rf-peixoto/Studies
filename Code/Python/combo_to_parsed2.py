@@ -61,7 +61,8 @@ try:
             json_objects.append(json_obj)
 except FileNotFoundError:
     print(f"File not found: {file_path}")
-    sys.exit(1)
+    pass
+    #sys.exit(1)
 
 # Open a new file for writing the JSON objects
 with open(output_file_path, 'w') as output_file:
