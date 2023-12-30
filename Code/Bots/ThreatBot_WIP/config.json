@@ -1,0 +1,12 @@
+{
+    "cve_url": "https://services.nvd.nist.gov/rest/json/cves/2.0/",
+    "cisa_url": "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json",
+    "local_cve_file": "cve_today.json",
+    "local_cisa_file": "vulnerabilities.json",
+    "local_ransomware_file": "local_data.json",
+    "telegram_chat_id": "YOUR_CHAT_ID",
+    "telegram_bot_token": "YOUR_BOT_TOKEN",
+    "check_intervals": ["8h00", "12h00", "16h00", "19h00", "23h00"],
+    "log_file": "app.log",
+    "sleep_interval": 1800
+}
