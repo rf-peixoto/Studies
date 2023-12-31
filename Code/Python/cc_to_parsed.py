@@ -1,6 +1,7 @@
 import json
 import sys
 import logging
+from datetime import datetime
 
 # Valid format: 0000000000000000|DD|YYYY|000
 
@@ -63,7 +64,7 @@ if __name__ == "__main__":
         sys.exit(1)
 
     file_path = sys.argv[1]
-    output_file_path = "output.json"
+    output_file_path = "parsed_at_{0}.json".format(datetime.timestamp(datetime.now()))
     last_id_file = "last_id.txt"
     
     try:
