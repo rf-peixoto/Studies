@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# I was about to ask WTF this code does, then I saw the comments.
+# Thanks person that I stole this from, for your kind comments.
+
 # NOTE:
 # This script was shameless stolen from https://github.com/mullvad/mullvadvpn-app/blob/main/scripts/find-stale-remote-branches.sh
 
