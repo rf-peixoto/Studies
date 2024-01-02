@@ -347,6 +347,8 @@ inurl:lv.php?month=8&news=34
 inurl:item=43651
 inurl:en-us/community/liveupdates/live_updat
 
+site:app.powerbi.com ("Financeiro" OR "DRE")
+
 Classified docs:
 site:DOMAIN ext:pdf ("internal use" | "confidential" | "redacted" | "classified" | "secret") 
 ("uso interno" | "confidencial" | "restrita") site:com.br ext:pdf
