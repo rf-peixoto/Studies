@@ -354,3 +354,6 @@ site:DOMAIN ext:pdf ("internal use" | "confidential" | "redacted" | "classified"
 ("uso interno" | "confidencial" | "restrita") site:com.br ext:pdf
 ext:pdf "Carta Acordo"
 ("A" | "B" | "C" | "D") ("uso interno" | "confidencial" | "restrito") ext:pdf -site:.gov.br -site:.leg.br -site:.jus.br
+
+site:pixeldrain.com ".com.br"
+intitle:"Inscreva-se no Jira | JIRA"
