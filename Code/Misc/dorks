@@ -63,6 +63,9 @@ path:.env AWS_KEY /(AKIA[A-Z0-9]{12,})/
 /ftp:\/\/.*:.*@.*target\.com/ 
 
 
+“.git” intitle:”Index of”
+filetype:git -github.com inurl:”/.git”
+
 inurl:".php?cat="+intext:"Paypal"+site:UK
 inurl:".php?cat="+intext:"/Buy Now/"+site:.net
 inurl:".php?cid="+intext:"online+betting"
