@@ -18,7 +18,9 @@ for filename in os.listdir(directory_path):
         file_path = os.path.join(directory_path, filename)
 
         # Open and read the HTML file
-        with open(file_path, 'r', encoding='utf-8') as file:
+        #with open(file_path, 'r', encoding='utf-8') as file:
+        #with open(file_path, 'r', encoding='ISO-8859-6') as file:
+        with open(file_path, 'r', encoding='windows-1256') as file:
             html_content = file.read()
 
         # Use regex to find all matches in the HTML content
