@@ -21,7 +21,7 @@ for en in encodings:
                 file_path = os.path.join(directory_path, filename)
 
                 # Open and read the HTML file
-                with open(file_path, 'r', encoding='windows-1256') as file:
+                with open(file_path, 'r', encoding=en) as file:
                     html_content = file.read()
 
                 # Use regex to find all matches in the HTML content
