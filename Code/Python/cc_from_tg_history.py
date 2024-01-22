@@ -32,7 +32,7 @@ for en in encodings:
 
                 # Add the matches to the extracted_data list
                 extracted_data.extend(matches)
-        break
+        #break # This one may cause a loop even when one of the encodings was enough.
     except Exception as error:# UnicodeDecodeError:
         print(error)
         continue
