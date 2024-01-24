@@ -354,7 +354,7 @@ site:app.powerbi.com ("Financeiro" OR "DRE") # "Senha" "password"
 
 Classified docs:
 site:DOMAIN ext:pdf ("internal use" | "confidential" | "redacted" | "classified" | "secret") 
-("uso interno" | "confidencial" | "restrita") site:com.br ext:pdf
+("uso interno" | "confidencial" | "restrita" | "TLP:RED") site:com.br ext:pdf
 ext:pdf "Carta Acordo"
 ("A" | "B" | "C" | "D") ("uso interno" | "confidencial" | "restrito") ext:pdf -site:.gov.br -site:.leg.br -site:.jus.br
 
