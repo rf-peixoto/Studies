@@ -4,7 +4,7 @@
 # a.k.a Corvo
 # ------------------------------------------------------- #
 
-VERSION="v1.3.0"
+VERSION="v1.4.0"
 
 # Setup colors:
 CLEAR='\033[0m'
@@ -55,14 +55,16 @@ mkdir $1
 # ------------------------------------------------------- #
 echo -e "[${BLUE}*${CLEAR}] Looking for subdomains."
 echo $1 > $1/subdomains.txt
-assetfinder $1 | sort -u >> $1/subdomains.txt
+assetfinder $1 | sort -u >> $1/assetfinder.txt
+subfinder -silent -all -dL $1/assetfinder.txt >> $1/subfinder.txt
+cat $1/assetfinder.txt $1/subfinder.txt | sort -u >> $1/subdomains.txt
 echo -e "    Found ${BLUE}$(wc -l $1/subdomains.txt | cut -d ' ' -f 1)${CLEAR} targets."
 
 # ------------------------------------------------------- #
 # Scan with nuclei:
 # ------------------------------------------------------- #
 echo -e "[${BLUE}*${CLEAR}] Scanning web assets."
-nuclei -env-vars -silent -l $1/subdomains.txt > $1/nuclei.txt
+nuclei -env-vars -silent -l $1/subdomains.txt -o $1/nuclei.txt
 
 # ------------------------------------------------------- #
 # Port scan with naabu, nmap and internetdb:
@@ -112,6 +114,7 @@ echo -e "[${BLUE}*${CLEAR}] Packing results."
 7z a $1.7z $1/* > /dev/null
 
 # Remove tmp files:
+rm $1/assetfinder.txt $1/subfinder.txt
 rm *.txt 2>/dev/null && rm ~/.config/nuclei/*.cfg 2>/dev/null
 echo ""
 
