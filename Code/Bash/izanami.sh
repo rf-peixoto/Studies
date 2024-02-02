@@ -4,7 +4,7 @@
 # a.k.a Corvo
 # ------------------------------------------------------- #
 
-VERSION="v1.4.0"
+VERSION="v1.4.1"
 
 # Setup colors:
 CLEAR='\033[0m'
@@ -64,7 +64,8 @@ echo -e "    Found ${BLUE}$(wc -l $1/subdomains.txt | cut -d ' ' -f 1)${CLEAR} t
 # Scan with nuclei:
 # ------------------------------------------------------- #
 echo -e "[${BLUE}*${CLEAR}] Scanning web assets."
-nuclei -env-vars -silent -l $1/subdomains.txt -o $1/nuclei.txt
+#nuclei -env-vars -silent -l $1/subdomains.txt -o $1/nuclei.txt
+nuclei -env-vars -silent -l $1/subdomains.txt -je $1/nuclei.json
 
 # ------------------------------------------------------- #
 # Port scan with naabu, nmap and internetdb:
