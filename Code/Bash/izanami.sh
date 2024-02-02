@@ -65,7 +65,7 @@ echo -e "    Found ${BLUE}$(wc -l $1/subdomains.txt | cut -d ' ' -f 1)${CLEAR} t
 # ------------------------------------------------------- #
 echo -e "[${BLUE}*${CLEAR}] Scanning web assets."
 #nuclei -env-vars -silent -l $1/subdomains.txt -o $1/nuclei.txt
-nuclei -env-vars -silent -l $1/subdomains.txt -je $1/nuclei.json
+nuclei -env-vars -header "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:122.0) Gecko/20100101 Firefox/122.0" -silent -l $1/subdomains.txt -jsonl -o $1/nuclei.json
 
 # ------------------------------------------------------- #
 # Port scan with naabu, nmap and internetdb:
