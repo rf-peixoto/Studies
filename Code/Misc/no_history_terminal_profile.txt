@@ -1,0 +1,9 @@
+# BASH /etc/bashrc
+unset HISTFILE
+HISTSIZE=0
+HISTFILESIZE=0
+
+# ZSH /etc/zshrc or /etc/zsh/zshenv
+unset HISTFILE
+HISTSIZE=0
+SAVEHIST=0
