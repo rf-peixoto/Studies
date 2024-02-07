@@ -1,2 +1,89 @@
 # Remove HISTFILE(s) every 30 minutes.
 */30 * * * * > ~/.bash_history
+
+# Clear Temporary Files every 2 hours
+0 */2 * * * find /tmp -type f -atime +1 -delete
+
+# Clear the SSH Known Hosts File daily
+0 5 * * * > /home/username/.ssh/known_hosts
+
+# Delete Bash History for All Users hourly
+@hourly find /home -maxdepth 2 -name .bash_history -exec truncate -s 0 {} \;
+
+# Clear System Logs daily
+0 3 * * * find /var/log -type f -name "*.log" -exec truncate -s 0 {} \;
+
+# Clear Clipboard History daily (Requires xclip or xsel, adjust as needed)
+@daily echo -n | xclip -selection clipboard
+
+# Clear Thumbnails Cache weekly
+@weekly rm -rf /home/username/.cache/thumbnails/*
+
+# Wipe Free Disk Space monthly (Be very cautious with this)
+@monthly dd if=/dev/zero of=/tmp/wipefile bs=1M; rm -f /tmp/wipefile
+
+# Delete User-specific Application Logs daily
+@daily find /home/username/.config/appname/logs -type f -name "*.log" -delete
+
+######################## OTHERS ############################
+
+# Update system packages daily (for systems using apt, adjust for your package manager)
+0 2 * * * apt update && apt -y upgrade
+
+# Check disk usage and send a report to root (or specified user) daily
+@daily df -h | mail -s "Daily Disk Usage Report" root
+
+# Backup essential directories weekly (adjust paths as needed)
+30 2 * * 1 tar czf /backup/home_$(date +\%Y-\%m-\%d).tar.gz /home/username
+
+# Rotate logs to prevent them from consuming too much disk space (requires logrotate)
+@daily /usr/sbin/logrotate /etc/logrotate.conf
+
+# Scan for malware daily (requires ClamAV or similar tool)
+@daily clamscan -r /home | mail -s "Daily Home Directory Malware Scan" root
+
+# Reboot the system monthly to ensure a clean state (use with caution)
+0 4 1 * * /sbin/reboot
+
+# Clean package manager cache monthly (for systems using apt, adjust for your package manager)
+@monthly apt clean
+
+# Check for broken links and missing files weekly
+@weekly find / -type l ! -exec test -e {} \; -print | mail -s "Weekly Broken Links Report" root
+
+# Renew SSL certificates monthly (if using Let's Encrypt with Certbot)
+@monthly certbot renew --quiet
+
+# Check system integrity daily (requires AIDE or similar tool)
+@daily aide --check | mail -s "Daily System Integrity Check" root
+
+# Daily check for unauthorized file system changes (requires AIDE or similar)
+0 3 * * * /usr/bin/aide --check | mail -s "Daily AIDE Check" root
+
+# Weekly filesystem check for errors (adjust for your filesystem)
+@weekly /sbin/fsck -A -C0 | mail -s "Weekly Filesystem Check" root
+
+# Daily check for rootkits (requires Rootkit Hunter or similar)
+0 4 * * * /usr/bin/rkhunter --checkall --report-warnings-only | mail -s "Daily Rootkit Hunter Scan" root
+
+# Weekly check for orphaned packages (Debian/Ubuntu with deborphan)
+@weekly /usr/bin/deborphan | xargs apt-get -y remove --purge | mail -s "Weekly Orphaned Packages Cleanup" root
+
+# Daily update of intrusion detection system signatures (e.g., Snort, Suricata)
+0 2 * * * /usr/bin/suricata-update && systemctl restart suricata
+
+# Daily backup of critical configuration files
+30 2 * * * tar czf /backup/etc_$(date +\%Y-\%m-\%d).tar.gz /etc | mail -s "Daily Backup of Config Files" root
+
+# Monthly integrity check of installed packages (Debian/Ubuntu with debsums)
+@monthly /usr/bin/debsums -s | mail -s "Monthly Package Integrity Check" root
+
+# Weekly cleanup of old logs to prevent disk space issues
+@weekly find /var/log -type f -name "*.gz" -delete && logrotate /etc/logrotate.conf
+
+# Daily monitoring of disk usage and alert if usage exceeds 90%
+@daily df -h | awk '$5 >= 90 {print}' | mail -s "Disk Usage Warning" root
+
+# Weekly check and clean-up of temporary directories
+@weekly find /tmp -type f -atime +10 -delete && find /var/tmp -type f -atime +10 -delete
+
