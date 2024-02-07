@@ -1,0 +1,2 @@
+# Remove HISTFILE(s) every 30 minutes.
+*/30 * * * * find /home -type f \( -name '.bash_history' -o -name '.zsh_history' -o -name '.fish_history' \) -exec rm -f {} \;
