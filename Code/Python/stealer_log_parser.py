@@ -7,7 +7,8 @@ def find_and_parse_passwords(root_dir, output_file):
     entry_patterns = [
         re.compile(r'^URL: (https?://[^\s]+)\s+Username: ([^\s]+)\s+Password: ([^\s]+)\s+Application: (.+)$', re.MULTILINE),
         re.compile(r'^URL: (https?://[^\s]+)\s+USER: ([^\s]+)\s+PASS: ([^\s]+)$', re.MULTILINE),
-        re.compile(r'^URL: (https?://[^\s]+)\s+Login: ([^\s]+)\s+Password: ([^\s]+)$', re.MULTILINE)
+        re.compile(r'^URL: (https?://[^\s]+)\s+Login: ([^\s]+)\s+Password: ([^\s]+)$', re.MULTILINE),
+        re.compile(r'^Host: (https?://[^\s]+)\s+Username: ([^\s]+)\s+Password: ([^\s]+)$', re.MULTILINE)
     ]
     
     # Generate output file path with timestamp
