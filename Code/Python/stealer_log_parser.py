@@ -5,7 +5,7 @@ from datetime import datetime
 def find_and_parse_passwords(root_dir, output_file):
     # Define both patterns
     entry_patterns = [
-        re.compile(r'^URL: (https?://[^\s]+)\s+Username: ([^\s]+)\s+Password: ([^\s]+)\s+Application: (.+)$', re.MULTILINE),
+        re.compile(r'^URL: (https?://[^\s]+)\s+Username: ([^\s]+)\s+Password: ([^\s]+)$', re.MULTILINE),
         re.compile(r'^URL: (https?://[^\s]+)\s+USER: ([^\s]+)\s+PASS: ([^\s]+)$', re.MULTILINE),
         re.compile(r'^URL: (https?://[^\s]+)\s+Login: ([^\s]+)\s+Password: ([^\s]+)$', re.MULTILINE),
         re.compile(r'^Host: (https?://[^\s]+)\s+Username: ([^\s]+)\s+Password: ([^\s]+)$', re.MULTILINE)
