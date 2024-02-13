@@ -7,6 +7,7 @@ def find_and_parse_passwords(root_dir, output_file):
     entry_patterns = [
         re.compile(r'^URL: (https?://[^\s]+)\s+Username: ([^\s]+)\s+Password: ([^\s]+)$', re.MULTILINE),
         re.compile(r'^URL: (https?://[^\s]+)\s+USER: ([^\s]+)\s+PASS: ([^\s]+)$', re.MULTILINE),
+        re.compile(r'^url: (https?://[^\s]+)\s+login: ([^\s]+)\s+password: ([^\s]+)$', re.MULTILINE),
         re.compile(r'^URL: (https?://[^\s]+)\s+Login: ([^\s]+)\s+Password: ([^\s]+)$', re.MULTILINE),
         re.compile(r'^Host: (https?://[^\s]+)\s+Username: ([^\s]+)\s+Password: ([^\s]+)$', re.MULTILINE)
     ]
