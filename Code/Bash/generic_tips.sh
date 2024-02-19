@@ -1,6 +1,9 @@
 # Consultar termo na wikipedia:
 dig +short txt <keyword>.wp.dg.cx
 
+# Download pdfs and zips from website:
+wget --reject html,htm,js,css --accept pdf,zip -rl1 <url>
+
 # Broadcast shell nas seguintes portas:
 script -qf | tee >(nc -kl 5000) >(nc -kl 5001) >(nc -kl 5002)
 
