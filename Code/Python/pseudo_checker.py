@@ -45,7 +45,7 @@ def generate_and_validate_cards(bin_prefix, num_cards):
         if is_luhn_valid(int(card_number)):
             expiration_month, expiration_year = generate_expiration_date()
             cvv = generate_cvv()
-            card_detail = f"{card_number}|{expiration_month}|{expiration_year}|{cvv}"
+            card_detail = f"{card_number}|{expiration_month}|{expiration_year}|{cvv} - [VALID]"
             card_details.append(card_detail)
     return card_details
 
@@ -64,3 +64,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
