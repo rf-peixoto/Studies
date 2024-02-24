@@ -41,9 +41,9 @@ def process_archives(folder_path, password_file, failed_folder):
                 shutil.move(archive_path, os.path.join(failed_folder, file))
 
 # Example usage
-folder_path = 'path/to/your/folder'
-password_file = 'path/to/your/passwords.txt'
-failed_folder = 'path/to/your/failed_folder'
+folder_path = r'path/to/your/folder'
+password_file = r'path/to/your/passwords.txt'
+failed_folder = r'path/to/your/failed_folder'
 process_archives(folder_path, password_file, failed_folder)
 
 """ Sample passwords.txt
