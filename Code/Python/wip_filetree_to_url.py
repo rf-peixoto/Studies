@@ -1,45 +1,62 @@
-def generate_urls_from_text_tree(text_tree, root_url):
+import os
+
+def parse_tree(file_path):
     """
-    Generates URLs from a textual representation of a file tree.
-
-    :param text_tree: A string containing the textual representation of the file tree.
-    :param root_url: The root URL to prepend to each file path.
-    :return: A list of complete URLs for each file found.
+    Parses the tree-like structure file to extract file paths.
+    
+    :param file_path: Path to the file containing the tree structure.
+    :return: A list of file paths.
     """
-    urls = []
-    lines = text_tree.strip().split('\n')
-    path_stack = []
+    file_paths = []
+    current_path = []
+    
+    with open(file_path, 'r', encoding='utf-8') as f:
+        for line in f:
+            # Determine the depth of the current line
+            depth = line.count('│   ') + line.count('├── ') + line.count('└── ')
+            
+            # Trim the tree structure characters to get the name
+            name = line.strip('│   ├── └\n')
+            
+            # Update the current path based on the depth
+            current_path = current_path[:depth] + [name]
+            
+            # Check if the line represents a file (not containing further structure)
+            if '├── ' in line or '└── ' in line:
+                file_paths.append('/'.join(current_path))
+    
+    return file_paths
 
-    for line in lines:
-        # Determine the depth of the current item (indicated by the number of indents, assuming 4 spaces per indent level)
-        depth = (len(line) - len(line.lstrip())) // 4
-
-        # Truncate the stack to the current item's depth
-        path_stack = path_stack[:depth]
-
-        # Extract the current item's name (strip leading spaces and any trailing slashes for directories)
-        current_item = line.strip().rstrip('/')
-
-        if not current_item:  # Skip empty lines or lines that don't represent files/directories
-            continue
-
-        # Add the current item to the path stack
-        path_stack.append(current_item)
-
-        # Join the items in the stack to form the path, and generate the URL
-        if '.' in current_item:  # Assuming that a dot in the name indicates a file
-            file_path = '/'.join(path_stack)
-            urls.append(f"{root_url}/{file_path}")
-
+def create_urls(file_paths, base_url):
+    """
+    Creates URLs for each file path based on the provided base URL.
+    
+    :param file_paths: A list of file paths.
+    :param base_url: The base URL to prepend to each file path.
+    :return: A list of complete URLs.
+    """
+    urls = [os.path.join(base_url, file_path) for file_path in file_paths]
     return urls
 
-# Example usage:
-text_tree = """
-FILETREE
-"""
-root_url = 'https://URL.com/download'
-urls = generate_urls_from_text_tree(text_tree, root_url)
+def save_urls(urls, output_file):
+    """
+    Saves the list of URLs to a file.
+    
+    :param urls: A list of URLs to save.
+    :param output_file: Path to the output file.
+    """
+    with open(output_file, 'w', encoding='utf-8') as f:
+        for url in urls:
+            f.write(url + '\n')
 
-# Print the URLs
-for url in urls:
-    print(url)
+# Example usage
+if __name__ == "__main__":
+    file_path = 'tree.txt'  # Change this to your file path
+    base_url = 'BASEURL'  # User-defined base URL
+    output_file = 'urls.txt'  # Output file path
+    
+    file_paths = parse_tree(file_path)
+    urls = create_urls(file_paths, base_url)
+    save_urls(urls, output_file)
+    
+    print(f'URLs have been saved to {output_file}')
