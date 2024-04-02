@@ -5,7 +5,9 @@ import pdfplumber
 import openpyxl
 import xlrd
 from pptx import Presentation
-from odf import text, teletype, spreadsheet, presentation
+from odf.opendocument import load as odf_load
+from odf.text import P
+from odf.table import Table, TableRow, TableCell
 
 # Load keywords from a file
 def load_keywords(filepath):
@@ -14,7 +16,7 @@ def load_keywords(filepath):
 
 # Reading functions for various file types
 def read_txt_file(filepath):
-    with open(filepath, 'r') as file:
+    with open(filepath, 'r', encoding='utf-8', errors='ignore') as file:
         return file.read()
 
 def read_docx_file(filepath):
@@ -48,37 +50,32 @@ def read_pptx_file(filepath):
     return text
 
 def read_odt_file(filepath):
-    odtFile = text.load(filepath)
-    allText = teletype.extractText(odtFile.documentElement)
-    return allText
+    document = odf_load(filepath)
+    texts = document.getElementsByType(P)
+    return ' '.join(teletype.extractText(text) for text in texts)
 
 def read_ods_file(filepath):
-    odsFile = spreadsheet.load(filepath)
+    document = odf_load(filepath)
     text = ''
-    for table in odsFile.spreadsheet.getElementsByType(spreadsheet.Table):
-        for row in table.getElementsByType(spreadsheet.TableRow):
-            for cell in row.getElementsByType(spreadsheet.TableCell):
-                repeat = cell.getAttribute("numbercolumnsrepeated")
-                if not repeat: repeat = 1
-                for _ in range(int(repeat)):  # Handle repeated cells
-                    if cell.firstChild:
-                        text += teletype.extractText(cell) + ' '
+    for table in document.spreadsheet.getElementsByType(Table):
+        for row in table.getElementsByType(TableRow):
+            for cell in row.getElementsByType(TableCell):
+                if cell.firstChild:
+                    text += teletype.extractText(cell) + ' '
             text += '\n'
     return text
 
 def read_odp_file(filepath):
-    odpFile = presentation.load(filepath)
+    document = odf_load(filepath)
     text = ''
-    for page in odpFile.getElementsByType(presentation.Page):
-        for frame in page.getElementsByType(presentation.Frame):
-            for textbox in frame.getElementsByType(text.P):
-                text += teletype.extractText(textbox) + '\n'
+    for p in document.getElementsByType(P):
+        text += teletype.extractText(p) + '\n'
     return text
 
-# Search for keywords in the provided text
+# Search for keywords in the provided text and in filenames
 def search_for_keywords(text, keywords, file):
     for keyword in keywords:
-        if keyword.lower() in text.lower():
+        if keyword.lower() in text.lower() or keyword.lower() in file.lower():
             print(f"KEYWORD FOUND: {keyword}, FILE: {file}")
 
 # Process each file based on its type
@@ -102,9 +99,9 @@ def process_file(filepath, keywords):
         text = read_ods_file(filepath)
     elif filepath.endswith('.odp'):
         text = read_odp_file(filepath)
-    else:
-        print(f"Unsupported file type: {filepath}")
-        return
+    #else:
+        #print(f"Unsupported file type: {filepath}")
+        #return
     search_for_keywords(text, keywords, filepath)
 
 # Walk through the folder and process each file
@@ -112,10 +109,12 @@ def walk_through_folder(folder, keywords):
     for root, dirs, files in os.walk(folder):
         for file in files:
             filepath = os.path.join(root, file)
+            # Check filename against keywords
+            search_for_keywords("", keywords, filepath)  # Checking filename
             process_file(filepath, keywords)
 
 keywords_file = 'keywords.txt'
-folder = 'path_to_your_folder'
+folder = 'C:\\Users\\USERNAME\\'
 keywords = load_keywords(keywords_file)
 
 walk_through_folder(folder, keywords)
