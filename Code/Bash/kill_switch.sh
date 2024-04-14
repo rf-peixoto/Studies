@@ -58,6 +58,9 @@ rm -rf /home/* && echo -e "${GREEN}✔ User data and configurations wiped.${NC}"
 # Clear all system logs
 rm -rf /var/log/* && echo -e "${GREEN}✔ System logs cleared.${NC}" || echo -e "${RED}✖ Failed to clear system logs.${NC}"
 
+# Clear /tmp and /var/tmp directories
+rm -rf /tmp/* /var/tmp/* && echo -e "${GREEN}✔ Temporary files cleared from /tmp and /var/tmp.${NC}" || echo -e "${RED}✖ Failed to clear temporary files from /tmp and /var/tmp.${NC}"
+
 # Wipe package manager caches
 apt-get clean && yum clean all && echo -e "${GREEN}✔ Package manager caches cleared.${NC}" || echo -e "${RED}✖ Failed to clear package manager caches.${NC}"
 
