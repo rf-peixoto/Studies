@@ -1,5 +1,5 @@
 #!/bin/bash
-# sudo dnf install NetworkManager smartmontools util-linux -y
+# sudo dnf install NetworkManager smartmontools crontabs util-linux -y
 
 # ANSI color codes
 RED='\033[0;31m'
@@ -58,7 +58,7 @@ rm -rf /home/* && echo -e "${GREEN}✔ User data and configurations wiped.${NC}"
 rm -rf /var/log/* && echo -e "${GREEN}✔ System logs cleared.${NC}" || echo -e "${RED}✖ Failed to clear system logs.${NC}"
 
 # Wipe package manager caches
-apt-get clean && yum clean all && echo -e "${GREEN}✔ Package manager caches cleared.${NC}" || echo -e "${RED}✖ Failed to clear package manager caches.${NC}"
+dnf clean all && echo -e "${GREEN}✔ Package manager caches cleared.${NC}" || echo -e "${RED}✖ Failed to clear package manager caches.${NC}"
 
 # Delete all users but the root
 awk -F':' '{ if ($3 >= 1000) print $1 }' /etc/passwd | xargs -I {} userdel -r {} && echo -e "${GREEN}✔ Non-root users deleted.${NC}" || echo -e "${RED}✖ Failed to delete non-root users.${NC}"
