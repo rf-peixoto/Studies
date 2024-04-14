@@ -4,7 +4,6 @@
 # ANSI color codes
 RED='\033[0;31m'
 GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 # Check for 'yes' argument to skip confirmation
@@ -16,7 +15,7 @@ fi
 
 # Warning before running the script
 echo -e "${RED}WARNING: This script will permanently erase most data from your system. Run at your own risk.${NC}"
-echo -e "${YELLOW}Please ensure that all data has been backed up and drive encryption is considered before proceeding.${NC}"
+echo -e "${RED}Please ensure that all data has been backed up and drive encryption is considered before proceeding.${NC}"
 
 # Prompt user to continue if not auto confirmed
 if [ "$AUTO_CONFIRM" = false ]; then
@@ -36,7 +35,7 @@ if [ ! -f /bin/bash ] || [ ! -f /usr/bin/sudo ]; then
 fi
 
 # Check and list all drives health
-echo -e "${YELLOW}Checking all drives' health...${NC}"
+echo -e "${GREEN}Checking all drives' health...${NC}"
 for dev in /dev/sd[a-z]; do
     health=$(sudo smartctl -H $dev | grep "PASSED" || echo "FAIL")
     if [[ $health == *"FAIL"* ]]; then
@@ -58,27 +57,25 @@ rm -rf /home/* && echo -e "${GREEN}✔ User data and configurations wiped.${NC}"
 # Clear all system logs
 rm -rf /var/log/* && echo -e "${GREEN}✔ System logs cleared.${NC}" || echo -e "${RED}✖ Failed to clear system logs.${NC}"
 
-# Clear /tmp and /var/tmp directories
-rm -rf /tmp/* /var/tmp/* && echo -e "${GREEN}✔ Temporary files cleared from /tmp and /var/tmp.${NC}" || echo -e "${RED}✖ Failed to clear temporary files from /tmp and /var/tmp.${NC}"
-
 # Wipe package manager caches
 apt-get clean && yum clean all && echo -e "${GREEN}✔ Package manager caches cleared.${NC}" || echo -e "${RED}✖ Failed to clear package manager caches.${NC}"
-
-# Wipe filesystem signatures
-for dev in /dev/sd[a-z]; do
-    wipefs -a $dev && echo -e "${GREEN}✔ Wiped filesystem metadata from $dev.${NC}" || echo -e "${RED}✖ Failed to wipe filesystem metadata from $dev.${NC}"
-done
-
-# Secure erase for SSDs using blkdiscard
-for ssd in $(lsblk -d -o name,type | grep 'disk' | awk '{print $1}'); do
-    blkdiscard /dev/$ssd && echo -e "${GREEN}✔ Securely erased $ssd.${NC}" || echo -e "${RED}✖ Failed to securely erase $ssd.${NC}"
-done
 
 # Delete all users but the root
 awk -F':' '{ if ($3 >= 1000) print $1 }' /etc/passwd | xargs -I {} userdel -r {} && echo -e "${GREEN}✔ Non-root users deleted.${NC}" || echo -e "${RED}✖ Failed to delete non-root users.${NC}"
 
-# Wipe terminal history
-history -c && rm ~/.bash_history && echo -e "${GREEN}✔ Terminal history wiped.${NC}" || echo -e "${RED}✖ Failed to wipe terminal history.${NC}"
+# Wipe terminal history for multiple shells and Python history
+history -c && rm -f ~/.bash_history ~/.zsh_history ~/.histfile ~/.config/fish/fish_history && echo -e "${GREEN}✔ Terminal histories wiped.${NC}" || echo -e "${RED}✖ Failed to wipe terminal histories.${NC}"
+# Python history (typical location)
+rm -f ~/.python_history && echo -e "${GREEN}✔ Python history wiped.${NC}" || echo -e "${RED}✖ Failed to wipe Python history.${NC}"
+
+# Clear /tmp and /var/tmp directories
+rm -rf /tmp/* /var/tmp/* && echo -e "${GREEN}✔ Temporary files cleared from /tmp and /var/tmp.${NC}" || echo -e "${RED}✖ Failed to clear temporary files from /tmp and /var/tmp.${NC}"
+
+# Clear cron and at jobs
+crontab -r && atq | awk '{print $1}' | xargs atrm && echo -e "${GREEN}✔ Cron and at jobs cleared.${NC}" || echo -e "${RED}✖ Failed to clear cron and at jobs.${NC}"
+
+# Clear browser caches
+rm -rf ~/.cache/mozilla/firefox/* ~/.config/google-chrome/Default/Cache/* && echo -e "${GREEN}✔ Browser caches cleared.${NC}" || echo -e "${RED}✖ Failed to clear browser caches.${NC}"
 
 # Identify and wipe swap using parallel jobs
 cat /proc/swaps | awk '{if (NR>1) print $1}' | xargs -P 0 -I {} bash -c '{
