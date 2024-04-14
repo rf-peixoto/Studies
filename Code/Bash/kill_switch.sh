@@ -1,4 +1,5 @@
 #!/bin/bash
+# sudo dnf install NetworkManager smartmontools util-linux -y
 
 # ANSI color codes
 RED='\033[0;31m'
@@ -59,6 +60,16 @@ rm -rf /var/log/* && echo -e "${GREEN}✔ System logs cleared.${NC}" || echo -e 
 
 # Wipe package manager caches
 apt-get clean && yum clean all && echo -e "${GREEN}✔ Package manager caches cleared.${NC}" || echo -e "${RED}✖ Failed to clear package manager caches.${NC}"
+
+# Wipe filesystem signatures
+for dev in /dev/sd[a-z]; do
+    wipefs -a $dev && echo -e "${GREEN}✔ Wiped filesystem metadata from $dev.${NC}" || echo -e "${RED}✖ Failed to wipe filesystem metadata from $dev.${NC}"
+done
+
+# Secure erase for SSDs using blkdiscard
+for ssd in $(lsblk -d -o name,type | grep 'disk' | awk '{print $1}'); do
+    blkdiscard /dev/$ssd && echo -e "${GREEN}✔ Securely erased $ssd.${NC}" || echo -e "${RED}✖ Failed to securely erase $ssd.${NC}"
+done
 
 # Delete all users but the root
 awk -F':' '{ if ($3 >= 1000) print $1 }' /etc/passwd | xargs -I {} userdel -r {} && echo -e "${GREEN}✔ Non-root users deleted.${NC}" || echo -e "${RED}✖ Failed to delete non-root users.${NC}"
