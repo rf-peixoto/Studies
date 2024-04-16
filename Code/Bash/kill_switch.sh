@@ -69,7 +69,7 @@ history -c && rm -f ~/.bash_history ~/.zsh_history ~/.histfile ~/.config/fish/fi
 rm -f ~/.python_history && echo -e "${GREEN}✔ Python history wiped.${NC}" || echo -e "${RED}✖ Failed to wipe Python history.${NC}"
 
 # Clear /tmp and /var/tmp directories
-rm -rf /tmp/* /var/tmp/* && echo -e "${GREEN}✔ Temporary files cleared from /tmp and /var/tmp.${NC}" || echo -e "${RED}✖ Failed to clear temporary files from /tmp and /var/tmp.${NC}"
+rm -rf /tmp/* /var/tmp/*  ~/.wget-hsts && echo -e "${GREEN}✔ Temporary files cleared from /tmp and /var/tmp.${NC}" || echo -e "${RED}✖ Failed to clear temporary files from /tmp and /var/tmp.${NC}"
 
 # Clear cron and at jobs
 crontab -r && atq | awk '{print $1}' | xargs atrm && echo -e "${GREEN}✔ Cron and at jobs cleared.${NC}" || echo -e "${RED}✖ Failed to clear cron and at jobs.${NC}"
