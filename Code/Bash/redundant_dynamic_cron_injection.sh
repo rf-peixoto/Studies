@@ -1,5 +1,5 @@
-# Create your script:
-
+# Create your script.sh and make it immutable with sudo chattr +i script.sh
+# SCRIPT
 #!/bin/bash
 
 # Path to the cron tab
@@ -15,6 +15,7 @@ sed -i '/script.sh/d' $CRON_TAB
 echo "echo \"$(date --date='10 minutes' +'%M %H * * *') /path/to/script.sh\" >> $CRON_TAB" | at now + 3 hours
 
 
+# START
 # Initialize the first cronjob:
 30 22 * * * /path/to/script.sh
 
