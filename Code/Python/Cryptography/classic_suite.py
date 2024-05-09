@@ -196,7 +196,7 @@ def main():
     with open(output_file, 'w') as file:
         file.write(result)
 
-    print(Fore.GREEN + f"Operation completed. Result saved to " + Fore.RESET + "{output_file}")
+    print(Fore.GREEN + "Operation completed. Result saved to " + Fore.RESET + f"{output_file}")
 
 if __name__ == "__main__":
     main()
