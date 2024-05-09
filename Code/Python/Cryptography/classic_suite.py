@@ -9,15 +9,15 @@ init(autoreset=True)
 
 # Helper function to load text data from file or user input
 def load_text(input_mode):
-    if input_mode == 'f':
-        filename = input(Fore.GREEN + "Enter the filename: ")
+    if input_mode.lower() == 'f':
+        filename = input(Fore.GREEN + "Enter the file path: " + Fore.RESET)
         if not os.path.exists(filename):
             print(Fore.RED + "File does not exist.")
             return None
         with open(filename, 'r') as file:
             return file.read()
     else:
-        return input(Fore.GREEN + "Enter the text: ")
+        return input(Fore.GREEN + "Enter the text: " + Fore.RESET)
 
 # Function to sanitize text by removing non-alphabetic characters
 def sanitize_text(text):
@@ -144,7 +144,7 @@ def simple_substitution_cipher(text, key, decrypt=False):
 
 # Main function
 def main():
-    print(Fore.YELLOW + "[Welcome to the Classic Cipher Suite]")
+    print(Fore.MAGENTA + Style.BRIGHT + "[Welcome to the Classic Cipher Suite]")
     ciphers = {
         "1": ("Caesars Cipher", caesar_cipher),
         "2": ("Atbash Cipher", atbash_cipher),
@@ -156,18 +156,18 @@ def main():
 
     for key, (name, _) in ciphers.items():
         print(f"{Fore.CYAN}{key}. {name}")
-    cipher_choice = input(Fore.GREEN + "Choose a cipher (number): ")
+    cipher_choice = input(Fore.GREEN + "Choose a cipher (number): " + Fore.RESET)
 
     if cipher_choice not in ciphers:
         print(Fore.RED + "Invalid cipher choice.")
         return
 
-    action = input(Fore.GREEN + "Do you want to [e]ncrypt or [d]ecrypt? ")
-    if action not in ['e', 'd']:
+    action = input(Fore.GREEN + "Do you want to " + Fore.RESET  + "[e]" + Fore.GREEN  + "ncrypt or " + Fore.RESET  + "[d]" + Fore.GREEN  +"ecrypt? " + Fore.RESET)
+    if action.lower() not in ['e', 'd']:
         print(Fore.RED + "Invalid action choice.")
         return
 
-    input_mode = input(Fore.GREEN + "Input from [t]ext or [f]ile? ")
+    input_mode = input(Fore.GREEN + "Input from " + Fore.RESET + "[t]" + Fore.GREEN + "ext or " + Fore.RESET +"[f]" + Fore.GREEN + "ile? " + Fore.RESET)
     data = load_text(input_mode)
     if data is None:
         return
@@ -176,14 +176,14 @@ def main():
     sanitized_data = sanitize_text(data)
 
     if action == 'e' and cipher_choice != "2":  # Atbash does not require a key
-        key_choice = input(Fore.GREEN + "Generate a [r]andom key or use your [o]wn? ")
+        key_choice = input(Fore.GREEN + "Generate a " + Fore.RESET + "[r]" + Fore.GREEN + "andom key or use your " + Fore.RESET + "[o]" + Fore.GREEN + "wn? " + Fore.RESET)
         if key_choice == 'r':
             key = generate_key(cipher_choice, sanitized_data)
-            print(Fore.YELLOW + f"Generated key: {key}")
+            print(Fore.MAGENTA + "Generated key: " + Fore.RESET + f"{key}")
         else:
-            key = input(Fore.GREEN + "Enter your key: ")
+            key = input(Fore.GREEN + "Enter your key: " + Fore.RESET)
     elif action == 'd' and cipher_choice != "2":
-        key = input(Fore.GREEN + "Enter the key used: ")
+        key = input(Fore.GREEN + "Enter the key used: " + Fore.RESET)
     else:
         key = None  # Atbash does not use a key
 
@@ -196,7 +196,8 @@ def main():
     with open(output_file, 'w') as file:
         file.write(result)
 
-    print(Fore.GREEN + f"Operation completed. Result saved to {output_file}")
+    print(Fore.GREEN + f"Operation completed. Result saved to " + Fore.RESET + "{output_file}")
 
 if __name__ == "__main__":
     main()
+
