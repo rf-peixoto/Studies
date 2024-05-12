@@ -8,7 +8,7 @@ def load_tokens(file_path):
     return tokens
 
 def build_frequency_model(tokens):
-    """Builds a frequency model based on bigrams."""
+    """Builds a frequency model based on bigrams for character-based tokens."""
     model = defaultdict(Counter)
     for token in tokens:
         prev = '^'  # Start of token marker
@@ -25,15 +25,22 @@ def predict_next_char(model, current_char):
         return random.choices(choices, weights=weights)[0]
     return '$'  # End of token marker if no valid next character
 
-def generate_predicted_token(model):
-    """Generates a new token based on the frequency model."""
+def generate_predicted_token(model, tokens):
+    """Generates a new token based on the frequency model or numeric sequence."""
+    # Check for numeric sequence
+    if all(token.isdigit() for token in tokens):
+        numbers = sorted(int(token) for token in tokens)
+        if numbers and all(numbers[i] + 1 == numbers[i + 1] for i in range(len(numbers) - 1)):
+            return str(numbers[-1] + 1)
+    
+    # Fallback to character-based prediction if not purely sequential
     token = []
     current_char = '^'
     while True:
         next_char = predict_next_char(model, current_char)
-        if next_char == '$':  # Stop at end of token marker
+        if next_char == '$':
             break
-        if current_char != '^':  # Avoid adding the start marker to the token
+        if current_char != '^':
             token.append(next_char)
         current_char = next_char
     return ''.join(token)
@@ -41,10 +48,10 @@ def generate_predicted_token(model):
 # Initialize colorama
 init()
 
-# Load tokens and build model
+# Load tokens
 tokens = load_tokens(sys.argv[1])
-model = build_frequency_model(tokens)
 
-# Generate a predicted token
-predicted_token = generate_predicted_token(model)
+# Build model and generate prediction
+model = build_frequency_model(tokens)
+predicted_token = generate_predicted_token(model, tokens)
 print(Fore.BLUE + "Predicted Token: " + Fore.GREEN + predicted_token + Style.RESET_ALL)
