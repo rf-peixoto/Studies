@@ -1,5 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
+import random
+import string
 
 class Rotor:
     def __init__(self, wiring, notch):
@@ -74,12 +76,12 @@ class EnigmaGUI(tk.Tk):
     def __init__(self, enigma):
         super().__init__()
         self.enigma = enigma
-        self.title("Enigma Machine")
+        self.title("Enigma Machine Simulator")
         self.geometry("600x400")
         self.create_widgets()
 
     def create_widgets(self):
-        tk.Label(self, text="Enigma Machine", font=("Helvetica", 16)).grid(row=0, column=0, columnspan=4, pady=10)
+        tk.Label(self, text="Enigma Machine Simulator", font=("Helvetica", 16)).grid(row=0, column=0, columnspan=4, pady=10)
 
         tk.Label(self, text="Message:").grid(row=1, column=0, pady=5, padx=5, sticky=tk.W)
         self.message_entry = tk.Entry(self, width=50)
@@ -109,11 +111,37 @@ class EnigmaGUI(tk.Tk):
         self.plugboard_pairs = tk.Entry(self, width=30)
         self.plugboard_pairs.grid(row=7, column=1, columnspan=3, pady=5, padx=5, sticky=tk.W)
 
+        self.random_setup_button = tk.Button(self, text="Random Setup", command=self.random_setup)
+        self.random_setup_button.grid(row=8, column=0, columnspan=2, pady=10, padx=5)
+
         self.encode_button = tk.Button(self, text="Encode", command=self.encode_message)
-        self.encode_button.grid(row=8, column=0, columnspan=4, pady=10)
+        self.encode_button.grid(row=8, column=2, columnspan=2, pady=10, padx=5)
 
         self.encoded_message_label = tk.Label(self, text="Encoded Message: ", font=("Helvetica", 12))
         self.encoded_message_label.grid(row=9, column=0, columnspan=4, pady=10)
+
+    def random_setup(self):
+        rotor_wirings = [''.join(random.sample(string.ascii_uppercase, 26)) for _ in range(3)]
+        reflector_wiring = ''.join(random.sample(string.ascii_uppercase, 26))
+        plugboard_pairs = ' '.join([''.join(random.sample(string.ascii_uppercase, 2)) for _ in range(10)])
+        rotor_positions = [random.randint(0, 25) for _ in range(3)]
+
+        self.rotor1_wiring.delete(0, tk.END)
+        self.rotor1_wiring.insert(0, rotor_wirings[0])
+        self.rotor2_wiring.delete(0, tk.END)
+        self.rotor2_wiring.insert(0, rotor_wirings[1])
+        self.rotor3_wiring.delete(0, tk.END)
+        self.rotor3_wiring.insert(0, rotor_wirings[2])
+        self.reflector_wiring.delete(0, tk.END)
+        self.reflector_wiring.insert(0, reflector_wiring)
+        self.plugboard_pairs.delete(0, tk.END)
+        self.plugboard_pairs.insert(0, plugboard_pairs)
+        self.rotor1_position.delete(0, tk.END)
+        self.rotor1_position.insert(0, rotor_positions[0])
+        self.rotor2_position.delete(0, tk.END)
+        self.rotor2_position.insert(0, rotor_positions[1])
+        self.rotor3_position.delete(0, tk.END)
+        self.rotor3_position.insert(0, rotor_positions[2])
 
     def encode_message(self):
         message = self.message_entry.get().upper()
