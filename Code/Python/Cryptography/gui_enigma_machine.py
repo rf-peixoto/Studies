@@ -77,7 +77,7 @@ class EnigmaGUI(tk.Tk):
         super().__init__()
         self.enigma = enigma
         self.title("Enigma Machine Simulator")
-        self.geometry("600x400")
+        self.geometry("600x500")
         self.create_widgets()
 
     def create_widgets(self):
@@ -112,10 +112,10 @@ class EnigmaGUI(tk.Tk):
         self.plugboard_pairs.grid(row=7, column=1, columnspan=3, pady=5, padx=5, sticky=tk.W)
 
         self.random_setup_button = tk.Button(self, text="Random Setup", command=self.random_setup)
-        self.random_setup_button.grid(row=8, column=0, columnspan=2, pady=10, padx=5)
+        self.random_setup_button.grid(row=8, column=0, columnspan=2, pady=10, padx=5, sticky=tk.E)
 
         self.encode_button = tk.Button(self, text="Encode", command=self.encode_message)
-        self.encode_button.grid(row=8, column=2, columnspan=2, pady=10, padx=5)
+        self.encode_button.grid(row=8, column=2, columnspan=2, pady=10, padx=5, sticky=tk.W)
 
         self.encoded_message_label = tk.Label(self, text="Encoded Message: ", font=("Helvetica", 12))
         self.encoded_message_label.grid(row=9, column=0, columnspan=4, pady=10)
