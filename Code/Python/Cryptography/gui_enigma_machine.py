@@ -76,12 +76,12 @@ class EnigmaGUI(tk.Tk):
     def __init__(self, enigma):
         super().__init__()
         self.enigma = enigma
-        self.title("Enigma Machine Simulator")
-        self.geometry("600x500")
+        self.title("Enigma Machine")
+        self.geometry("500x400")
         self.create_widgets()
 
     def create_widgets(self):
-        tk.Label(self, text="Enigma Machine Simulator", font=("Helvetica", 16)).grid(row=0, column=0, columnspan=4, pady=10)
+        tk.Label(self, text="Enigma Machine", font=("Helvetica", 16)).grid(row=0, column=0, columnspan=4, pady=10)
 
         tk.Label(self, text="Message:").grid(row=1, column=0, pady=5, padx=5, sticky=tk.W)
         self.message_entry = tk.Entry(self, width=50)
