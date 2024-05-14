@@ -77,7 +77,7 @@ class EnigmaGUI(tk.Tk):
         super().__init__()
         self.enigma = enigma
         self.title("Enigma Machine")
-        self.geometry("500x400")
+        self.geometry("550x400")
         self.create_widgets()
 
     def create_widgets(self):
