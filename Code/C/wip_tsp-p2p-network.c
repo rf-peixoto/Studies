@@ -11,11 +11,14 @@
 #include <netdb.h>
 #include <errno.h>
 #include <sys/time.h>
+#include <json-c/json.h>
 
 #define BANNER "TSP_NODE"
 #define PORT 5000
 #define TIMEOUT 1
 #define MAX_PEERS 255
+#define MAX_NODES 255
+#define INF 1e9
 
 typedef struct Peer {
     char ip[INET_ADDRSTRLEN];
@@ -27,7 +30,71 @@ typedef struct Node {
     char ip[INET_ADDRSTRLEN];
     Peer peers[MAX_PEERS];
     int peer_count;
+    double adj_matrix[MAX_NODES][MAX_NODES];
+    int node_count;
+    char node_ips[MAX_NODES][INET_ADDRSTRLEN];
 } Node;
+
+void initialize_graph(Node *node) {
+    node->node_count = 0;
+    for (int i = 0; i < MAX_NODES; ++i) {
+        for (int j = 0; j < MAX_NODES; ++j) {
+            node->adj_matrix[i][j] = (i == j) ? 0 : INF;
+        }
+    }
+}
+
+int get_node_index(Node *node, const char *ip) {
+    for (int i = 0; i < node->node_count; ++i) {
+        if (strcmp(node->node_ips[i], ip) == 0) {
+            return i;
+        }
+    }
+    strcpy(node->node_ips[node->node_count], ip);
+    return node->node_count++;
+}
+
+void add_edge(Node *node, const char *ip1, const char *ip2, double latency) {
+    int idx1 = get_node_index(node, ip1);
+    int idx2 = get_node_index(node, ip2);
+    node->adj_matrix[idx1][idx2] = latency;
+    node->adj_matrix[idx2][idx1] = latency;
+}
+
+void dijkstra(Node *node, int src, double dist[], int prev[]) {
+    int n = node->node_count;
+    int visited[n];
+    for (int i = 0; i < n; ++i) {
+        dist[i] = INF;
+        visited[i] = 0;
+        prev[i] = -1;
+    }
+    dist[src] = 0;
+    for (int i = 0; i < n - 1; ++i) {
+        double min_dist = INF;
+        int u = -1;
+        for (int j = 0; j < n; ++j) {
+            if (!visited[j] && dist[j] < min_dist) {
+                min_dist = dist[j];
+                u = j;
+            }
+        }
+        if (u == -1) break;
+        visited[u] = 1;
+        for (int v = 0; v < n; ++v) {
+            if (!visited[v] && node->adj_matrix[u][v] != INF && dist[u] + node->adj_matrix[u][v] < dist[v]) {
+                dist[v] = dist[u] + node->adj_matrix[u][v];
+                prev[v] = u;
+            }
+        }
+    }
+}
+
+void print_path(int prev[], int j) {
+    if (prev[j] == -1) return;
+    print_path(prev, prev[j]);
+    printf(" -> %d", j);
+}
 
 void* handle_client(void* arg) {
     int client_socket = *((int*)arg);
@@ -129,6 +196,7 @@ void discover_peers(Node* node) {
                     strcpy(node->peers[node->peer_count].ip, target_ip);
                     node->peers[node->peer_count].latency = latency;
                     node->peer_count++;
+                    add_edge(node, node->ip, target_ip, latency);
                 }
             }
         }
@@ -137,9 +205,53 @@ void discover_peers(Node* node) {
     }
 }
 
+void exchange_peer_lists(Node* node) {
+    for (int i = 0; i < node->peer_count; ++i) {
+        int sock = socket(AF_INET, SOCK_STREAM, 0);
+        struct sockaddr_in server_addr;
+        server_addr.sin_family = AF_INET;
+        server_addr.sin_port = htons(PORT);
+        inet_pton(AF_INET, node->peers[i].ip, &server_addr.sin_addr);
+
+        if (connect(sock, (struct sockaddr*)&server_addr, sizeof(server_addr)) == 0) {
+            send(sock, BANNER, strlen(BANNER), 0);
+            char buffer[4096];
+            recv(sock, buffer, sizeof(buffer), 0);
+
+            struct json_object *parsed_json = json_tokener_parse(buffer);
+            struct json_object *peer_array = json_object_object_get(parsed_json, "peers");
+
+            int peer_array_len = json_object_array_length(peer_array);
+            for (int j = 0; j < peer_array_len; ++j) {
+                struct json_object *peer_obj = json_object_array_get_idx(peer_array, j);
+                const char *peer_ip = json_object_get_string(json_object_object_get(peer_obj, "ip"));
+                double latency = json_object_get_double(json_object_object_get(peer_obj, "latency"));
+                add_edge(node, node->peers[i].ip, peer_ip, latency);
+            }
+
+            json_object_put(parsed_json);
+        }
+
+        close(sock);
+    }
+}
+
 void broadcast_message(Node* node, const char* target_ip, const char* message) {
-    printf("Message from %s to %s: %s\n", node->ip, target_ip, message);
-    // Implement the shortest path and message broadcast logic here
+    double dist[MAX_NODES];
+    int prev[MAX_NODES];
+    int src_idx = get_node_index(node, node->ip);
+    int tgt_idx = get_node_index(node, target_ip);
+
+    dijkstra(node, src_idx, dist, prev);
+
+    if (dist[tgt_idx] == INF) {
+        printf("No path from %s to %s\n", node->ip, target_ip);
+        return;
+    }
+
+    printf("Message from %s to %s: %s\nPath: %d", node->ip, target_ip, message, src_idx);
+    print_path(prev, tgt_idx);
+    printf("\n");
 }
 
 int main() {
@@ -147,6 +259,7 @@ int main() {
     char node_ip[] = "192.168.1.1";
     Node node = { .id = node_id, .peer_count = 0 };
     strcpy(node.ip, node_ip);
+    initialize_graph(&node);
 
     pthread_t server_thread;
     pthread_create(&server_thread, NULL, start_node_server, (void*)&node_id);
@@ -154,6 +267,7 @@ int main() {
     sleep(1);  // Allow server to start
 
     discover_peers(&node);
+    exchange_peer_lists(&node);
 
     for (int i = 0; i < node.peer_count; i++) {
         printf("Discovered peer: %s with latency %.2f ms\n", node.peers[i].ip, node.peers[i].latency);
