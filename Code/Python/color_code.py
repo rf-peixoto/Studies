@@ -14,7 +14,7 @@ def rgb_to_char(rgb):
 
 def generate_image_from_string(input_string):
     """Generate an image from a given string."""
-    max_chars = 256
+    max_chars = 4096
     char_size = 8
     num_chars = min(len(input_string), max_chars)
     img_size = int(np.ceil(np.sqrt(num_chars)))
@@ -36,7 +36,12 @@ def generate_image_from_string(input_string):
 
 def decode_image_to_string(image_path):
     """Decode an image to retrieve the string."""
-    image = Image.open(image_path)
+    try:
+        image = Image.open(image_path)
+    except IOError:
+        print("Error: Unable to open image file.")
+        return None
+    
     pixels = image.load()
     char_size = 8
     img_size = image.size[0] // char_size
@@ -59,6 +64,7 @@ if __name__ == '__main__':
     elif mode == 'decode':
         image_path = input("Enter the path to the image to decode: ").strip()
         decoded_string = decode_image_to_string(image_path)
-        print("Decoded string:", decoded_string)
+        if decoded_string:
+            print("Decoded string:", decoded_string)
     else:
         print("Invalid mode selected.")
