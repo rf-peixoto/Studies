@@ -3,35 +3,34 @@
 from PIL import Image
 import numpy as np
 
-def char_to_rgb(char):
-    """Convert a character to an RGB color."""
-    ascii_val = ord(char)
-    return (ascii_val, ascii_val, ascii_val)
+def char_to_index(char):
+    """Convert a character to a palette index."""
+    return ord(char)
 
-def rgb_to_char(rgb):
-    """Convert an RGB color to a character."""
-    return chr(rgb[0])
+def index_to_char(index):
+    """Convert a palette index to a character."""
+    return chr(index)
 
 def generate_image_from_string(input_string):
     """Generate an image from a given string."""
-    max_chars = 4096
-    char_size = 8
+    max_chars = 256
     num_chars = min(len(input_string), max_chars)
     img_size = int(np.ceil(np.sqrt(num_chars)))
 
-    image = Image.new('RGB', (img_size * char_size, img_size * char_size))
+    image = Image.new('P', (img_size, img_size))
+    palette = [i for i in range(256)] * 3  # Create a grayscale palette
+    image.putpalette(palette)
     pixels = image.load()
 
     for i, char in enumerate(input_string[:max_chars]):
-        x = (i % img_size) * char_size
-        y = (i // img_size) * char_size
-        color = char_to_rgb(char)
+        x = i % img_size
+        y = i // img_size
+        if x >= img_size or y >= img_size:
+            break
+        index = char_to_index(char)
+        pixels[x, y] = index
 
-        for dx in range(char_size):
-            for dy in range(char_size):
-                pixels[x + dx, y + dy] = color
-
-    image.save('encoded_image.png')
+    image.save('encoded_image.png', optimize=True)
     print("Image saved as 'encoded_image.png'")
 
 def decode_image_to_string(image_path):
@@ -43,14 +42,13 @@ def decode_image_to_string(image_path):
         return None
     
     pixels = image.load()
-    char_size = 8
-    img_size = image.size[0] // char_size
+    img_size = image.size[0]
 
     decoded_chars = []
     for y in range(img_size):
         for x in range(img_size):
-            color = pixels[x * char_size, y * char_size]
-            decoded_chars.append(rgb_to_char(color))
+            index = pixels[x, y]
+            decoded_chars.append(index_to_char(index))
 
     decoded_string = ''.join(decoded_chars).rstrip('\x00')
     return decoded_string
