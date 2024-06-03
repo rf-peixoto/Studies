@@ -1,4 +1,4 @@
-// Powered by ChatGPT na cara dura.
+// Powered by ChatGPT na cara dura;
 package main
 
 import (
