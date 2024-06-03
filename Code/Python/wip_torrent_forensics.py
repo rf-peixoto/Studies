@@ -31,6 +31,19 @@ def track_torrent(magnet_link):
         print('Upload rate:', status.upload_rate / 1000, 'kB/s')
         print('Progress:', status.progress * 100, '%')
         print('-' * 40)
+
+        peers_info = handle.get_peer_info()
+        for peer in peers_info:
+            print(f'IP: {peer.ip}')
+            print(f'Client: {peer.client}')
+            print(f'Country: {peer.country}')
+            print(f'Download speed: {peer.down_speed / 1000} kB/s')
+            print(f'Upload speed: {peer.up_speed / 1000} kB/s')
+            print(f'Progress: {peer.progress * 100}%')
+            print(f'Connection type: {peer.connection_type}')
+            print(f'Flags: {peer.flags}')
+            print('-' * 20)
+        
         time.sleep(5)
 
 if __name__ == '__main__':
