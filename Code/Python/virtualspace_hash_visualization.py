@@ -1,7 +1,7 @@
 import numpy as np
 import hashlib
 import sys
-import random
+import random, secrets
 from panda3d.core import Point3, AmbientLight, DirectionalLight, LVecBase4f, TextNode
 from panda3d.core import Geom, GeomNode, GeomVertexData, GeomVertexFormat, GeomVertexWriter, GeomTriangles
 from panda3d.core import NodePath
@@ -10,12 +10,13 @@ from direct.task import Task
 from direct.gui.OnscreenText import OnscreenText
 
 # Configurable parameters
-CUBE_SIZE = 0.02
-SPACING = 0.06
-CAMERA_SPEED = 2
-TURN_SPEED = 50
+CUBE_SIZE = 0.01
+SPACING = 0.04
+CAMERA_SPEED = 0.5
+TURN_SPEED = 100
 PITCH_SPEED = 50
 MATRIX_HEIGHT = 2
+ENABLE_VISUAL_EFFECTS = True  # Option to enable visual effects
 
 # Function to generate a 32-byte hash from a string and convert it to a binary matrix
 def hash_to_binary_matrix(seed_string):
@@ -39,6 +40,7 @@ class MyApp(ShowBase):
 
         # Add cubes based on the binary matrix
         self.cubes = []
+        self.cube_nodes = []  # Store nodes for visual effects
         for x in range(binary_matrix.shape[0]):
             for y in range(binary_matrix.shape[1]):
                 for z in range(binary_matrix.shape[2]):
@@ -46,8 +48,10 @@ class MyApp(ShowBase):
                         cube = self.create_cube(size=CUBE_SIZE)
                         cube.reparentTo(self.render)
                         cube.setPos(Point3(x * SPACING, y * SPACING, z * SPACING + MATRIX_HEIGHT))  # Offset Z to float above ground
-                        cube.setColor(random.uniform(0, 0.2), random.uniform(0.5, 1), random.uniform(0, 0.2), 1)  # Shades of green
+                        initial_color = (random.uniform(0, 0.2), random.uniform(0.5, 1), random.uniform(0, 0.2), 1)
+                        cube.setColor(*initial_color)  # Shades of green
                         self.cubes.append(cube)
+                        self.cube_nodes.append((cube, initial_color))
 
         # Setup lights
         ambientLight = AmbientLight("ambientLight")
@@ -65,6 +69,9 @@ class MyApp(ShowBase):
         self.camera.setPos(0, -2, MATRIX_HEIGHT)  # Set camera at the same height as the cubes
         self.heading = 0
         self.pitch = 0
+        self.speed = CAMERA_SPEED
+        self.turn_speed = TURN_SPEED
+        self.pitch_speed = PITCH_SPEED
 
         # Movement controls
         self.keyMap = {
@@ -97,6 +104,10 @@ class MyApp(ShowBase):
             pos=(-1.3, 0.9), scale=0.07, fg=(1, 1, 1, 1), align=TextNode.ALeft
         )
 
+        # Add visual effects if enabled
+        if ENABLE_VISUAL_EFFECTS:
+            self.taskMgr.add(self.visual_effects, "visual_effects")
+
     def updateKeyMap(self, key, state):
         self.keyMap[key] = state
 
@@ -105,25 +116,39 @@ class MyApp(ShowBase):
 
         # Movement logic
         if self.keyMap["forward"]:
-            self.camera.setPos(self.camera, Point3(0, CAMERA_SPEED * dt, 0))
+            self.camera.setPos(self.camera, Point3(0, self.speed * dt, 0))
         if self.keyMap["backward"]:
-            self.camera.setPos(self.camera, Point3(0, -CAMERA_SPEED * dt, 0))
+            self.camera.setPos(self.camera, Point3(0, -self.speed * dt, 0))
         if self.keyMap["left"]:
-            self.camera.setPos(self.camera, Point3(-CAMERA_SPEED * dt, 0, 0))
+            self.camera.setPos(self.camera, Point3(-self.speed * dt, 0, 0))
         if self.keyMap["right"]:
-            self.camera.setPos(self.camera, Point3(CAMERA_SPEED * dt, 0, 0))
+            self.camera.setPos(self.camera, Point3(self.speed * dt, 0, 0))
         if self.keyMap["turn_left"]:
-            self.heading += TURN_SPEED * dt
+            self.heading += self.turn_speed * dt
             self.camera.setH(self.heading)
         if self.keyMap["turn_right"]:
-            self.heading -= TURN_SPEED * dt
+            self.heading -= self.turn_speed * dt
             self.camera.setH(self.heading)
         if self.keyMap["look_up"]:
-            self.pitch += PITCH_SPEED * dt
+            self.pitch += self.pitch_speed * dt
             self.camera.setP(self.pitch)
         if self.keyMap["look_down"]:
-            self.pitch -= PITCH_SPEED * dt
+            self.pitch -= self.pitch_speed * dt
             self.camera.setP(self.pitch)
+
+        return Task.cont
+
+    def visual_effects(self, task):
+        time = globalClock.getFrameTime() * 2  # Adjust time scaling for smoother effects
+        for node, initial_color in self.cube_nodes:
+            scale = 1.0 + 0.1 * np.sin(time)
+            node.setScale(scale)
+
+            # Pulsing color effect
+            r = initial_color[0] + 0.1 * np.sin(time)
+            g = initial_color[1] + 0.1 * np.sin(time + 2)
+            b = initial_color[2] + 0.1 * np.sin(time + 4)
+            node.setColor(r, g, b, 1)
 
         return Task.cont
 
@@ -190,6 +215,6 @@ class MyApp(ShowBase):
         return NodePath(node)
 
 if __name__ == "__main__":
-    seed_string = sys.argv[1] if len(sys.argv) > 1 else "default_seed"
+    seed_string = sys.argv[1] if len(sys.argv) > 1 else secrets.token_urlsafe(32)
     app = MyApp(seed_string)
     app.run()
