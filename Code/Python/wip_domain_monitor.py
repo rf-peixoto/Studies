@@ -1,4 +1,4 @@
-# pip install requests beautifulsoup4 dnspython whois schedule wappalyzer
+# pip install requests beautifulsoup4 dnspython whois schedule builtwith
 
 import requests
 import json
@@ -8,12 +8,12 @@ import whois
 from bs4 import BeautifulSoup
 import time
 import schedule
-from wappalyzer import Wappalyzer, WebPage
+import builtwith
 
 # Customizable Variables
 DOMAINS_FILE = 'domains.txt'
 CHECK_INTERVAL = 86400  # Time in seconds (86400 seconds = 24 hours)
-OUTPUT_DIR = './domain_details/'
+OUTPUT_DIR = './data/'
 
 # Function to get IP address
 def get_ip(domain):
@@ -50,18 +50,17 @@ def get_whois_info(domain):
     except Exception as e:
         return str(e)
 
-# Function to detect technologies
+# Function to detect technologies using BuiltWith
 def detect_technologies(url):
     try:
-        wappalyzer = Wappalyzer.latest()
-        webpage = WebPage.new_from_url(url)
-        return wappalyzer.analyze_with_versions_and_categories(webpage)
+        return builtwith.parse(url)
     except Exception as e:
         return str(e)
 
 # Function to gather all details for a domain
 def gather_domain_details(url):
     domain = url.replace('https://', '').replace('http://', '').split('/')[0]
+    print(f"Processing domain: {domain}")
     details = {
         'domain': domain,
         'url': url,
@@ -89,8 +88,12 @@ def read_domains(file_path):
 def update_all_domains():
     domains_list = read_domains(DOMAINS_FILE)
     for url in domains_list:
-        domain_details = gather_domain_details(url)
-        save_to_json(domain_details, OUTPUT_DIR)
+        try:
+            domain_details = gather_domain_details(url)
+            save_to_json(domain_details, OUTPUT_DIR)
+            print(f"Successfully processed domain: {domain_details['domain']}")
+        except Exception as e:
+            print(f"Error processing domain {url}: {e}")
     print(f"Updated domain details at {time.strftime('%Y-%m-%d %H:%M:%S')}")
 
 # Create output directory if not exists
