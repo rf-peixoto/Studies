@@ -20,6 +20,7 @@ inurl:”id=” & intext:”Warning: ilesize()
 inurl:”id=” & intext:”Warning: filesize()
 inurl:”id=” & intext:”Warning: mysql_query()
 site:t.me "cc" ("live" | "approved")
+intitle:"HFS" AND intext:"httpfileserver 2.3" AND -intext:"remote"
 filetype:log intext:password intext:(@gmail.com | @yahoo.com | @hotmail.com)
 "Budget report" filetype:pdf
 intitle:"Live View / - AXIS" | inurl:/mjpg/video.mjpg?timestamp
