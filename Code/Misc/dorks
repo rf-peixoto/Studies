@@ -356,6 +356,7 @@ intitle:"index of" "parameters.yml.test" OR "parameters.yml.dist"
 site:app.powerbi.com ("Financeiro" OR "DRE") # "Senha" "password"
 
 Classified docs:
+intitle:report (nessus | qualys | acunetix | arachini) ext:pdf
 site:DOMAIN ext:pdf ("internal use" | "confidential" | "redacted" | "classified" | "secret") 
 ("uso interno" | "confidencial" | "restrita" | "TLP:RED" | "ata") site:com.br ext:pdf
 ext:pdf "Carta Acordo"
