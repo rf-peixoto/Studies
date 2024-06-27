@@ -1,0 +1,11 @@
+{
+    "timeout": 30,
+    "sleep_time": 5,
+    "tor_control_port": 9051,
+    "tor_socks_port": 9050,
+    "tor_password": null,
+    "renew_ip_on_error": true,
+    "decode_urls": true,
+    "download_dir": "downloads",
+    "concurrent_downloads": 4
+}
