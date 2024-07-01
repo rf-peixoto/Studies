@@ -122,12 +122,22 @@ def download_file(url, progress_bar=None, progress_lock=None):
         host = url.split('/')[2]
         headers['Host'] = host
         headers['Referer'] = '/'.join(url.split('/')[:-1]) + '/'
-        response = session.get(url, headers=headers, timeout=config['timeout'], allow_redirects=True)
-        response.raise_for_status()
-        content_type = response.headers.get('Content-Type')
-        logging.info(f"Content-Type: {content_type}")
-        with open(filepath, 'wb') as file:
-            file.write(response.content)
+        
+        with requests.get(url, headers=headers, timeout=config['timeout'], allow_redirects=True, stream=True) as response:
+            response.raise_for_status()
+            total_size = int(response.headers.get('content-length', 0))
+            chunk_size = 1024
+            with open(filepath, 'wb') as file, tqdm(
+                desc=filename,
+                total=total_size,
+                unit='iB',
+                unit_scale=True,
+                unit_divisor=1024,
+            ) as file_progress:
+                for chunk in response.iter_content(chunk_size=chunk_size):
+                    file.write(chunk)
+                    file_progress.update(len(chunk))
+        
         logging.info(f"Downloaded: {filename}")
         print(f"Downloaded: {colored(filename, 'green')}")
 
@@ -180,7 +190,7 @@ failed_downloads = []
 def start_download():
     if test_tor_connection():
         # Set up progress bar and lock for thread-safe updates
-        progress_bar = tqdm(total=url_queue.qsize(), desc="Downloading files")
+        progress_bar = tqdm(total=url_queue.qsize(), desc="Overall Progress", unit="file")
         progress_lock = threading.Lock()
         # Start worker threads
         threads = []
