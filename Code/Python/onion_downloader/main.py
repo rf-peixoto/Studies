@@ -26,8 +26,7 @@ config = {
     'renew_ip_on_error': True,  # Enable or disable IP renewal
     'decode_urls': True,  # Enable or disable URL decoding
     'download_dir': 'downloads',  # Directory to save downloads
-    'concurrent_downloads': 4,  # Number of parallel downloads
-    'progress_interval': 100  # Interval for detailed progress reporting
+    'concurrent_downloads': 4  # Number of parallel downloads
 }
 
 headers = {
@@ -43,20 +42,13 @@ headers = {
     'Sec-Fetch-Site': 'same-origin',
     'Sec-Fetch-User': '?1'
 }
-log_file = 'download_log.txt'
+log_file = 'app.log'
 urls_file = 'urls.txt'
 failed_downloads_file = 'failed_downloads.txt'
 
 # Set up logging
 logging.basicConfig(filename=log_file, level=logging.DEBUG,
                     format='%(asctime)s - %(levelname)s - %(message)s')
-
-# Global counters
-success_count = 0
-fail_count = 0
-
-# Lock for counters
-counter_lock = threading.Lock()
 
 # Function to get a new Tor identity
 def renew_tor_ip():
@@ -68,6 +60,7 @@ def renew_tor_ip():
                 controller.authenticate()
             controller.signal(Signal.NEWNYM)
         logging.info("Tor IP renewed.")
+        print(colored("Tor IP renewed.", "green"))
     except Exception as e:
         logging.error(f"Error renewing Tor IP: {e}")
         print(f"Error renewing Tor IP: {colored(str(e), 'red')}")
@@ -113,8 +106,7 @@ if not os.path.exists(config['download_dir']):
     os.makedirs(config['download_dir'])
 
 # Function to download a file from a URL
-def download_file(url, progress_bar=None, progress_lock=None):
-    global success_count, fail_count
+def download_file(url, progress_bar=None):
     filename = os.path.basename(url)
     filepath = os.path.join(config['download_dir'], filename)
     try:
@@ -122,56 +114,36 @@ def download_file(url, progress_bar=None, progress_lock=None):
         host = url.split('/')[2]
         headers['Host'] = host
         headers['Referer'] = '/'.join(url.split('/')[:-1]) + '/'
-        
-        with requests.get(url, headers=headers, timeout=config['timeout'], allow_redirects=True, stream=True) as response:
-            response.raise_for_status()
-            total_size = int(response.headers.get('content-length', 0))
-            chunk_size = 1024
-            with open(filepath, 'wb') as file, tqdm(
-                desc=filename,
-                total=total_size,
-                unit='iB',
-                unit_scale=True,
-                unit_divisor=1024,
-            ) as file_progress:
-                for chunk in response.iter_content(chunk_size=chunk_size):
-                    file.write(chunk)
-                    file_progress.update(len(chunk))
-        
+        response = session.get(url, headers=headers, timeout=config['timeout'], allow_redirects=True)
+        response.raise_for_status()
+        content_type = response.headers.get('Content-Type')
+        logging.info(f"Content-Type: {content_type}")
+        with open(filepath, 'wb') as file:
+            file.write(response.content)
         logging.info(f"Downloaded: {filename}")
         print(f"Downloaded: {colored(filename, 'green')}")
-
-        with counter_lock:
-            success_count += 1
-            if success_count % config['progress_interval'] == 0:
-                print(f"{success_count} files downloaded successfully.")
-
         if progress_bar:
-            with progress_lock:
+            with progress_bar.get_lock():
                 progress_bar.update(1)
         return True
     except requests.exceptions.HTTPError as e:
         logging.error(f"Failed to download {filename}: {e}")
-        with counter_lock:
-            fail_count += 1
         if e.response.status_code == 404:
             print(f"Failed to download {colored(filename, 'red')}: {colored('404 Not Found', 'red')}")
         else:
             print(f"Failed to download {colored(filename, 'red')}: {colored(str(e), 'red')}")
     except requests.exceptions.RequestException as e:
         logging.error(f"Failed to download {filename}: {e}")
-        with counter_lock:
-            fail_count += 1
         print(f"Failed to download {colored(filename, 'red')}: {colored(str(e), 'red')}")
     return False
 
 # Worker function for threading
-def worker(url_queue, progress_bar, progress_lock, failed_downloads):
+def worker(url_queue, progress_bar, failed_downloads):
     while not url_queue.empty():
         url = url_queue.get()
         if config['decode_urls']:
             url = urllib.parse.unquote(url)
-        success = download_file(url, progress_bar, progress_lock)
+        success = download_file(url, progress_bar)
         time.sleep(config['sleep_time'])
         if config['renew_ip_on_error'] and not success:
             renew_tor_ip()
@@ -189,13 +161,12 @@ failed_downloads = []
 # Test Tor connection before starting the download process
 def start_download():
     if test_tor_connection():
-        # Set up progress bar and lock for thread-safe updates
-        progress_bar = tqdm(total=url_queue.qsize(), desc="Overall Progress", unit="file")
-        progress_lock = threading.Lock()
+        # Set up progress bar
+        progress_bar = tqdm(total=url_queue.qsize(), desc="Downloading files")
         # Start worker threads
         threads = []
         for _ in range(config['concurrent_downloads']):
-            thread = threading.Thread(target=worker, args=(url_queue, progress_bar, progress_lock, failed_downloads))
+            thread = threading.Thread(target=worker, args=(url_queue, progress_bar, failed_downloads))
             thread.start()
             threads.append(thread)
 
@@ -273,9 +244,6 @@ def main():
 
         if os.path.exists(failed_downloads_file):
             os.remove(failed_downloads_file)
-
-    # Print summary
-    print(f"Download completed: {success_count} successful, {fail_count} failed.")
 
 if __name__ == "__main__":
     main()
