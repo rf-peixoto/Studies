@@ -44,6 +44,7 @@ headers = {
 }
 log_file = 'download_log.txt'
 urls_file = 'urls.txt'
+failed_downloads_file = 'failed_downloads.txt'
 
 # Set up logging
 logging.basicConfig(filename=log_file, level=logging.DEBUG,
@@ -121,7 +122,8 @@ def download_file(url, progress_bar=None):
         logging.info(f"Downloaded: {filename}")
         print(f"Downloaded: {colored(filename, 'green')}")
         if progress_bar:
-            progress_bar.update(1)
+            with progress_bar.get_lock():
+                progress_bar.update(1)
         return True
     except requests.exceptions.HTTPError as e:
         logging.error(f"Failed to download {filename}: {e}")
@@ -135,7 +137,7 @@ def download_file(url, progress_bar=None):
     return False
 
 # Worker function for threading
-def worker(url_queue, progress_bar):
+def worker(url_queue, progress_bar, failed_downloads):
     while not url_queue.empty():
         url = url_queue.get()
         if config['decode_urls']:
@@ -144,6 +146,7 @@ def worker(url_queue, progress_bar):
         time.sleep(config['sleep_time'])
         if config['renew_ip_on_error'] and not success:
             renew_tor_ip()
+            failed_downloads.append(url)
         url_queue.task_done()
 
 # Read URLs from file and add to queue
@@ -152,23 +155,48 @@ with open(urls_file, 'r') as file:
     for url in file.readlines():
         url_queue.put(url.strip())
 
+failed_downloads = []
+
 # Test Tor connection before starting the download process
-if test_tor_connection():
-    # Set up progress bar
-    with tqdm(total=url_queue.qsize(), desc="Downloading files") as progress_bar:
+def start_download():
+    if test_tor_connection():
+        # Set up progress bar
+        progress_bar = tqdm(total=url_queue.qsize(), desc="Downloading files")
         # Start worker threads
         threads = []
         for _ in range(config['concurrent_downloads']):
-            thread = threading.Thread(target=worker, args=(url_queue, progress_bar))
+            thread = threading.Thread(target=worker, args=(url_queue, progress_bar, failed_downloads))
             thread.start()
             threads.append(thread)
 
         # Wait for all threads to finish
         for thread in threads:
             thread.join()
-else:
-    logging.error("Exiting due to Tor connection failure.")
-    print(colored("Exiting due to Tor connection failure.", "red"))
+        
+        progress_bar.close()
+    else:
+        logging.error("Exiting due to Tor connection failure.")
+        print(colored("Exiting due to Tor connection failure.", "red"))
+
+start_download()
+
+# Save failed downloads to a file
+if failed_downloads:
+    with open(failed_downloads_file, 'w') as file:
+        for url in failed_downloads:
+            file.write(url + '\n')
+
+# Retry failed downloads
+if os.path.exists(failed_downloads_file):
+    with open(failed_downloads_file, 'r') as file:
+        for url in file.readlines():
+            url_queue.put(url.strip())
+
+    failed_downloads.clear()
+    start_download()
+
+    if os.path.exists(failed_downloads_file):
+        os.remove(failed_downloads_file)
 
 # Command-line argument parsing
 def parse_arguments():
@@ -202,22 +230,19 @@ def main():
         os.makedirs(config['download_dir'])
 
     # Start the download process
-    if test_tor_connection():
-        # Set up progress bar
-        with tqdm(total=url_queue.qsize(), desc="Downloading files") as progress_bar:
-            # Start worker threads
-            threads = []
-            for _ in range(config['concurrent_downloads']):
-                thread = threading.Thread(target=worker, args=(url_queue, progress_bar))
-                thread.start()
-                threads.append(thread)
+    start_download()
 
-            # Wait for all threads to finish
-            for thread in threads:
-                thread.join()
-    else:
-        logging.error("Exiting due to Tor connection failure.")
-        print(colored("Exiting due to Tor connection failure.", "red"))
+    # Retry failed downloads
+    if os.path.exists(failed_downloads_file):
+        with open(failed_downloads_file, 'r') as file:
+            for url in file.readlines():
+                url_queue.put(url.strip())
+
+        failed_downloads.clear()
+        start_download()
+
+        if os.path.exists(failed_downloads_file):
+            os.remove(failed_downloads_file)
 
 if __name__ == "__main__":
     main()
