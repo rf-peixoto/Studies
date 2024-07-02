@@ -109,6 +109,14 @@ if not os.path.exists(config['download_dir']):
 def download_file(url, progress_bar=None):
     parsed_url = urllib.parse.urlparse(url)
     filepath = os.path.join(config['download_dir'], parsed_url.netloc + parsed_url.path)
+    
+    # Check if the URL is a directory
+    if filepath.endswith('/'):
+        os.makedirs(filepath, exist_ok=True)
+        logging.info(f"Created directory: {filepath}")
+        print(f"Created directory: {colored(filepath, 'blue')}")
+        return True
+    
     os.makedirs(os.path.dirname(filepath), exist_ok=True)
     try:
         logging.info(f"Attempting to download: {url}")
@@ -243,8 +251,8 @@ def main():
         failed_downloads.clear()
         start_download()
 
-        if os.path.exists(failed_downloads_file):
-            os.remove(failed_downloads_file)
+        #if os.path.exists(failed_downloads_file):
+        #    os.remove(failed_downloads_file)
 
 if __name__ == "__main__":
     main()
