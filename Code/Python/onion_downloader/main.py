@@ -44,7 +44,7 @@ headers = {
 }
 log_file = 'app.log'
 urls_file = 'urls.txt'
-failed_downloads_file = 'failed_downloads.txt'
+failed_downloads_file = 'failed.txt'
 
 # Set up logging
 logging.basicConfig(filename=log_file, level=logging.DEBUG,
