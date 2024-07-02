@@ -107,10 +107,11 @@ if not os.path.exists(config['download_dir']):
 
 # Function to download a file from a URL
 def download_file(url, progress_bar=None):
-    filename = os.path.basename(url)
-    filepath = os.path.join(config['download_dir'], filename)
+    parsed_url = urllib.parse.urlparse(url)
+    filepath = os.path.join(config['download_dir'], parsed_url.netloc + parsed_url.path)
+    os.makedirs(os.path.dirname(filepath), exist_ok=True)
     try:
-        logging.info(f"Attempting to download: {filename}")
+        logging.info(f"Attempting to download: {url}")
         host = url.split('/')[2]
         headers['Host'] = host
         headers['Referer'] = '/'.join(url.split('/')[:-1]) + '/'
@@ -120,21 +121,21 @@ def download_file(url, progress_bar=None):
         logging.info(f"Content-Type: {content_type}")
         with open(filepath, 'wb') as file:
             file.write(response.content)
-        logging.info(f"Downloaded: {filename}")
-        print(f"Downloaded: {colored(filename, 'green')}")
+        logging.info(f"Downloaded: {url}")
+        print(f"Downloaded: {colored(url, 'green')}")
         if progress_bar:
             with progress_bar.get_lock():
                 progress_bar.update(1)
         return True
     except requests.exceptions.HTTPError as e:
-        logging.error(f"Failed to download {filename}: {e}")
+        logging.error(f"Failed to download {url}: {e}")
         if e.response.status_code == 404:
-            print(f"Failed to download {colored(filename, 'red')}: {colored('404 Not Found', 'red')}")
+            print(f"Failed to download {colored(url, 'red')}: {colored('404 Not Found', 'red')}")
         else:
-            print(f"Failed to download {colored(filename, 'red')}: {colored(str(e), 'red')}")
+            print(f"Failed to download {colored(url, 'red')}: {colored(str(e), 'red')}")
     except requests.exceptions.RequestException as e:
-        logging.error(f"Failed to download {filename}: {e}")
-        print(f"Failed to download {colored(filename, 'red')}: {colored(str(e), 'red')}")
+        logging.error(f"Failed to download {url}: {e}")
+        print(f"Failed to download {colored(url, 'red')}: {colored(str(e), 'red')}")
     return False
 
 # Worker function for threading
