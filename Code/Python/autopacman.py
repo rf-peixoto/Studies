@@ -2,31 +2,34 @@ import random
 import curses
 import heapq
 import time
+from collections import deque
 
 # Configuration variables
-WIDTH = 50
-HEIGHT = 50
-CHUNK_SIZE = 20
-SCREEN_SIZE = 20
+WIDTH = 64
+HEIGHT = 64
+CHUNK_SIZE = 16
+SCREEN_SIZE = 16
 REFRESH_RATE = 100  # Time in milliseconds
 NUM_ITEMS = 10
 NUM_MONSTERS = 5  # Number of monsters
+NUM_THIEVES = 1  # Number of thieves
 SPAWN_INTERVAL = 5  # Time interval in seconds to spawn new items
-POWER_UP_SPAWN_INTERVAL = 30  # Time interval in seconds to spawn power-ups
+POWER_UP_SPAWN_INTERVAL = 10  # Time interval in seconds to spawn power-ups
 POWER_UP_DURATION = 15  # Duration of power-up effects in seconds
 PLAYER_CHAR = '@'
 ITEM_CHAR = 'I'
 MONSTER_CHAR = 'M'
+THIEF_CHAR = 'T'
 POWER_UP_CHAR = 'P'  # Display as a different color for differentiation
 WALL_CHAR = '#'
 PATH_CHAR = '.'
-MONSTER_NEAR_THRESHOLD = 10  # Distance within which the player flees from monsters
+MONSTER_NEAR_THRESHOLD = 105  # Distance within which the player flees from monsters
 
 # Random names for players
 PLAYER_NAMES = ["Alex", "Blake", "Casey", "Drew", "Elliot", "Frankie", "Glen", "Harper", "Jesse", "Kai"]
 
 # Power-up effects
-POWER_UPS = ["Speed", "Extra Life", "Double"]
+POWER_UPS = ["speed", "extra_life", "double_value"]
 
 class Maze:
     def __init__(self, width, height, chunk_size, num_items):
@@ -91,7 +94,7 @@ class Maze:
                 self.items.append((x, y))
                 break
 
-    def display_chunk(self, stdscr, player_x, player_y, monsters, player_name, player_items, player_turns, high_scores, power_up_effect):
+    def display_chunk(self, stdscr, player_x, player_y, monsters, thieves, player_name, player_items, player_turns, high_scores, power_up_effect):
         chunk_x = player_x // self.chunk_size * self.chunk_size
         chunk_y = player_y // self.chunk_size * self.chunk_size
 
@@ -105,6 +108,8 @@ class Maze:
                             stdscr.addch(y - chunk_y, x - chunk_x, ITEM_CHAR, curses.color_pair(4))
                         elif (x, y) in [(m.x, m.y) for m in monsters]:
                             stdscr.addch(y - chunk_y, x - chunk_x, MONSTER_CHAR, curses.color_pair(5))
+                        elif (x, y) in [(t.x, t.y) for t in thieves]:
+                            stdscr.addch(y - chunk_y, x - chunk_x, THIEF_CHAR, curses.color_pair(7))
                         elif (x, y) in [(p[0], p[1]) for p in self.power_ups]:
                             stdscr.addch(y - chunk_y, x - chunk_x, POWER_UP_CHAR, curses.color_pair(6))
                         elif self.maze[x][y] == 0:
@@ -191,6 +196,53 @@ class Monster(Entity):
             next_pos = path.pop(0)
             self.x, self.y = next_pos
 
+class Thief(Entity):
+    def __init__(self, start_x, start_y):
+        super().__init__(start_x, start_y)
+        self.collected_items = 0
+        self.power_up_end_time = None
+        self.power_up_effect = None
+        self.extra_life = False
+        self.double_value_active = False
+
+    def move(self, path, maze, items, power_ups):
+        if path:
+            next_pos = path.pop(0)
+            self.x, self.y = next_pos
+            if (self.x, self.y) in items:
+                items.remove((self.x, self.y))
+                if self.double_value_active:
+                    self.collected_items += 2
+                else:
+                    self.collected_items += 1
+            for power_up in power_ups:
+                if (self.x, self.y) == (power_up[0], power_up[1]):
+                    self.apply_power_up(power_up[2])
+                    power_ups.remove(power_up)
+
+    def apply_power_up(self, effect):
+        self.power_up_effect = effect
+        if effect == "speed":
+            self.power_up_end_time = time.time() + POWER_UP_DURATION
+        elif effect == "extra_life":
+            self.extra_life = True
+            self.power_up_end_time = time.time() + POWER_UP_DURATION  # Ensuring it doesn't stack
+        elif effect == "double_value":
+            self.double_value_active = True
+            self.power_up_end_time = time.time() + POWER_UP_DURATION
+
+    def check_power_up_expiry(self):
+        if self.power_up_end_time and time.time() >= self.power_up_end_time:
+            self.power_up_end_time = None
+            self.power_up_effect = None
+            self.double_value_active = False
+            self.extra_life = False
+
+    def flee(self, path):
+        if path:
+            next_pos = path.pop(0)
+            self.x, self.y = next_pos
+
 def heuristic(a, b):
     return abs(a[0] - b[0]) + abs(a[1] - b[1])
 
@@ -248,11 +300,13 @@ def main(stdscr):
     curses.init_pair(4, curses.COLOR_CYAN, curses.COLOR_BLACK)  # Items
     curses.init_pair(5, curses.COLOR_RED, curses.COLOR_BLACK)  # Monsters
     curses.init_pair(6, curses.COLOR_MAGENTA, curses.COLOR_BLACK)  # Power-Ups
+    curses.init_pair(7, curses.COLOR_WHITE, curses.COLOR_BLACK)  # Thief
 
     width, height = max(WIDTH, CHUNK_SIZE), max(HEIGHT, CHUNK_SIZE)
     maze = Maze(width, height, CHUNK_SIZE, NUM_ITEMS)
     player = Player(1, 1)
     monsters = [Monster(random.randint(1, width - 2), random.randint(1, height - 2)) for _ in range(NUM_MONSTERS)]
+    thieves = [Thief(random.randint(1, width - 2), random.randint(1, height - 2)) for _ in range(NUM_THIEVES)]
     high_scores = []
 
     stdscr.nodelay(1)  # Set getch() to non-blocking
@@ -264,7 +318,9 @@ def main(stdscr):
     while True:
         stdscr.clear()
         player.check_power_up_expiry()
-        maze.display_chunk(stdscr, player.x, player.y, monsters, player.name, player.collected_items, player.turns_survived, high_scores, player.power_up_effect)
+        for thief in thieves:
+            thief.check_power_up_expiry()
+        maze.display_chunk(stdscr, player.x, player.y, monsters, thieves, player.name, player.collected_items, player.turns_survived, high_scores, player.power_up_effect)
 
         flee_path = None
         for monster in monsters:
@@ -287,6 +343,25 @@ def main(stdscr):
                     high_scores = high_scores[:5]  # Keep top 5 high scores
                     player = Player(random.randint(1, width - 2), random.randint(1, height - 2))
                     break
+
+        for thief in thieves:
+            path_to_thief = a_star_search((thief.x, thief.y), (player.x, player.y), maze.maze)
+            if heuristic((thief.x, thief.y), (player.x, player.y)) < MONSTER_NEAR_THRESHOLD:
+                flee_path_thief = a_star_search((thief.x, thief.y), (thief.x + (thief.x - player.x), thief.y + (thief.y - player.y)), maze.maze)
+                thief.flee(flee_path_thief)
+            else:
+                if maze.power_ups:
+                    nearest_power_up = min(maze.power_ups, key=lambda power_up: heuristic((thief.x, thief.y), (power_up[0], power_up[1])))
+                    path = a_star_search((thief.x, thief.y), (nearest_power_up[0], nearest_power_up[1]), maze.maze)
+                    thief.move(path, maze.maze, maze.items, maze.power_ups)
+                elif maze.items:
+                    nearest_item = min(maze.items, key=lambda item: heuristic((thief.x, thief.y), item))
+                    path = a_star_search((thief.x, thief.y), nearest_item, maze.maze)
+                    thief.move(path, maze.maze, maze.items, maze.power_ups)
+
+            if (thief.x, thief.y) == (player.x, player.y):
+                player.collected_items += thief.collected_items
+                thieves.remove(thief)
 
         if flee_path:
             player.flee(flee_path)
