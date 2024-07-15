@@ -22,7 +22,7 @@ ssh -fX user@host program
 # Ex: ssh -fX user@host wireshark
 
 # Change ELF banner with bless:
-# 1) Find bin with.
+# 1) Find bin.
 whereis [bin] # Ex: whereis sshd
 # You can check it with: strings [bin]
 # 2) Open ELF with bless:;
