@@ -1,3 +1,7 @@
+import json
+import logging
+import os
+import time
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service as ChromeService
 from selenium.webdriver.common.by import By
@@ -6,8 +10,10 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 from colorama import Fore, Style
-import os
-import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
+# Setup logging
+logging.basicConfig(filename='script.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Function to set up the Chrome WebDriver with options
 def setup_driver(user_agent, cookies):
@@ -39,9 +45,28 @@ def capture_screenshot(url, driver, output_folder):
     screenshot_path = os.path.join(output_folder, screenshot_name)
     driver.save_screenshot(screenshot_path)
     print(Fore.GREEN + f"Screenshot saved as {screenshot_path}" + Style.RESET_ALL)
+    logging.info(f"Screenshot saved as {screenshot_path}")
+
+# Function to process a single URL
+def process_url(url, user_agent, cookies, output_folder):
+    driver = setup_driver(user_agent, cookies)
+    try:
+        capture_screenshot(url, driver, output_folder)
+    except Exception as e:
+        logging.error(f"Failed to capture screenshot for {url}: {e}", exc_info=True)
+        failed_message = f"Screenshot failed at {url}"
+        print(Fore.RED + failed_message + Style.RESET_ALL)
+        with open('failed_urls.txt', 'a') as f:
+            f.write(url + '\n')
+    finally:
+        driver.quit()
 
 # Main function to process the list of URLs
 def main():
+    # Read configuration from a file
+    with open('config.json', 'r') as file:
+        config = json.load(file)
+
     # Read URLs from a file
     with open('urls.txt', 'r') as file:
         urls = [line.strip() for line in file.readlines()]
@@ -49,37 +74,22 @@ def main():
     # Ensure URLs are correctly formatted
     formatted_urls = ["http://" + url if not (url.startswith("http://") or url.startswith("https://")) else url for url in urls]
     
-    # Define user agent and cookies
-    user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.107 Safari/537.36"
-    cookies = [
-        # Example cookie
-        # {'name': 'cookie_name', 'value': 'cookie_value', 'domain': 'domain.com'},
-        # Add more cookies if needed, or leave the list empty
-    ]
-    
     # Create output folder if it doesn't exist
     output_folder = 'img'
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
     
-    # File to record failed URLs
-    failed_urls_file = 'failed_urls.txt'
-    with open(failed_urls_file, 'w') as f:
-        pass  # Just to create/clear the file at the start
+    user_agent = config['user_agent']
+    cookies = config['cookies']
+    delay = config.get('delay', 1)
+    max_workers = config.get('max_workers', 4)
     
-    driver = setup_driver(user_agent, cookies)
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = [executor.submit(process_url, url, user_agent, cookies, output_folder) for url in formatted_urls]
+        for future in as_completed(futures):
+            future.result()  # Ensure exceptions are raised
     
-    for url in formatted_urls:
-        try:
-            capture_screenshot(url, driver, output_folder)
-            time.sleep(1)  # Delay between requests to avoid being flagged as a bot
-        except Exception as e:
-            failed_message = f"Screenshot failed at {url}"
-            print(Fore.RED + failed_message + Style.RESET_ALL)
-            with open(failed_urls_file, 'a') as f:
-                f.write(url + '\n')
-    
-    driver.quit()
+    time.sleep(delay)  # Delay between batches
 
 if __name__ == "__main__":
     main()
