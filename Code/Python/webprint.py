@@ -5,6 +5,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
+from colorama import Fore, Style
 import os
 import time
 
@@ -15,7 +16,8 @@ def setup_driver(user_agent, cookies):
     options.add_argument("--headless")  # Run in headless mode for faster performance
     options.add_argument("--disable-gpu")
     options.add_argument("--window-size=1920x1080")
-    
+    options.add_argument("--log-level=3")  # Suppress driver output
+
     driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=options)
     driver.delete_all_cookies()
     
@@ -36,7 +38,7 @@ def capture_screenshot(url, driver, output_folder):
     screenshot_name = url.replace('https://', '').replace('http://', '').replace('/', '_') + ".png"
     screenshot_path = os.path.join(output_folder, screenshot_name)
     driver.save_screenshot(screenshot_path)
-    print(f"Screenshot saved as {screenshot_path}")
+    print(Fore.GREEN + f"Screenshot saved as {screenshot_path}" + Style.RESET_ALL)
 
 # Main function to process the list of URLs
 def main():
@@ -60,6 +62,11 @@ def main():
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
     
+    # File to record failed URLs
+    failed_urls_file = 'failed_urls.txt'
+    with open(failed_urls_file, 'w') as f:
+        pass  # Just to create/clear the file at the start
+    
     driver = setup_driver(user_agent, cookies)
     
     for url in formatted_urls:
@@ -67,7 +74,10 @@ def main():
             capture_screenshot(url, driver, output_folder)
             time.sleep(1)  # Delay between requests to avoid being flagged as a bot
         except Exception as e:
-            print(f"Failed to capture screenshot for {url}: {e}")
+            failed_message = f"Screenshot failed at {url}"
+            print(Fore.RED + failed_message + Style.RESET_ALL)
+            with open(failed_urls_file, 'a') as f:
+                f.write(url + '\n')
     
     driver.quit()
 
