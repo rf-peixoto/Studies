@@ -2,6 +2,7 @@ import json
 import logging
 import os
 import time
+import chardet
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service as ChromeService
 from selenium.webdriver.common.by import By
@@ -61,14 +62,25 @@ def process_url(url, user_agent, cookies, output_folder):
     finally:
         driver.quit()
 
+# Function to detect file encoding
+def detect_encoding(file_path):
+    with open(file_path, 'rb') as file:
+        raw_data = file.read()
+    result = chardet.detect(raw_data)
+    return result['encoding']
+
 # Main function to process the list of URLs
 def main():
     # Read configuration from a file
     with open('config.json', 'r') as file:
         config = json.load(file)
 
-    # Read URLs from a file
-    with open('urls.txt', 'r') as file:
+    # Detect encoding of the URLs file
+    urls_file_path = 'urls.txt'
+    encoding = detect_encoding(urls_file_path)
+    
+    # Read URLs from the file with the detected encoding
+    with open(urls_file_path, 'r', encoding=encoding) as file:
         urls = [line.strip() for line in file.readlines()]
     
     # Ensure URLs are correctly formatted
