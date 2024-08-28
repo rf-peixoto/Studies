@@ -69,6 +69,12 @@ path:.env AWS_KEY /(AKIA[A-Z0-9]{12,})/
 /ssh:\/\/.*:.*@.*target\.com/
 /ftp:\/\/.*:.*@.*target\.com/ 
 
+/_vti_pvt/service.pwd
+/master.passwd/master.passwd.txt
+/servudaemon.ini
+/app/config/config.local.neon
+/app/etc/local.xml
+/home/000~ROOT~000
 
 “.git” intitle:”Index of”
 filetype:git -github.com inurl:”/.git”
