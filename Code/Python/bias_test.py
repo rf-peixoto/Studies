@@ -1,225 +1,225 @@
 import os
 import sys
+import random
 
 # List of cognitive biases with intuitive questions and weightings
 biases = {
     "Confirmation Bias": {
         "questions": [
-            "Do you tend to look for information that supports your beliefs?",
-            "Do you dismiss evidence that contradicts your opinions?"
+            "Do you prefer hearing information that supports your existing opinions?",
+            "When you see evidence that contradicts your view, do you tend to dismiss it quickly?"
         ],
         "weight": 1.5,
-        "description": "You may focus on confirming your beliefs and ignore contradictory information."
+        "description": "This reflects a tendency to seek out information that confirms your pre-existing beliefs."
     },
     "Anchoring Bias": {
         "questions": [
-            "When making decisions, do you focus heavily on the first piece of information you see?",
-            "Do you rely on initial information even when new data becomes available?"
+            "When making decisions, do you rely heavily on the first piece of information you receive?",
+            "Do you tend to hold on to your first opinion, even when new information becomes available?"
         ],
         "weight": 1.0,
-        "description": "You might rely too much on initial information when making decisions."
+        "description": "This evaluates how much your decisions rely on initial impressions."
     },
     "Availability Heuristic": {
         "questions": [
-            "Do recent events affect how you perceive the likelihood of future events?",
-            "Do you believe something is more likely to happen if you can easily remember an example?"
+            "Do recent events make you think they are more likely to happen again?",
+            "Do you feel that something is more likely to happen if it’s fresh in your memory?"
         ],
         "weight": 1.0,
-        "description": "You may overestimate the likelihood of events based on recent memories."
+        "description": "This checks whether recent events disproportionately influence your perception of likelihood."
     },
     "Hindsight Bias": {
         "questions": [
-            "Do you often feel that an outcome was obvious after it has already happened?",
-            "When you see the result of an event, do you feel like you knew it all along?"
+            "Do you often feel like an outcome was obvious after it has already happened?",
+            "When a result occurs, do you tend to think you 'knew it all along'?"
         ],
         "weight": 1.2,
-        "description": "You may believe you predicted an outcome after it occurred, though you did not."
+        "description": "This reflects a tendency to view past events as predictable after they happen."
     },
     "Overconfidence Bias": {
         "questions": [
-            "Do you often feel very confident in your opinions, even without much evidence?",
-            "Do you think you're better at things than most people?"
+            "Do you often feel very confident in your predictions, even when there is little evidence?",
+            "Do you believe you’re better than most people at tasks, even when you have little experience?"
         ],
         "weight": 1.3,
-        "description": "You may have excessive confidence in your abilities or decisions."
+        "description": "This evaluates how overconfident you are in your abilities or predictions."
     },
     "Sunk Cost Fallacy": {
         "questions": [
-            "Do you continue with something because you've already invested time or money into it?",
-            "Do you avoid quitting a project because you've already spent too much on it?"
+            "Do you keep working on something just because you’ve already put a lot of time or money into it?",
+            "Do you avoid quitting a project or investment because of the effort you’ve already put in?"
         ],
         "weight": 1.2,
-        "description": "You may be unwilling to stop an activity because of past investments, even if it no longer makes sense."
+        "description": "This checks whether past investments (time, effort, or money) overly influence your future decisions."
     },
     "Framing Effect": {
         "questions": [
-            "Does the way something is presented change how you feel about it?",
-            "If something is framed as a '90% success rate,' does that sound better than '10% failure rate'?"
+            "Does how something is presented affect how you feel about it?",
+            "If told there’s a '90% success rate' versus a '10% failure rate,' does that change how you perceive it?"
         ],
         "weight": 1.2,
-        "description": "You may be influenced by how information is framed, even when the facts are the same."
+        "description": "This evaluates whether you are influenced by how information is presented, even when the facts are the same."
     },
     "Bandwagon Effect": {
         "questions": [
-            "Do you tend to follow trends just because a lot of people are doing it?",
-            "Do you often adopt the opinions of people around you?"
+            "Do you find yourself adopting opinions or following trends just because a lot of people are doing the same?",
+            "Do you tend to follow the group opinion, even if you're unsure about it?"
         ],
         "weight": 1.0,
-        "description": "You may follow popular opinions or trends just because others are doing it."
+        "description": "This checks how much you are influenced by the actions or opinions of others."
     },
     "Self-Serving Bias": {
         "questions": [
-            "Do you credit yourself when things go well but blame others or circumstances when things go wrong?",
-            "Is it easier for you to see your successes than your failures?"
+            "When things go well, do you attribute it to your own efforts, but when things go poorly, do you blame external factors?",
+            "Do you feel you deserve more credit for your successes than others?"
         ],
         "weight": 1.3,
-        "description": "You may attribute success to your abilities and failures to external factors."
+        "description": "This reflects how much you credit yourself for success while blaming others or circumstances for failures."
     },
     "Fundamental Attribution Error": {
         "questions": [
-            "Do you often think someone’s behavior is due to their personality rather than their situation?",
-            "Do you judge people’s actions without considering their circumstances?"
+            "When someone makes a mistake, do you think it’s because of their personality, not the situation they were in?",
+            "Do you often assume people act a certain way because of who they are, rather than considering the situation?"
         ],
         "weight": 1.1,
-        "description": "You may overestimate personal factors and underestimate situational factors in others' behavior."
+        "description": "This checks whether you blame others' actions on their character, while downplaying external circumstances."
     },
     "Halo Effect": {
         "questions": [
-            "Do you assume people are good at everything because they excel in one area?",
+            "Do you assume someone who is good at one thing is also good at other unrelated things?",
             "If you like one thing about a person, do you tend to like everything about them?"
         ],
         "weight": 1.0,
-        "description": "You may let one positive trait influence your judgment of other unrelated traits."
+        "description": "This evaluates how much you let a single positive trait influence your perception of other unrelated traits."
     },
     "Horn Effect": {
         "questions": [
             "If you dislike one thing about a person, do you assume they have other negative qualities?",
-            "Do you tend to see everything about a person negatively if they do one thing wrong?"
+            "Do you find that a single bad trait makes you think negatively about a person overall?"
         ],
         "weight": 1.0,
-        "description": "You may allow a single negative trait to influence your perception of unrelated traits."
+        "description": "This reflects whether a negative impression of one trait leads you to view everything about a person negatively."
     },
     "Ingroup Bias": {
         "questions": [
-            "Do you trust people more if they are part of your social or cultural group?",
-            "Do you feel more comfortable with people who share similar backgrounds or interests?"
+            "Do you feel more comfortable with people who share similar backgrounds, beliefs, or interests?",
+            "Do you trust people more if they are part of your own social group?"
         ],
         "weight": 1.2,
-        "description": "You may prefer people who belong to your own group over outsiders."
+        "description": "This checks whether you favor people from your own social group over those from outside."
     },
     "Belief Bias": {
         "questions": [
             "Do you accept arguments more easily when they align with your existing beliefs?",
-            "Do you think arguments are valid just because you agree with their conclusions?"
+            "Do you tend to agree with conclusions just because they match your opinions?"
         ],
         "weight": 1.3,
-        "description": "You may judge arguments based on whether you agree with them, rather than their logic."
+        "description": "This evaluates whether you judge arguments based on their alignment with your existing beliefs, rather than logic."
     },
     "Negativity Bias": {
         "questions": [
-            "Do you focus more on negative experiences than positive ones?",
-            "Do negative events impact you more than positive ones?"
+            "Do negative events affect you more deeply than positive ones, even when the positives are more frequent?",
+            "Do you tend to focus on the negatives in a situation, even when there are more positive aspects?"
         ],
         "weight": 1.1,
-        "description": "You may give more importance to negative events than positive ones."
+        "description": "This checks how much negative information influences you compared to positive information."
     },
     "Gambler's Fallacy": {
         "questions": [
-            "Do you believe that if something happens frequently, it’s less likely to happen in the future?",
-            "Do you think random events, like a coin toss, will 'even out' over time?"
+            "Do you believe that if something has happened often, it’s less likely to happen in the future?",
+            "Do you think that random events 'balance out' over time, like a coin toss?"
         ],
         "weight": 1.0,
-        "description": "You may believe that random events are influenced by past occurrences, even when they are not."
+        "description": "This evaluates whether you believe random events are influenced by previous occurrences."
     },
     "Status Quo Bias": {
         "questions": [
-            "Do you prefer things to stay the same, even when change might be better?",
+            "Do you prefer to keep things the way they are, even when change might be better?",
             "Are you uncomfortable with changes, even when they are small?"
         ],
         "weight": 1.2,
-        "description": "You may resist change, even when it might improve your situation."
+        "description": "This checks whether you favor the current state of affairs over potential improvements through change."
     },
     "Outcome Bias": {
         "questions": [
-            "Do you judge decisions by their outcome rather than the reasoning behind them?",
-            "Do you think a decision was good just because it led to a positive result?"
+            "Do you judge decisions by their outcome, rather than by the reasoning behind them?",
+            "If something turned out well, do you assume the decision was a good one, regardless of how it was made?"
         ],
         "weight": 1.1,
-        "description": "You may judge decisions based on their outcomes, not the quality of the decision-making process."
+        "description": "This reflects how much you judge decisions based on their results rather than the quality of the decision-making process."
     },
     "Dunning-Kruger Effect": {
         "questions": [
-            "Do you feel confident about a subject even when you have limited knowledge?",
+            "Do you feel confident in your abilities, even when you have little experience in a given area?",
             "Do you underestimate how much others know compared to you?"
         ],
         "weight": 1.3,
-        "description": "You may overestimate your abilities or knowledge in certain areas."
+        "description": "This checks whether you overestimate your own abilities or knowledge."
     },
     "Optimism Bias": {
         "questions": [
-            "Do you generally believe that good things will happen to you?",
-            "Do you tend to ignore risks because you assume things will work out?"
+            "Do you believe that good things are more likely to happen to you than to others?",
+            "Do you tend to downplay risks because you believe things will work out in the end?"
         ],
         "weight": 1.2,
-        "description": "You may expect positive outcomes more often than is realistic."
+        "description": "This reflects how much you expect positive outcomes, even when the risks are high."
     },
     "Pessimism Bias": {
         "questions": [
-            "Do you tend to expect bad things to happen, even without evidence?",
-            "Do you assume the worst in situations, even when positive outcomes are possible?"
+            "Do you tend to expect the worst, even when there's no strong reason to believe it?",
+            "Do you assume bad outcomes are more likely, even when positive outcomes are possible?"
         ],
         "weight": 1.2,
-        "description": "You may expect negative outcomes more often than is realistic."
+        "description": "This checks whether you expect negative outcomes more often than is warranted by the situation."
     },
     "Survivorship Bias": {
         "questions": [
-            "Do you focus on successful examples and ignore those that failed?",
-            "Do you tend to look at success stories and assume they are typical?"
+            "Do you focus on successful examples and ignore the failures when making decisions?",
+            "Do you assume something is common or easy because successful examples are easy to find?"
         ],
         "weight": 1.0,
-        "description": "You may give more attention to successful examples while ignoring the failures."
+        "description": "This evaluates how much you are influenced by success stories while ignoring the likelihood of failure."
     },
     "Illusory Correlation": {
         "questions": [
-            "Do you believe two things are related because they happen together, even if there’s no evidence?",
-            "Do you see patterns where none exist?"
+            "Do you believe two things are related just because they happen together often?",
+            "Do you see patterns where there may not be any?"
         ],
         "weight": 1.1,
-        "description": "You may perceive connections between unrelated events."
+        "description": "This checks whether you perceive connections between unrelated events."
     },
     "Recency Bias": {
         "questions": [
-            "Do recent events influence your decisions more than older, equally important ones?",
-            "Do you give more weight to the latest information when making decisions?"
+            "Do you place more importance on recent events than older, equally important ones?",
+            "Do you think recent experiences are more meaningful than those that happened further in the past?"
         ],
         "weight": 1.1,
-        "description": "You may give too much importance to recent events compared to past ones."
+        "description": "This reflects how much recent events influence your decisions compared to older ones."
     },
     "Clustering Illusion": {
         "questions": [
-            "Do you see patterns in random data, like believing certain events occur in streaks?",
-            "Do you think random events happen in clusters more than they actually do?"
+            "Do you believe that random events happen in streaks or clusters?",
+            "Do you tend to see patterns in random data, like thinking something is 'due' to happen?"
         ],
         "weight": 1.0,
-        "description": "You may see patterns in things that are actually random."
+        "description": "This evaluates whether you see patterns in random events where none actually exist."
     }
 }
-
 # Scoring system and corresponding answer map
 score_map = {
-    1: "Yes",
-    2: "Maybe Yes",
-    3: "Neutral",
-    4: "Maybe No",
-    5: "No"
+    "Y": 2,
+    "M": 1,
+    "N": 0,
+    "n": -1,
+    "NO": -2
 }
 
 numeric_score_map = {
-    1: 2,
-    2: 1,
-    3: 0,
-    4: -1,
-    5: -2
+    1: "Y",  # Yes
+    2: "M",  # Maybe Yes
+    3: "N",  # Neutral
+    4: "n",  # Maybe No
+    5: "NO"  # No
 }
 
 def clear_terminal():
@@ -239,7 +239,7 @@ def ask_question(question, current, total):
     print("Answer options: 1) Yes, 2) Maybe Yes, 3) Neutral, 4) Maybe No, 5) No")
     
     try:
-        answer = int(input("Your answer (1-5): ").strip())
+        answer = int(input("Your answer: ").strip())
     except ValueError:
         answer = 0
     
@@ -252,61 +252,70 @@ def ask_question(question, current, total):
     
     return numeric_score_map[answer]
 
+def interpret_score(overall_score):
+    if overall_score > 20:
+        return "Highly Biased: You exhibit a strong tendency toward cognitive biases across many categories."
+    elif 10 <= overall_score <= 20:
+        return "Moderately Biased: You show several cognitive biases, but not strongly in every category."
+    elif 0 <= overall_score < 10:
+        return "Slight Bias: You have some bias but remain relatively objective overall."
+    elif -10 <= overall_score < 0:
+        return "Unbiased: You exhibit minimal cognitive bias and are generally objective."
+    elif overall_score < -10:
+        return "Highly Unbiased: You demonstrate strong critical thinking and are resistant to common biases."
+    else:
+        return "Neutral: Your score suggests a balanced mindset with no clear indication of bias."
+
 def test_for_bias():
     total_score = 0
-    total_questions = 0
     bias_scores = {}
-    
-    # Total number of questions
-    total_questions_count = sum(len(bias['questions']) for bias in biases.values())
-    
+
+    # Randomize order of biases and questions
+    all_questions = []
+    for bias_name, bias_data in biases.items():
+        for question in bias_data["questions"]:
+            all_questions.append((bias_name, question, bias_data["weight"]))
+
+    random.shuffle(all_questions)
+
+    total_questions_count = len(all_questions)
     current_question_number = 0
 
-    for bias_name, bias_data in biases.items():
-        bias_scores[bias_name] = 0
-        questions = bias_data["questions"]
-        weight = bias_data["weight"]
-        
-        for question in questions:
-            score = ask_question(question, current_question_number + 1, total_questions_count)
-            bias_scores[bias_name] += score
-            total_score += score * weight
-            current_question_number += 1
-            sys.stdout.flush()  # Ensure smooth output of progress bar
+    for bias_name, question, weight in all_questions:
+        answer_str = ask_question(question, current_question_number + 1, total_questions_count)
+        score = score_map[answer_str]  # Convert answer string to corresponding integer score
+
+        if bias_name not in bias_scores:
+            bias_scores[bias_name] = 0
+
+        bias_scores[bias_name] += score
+        total_score += score * weight
+        current_question_number += 1
+        sys.stdout.flush()  # Ensure smooth output of progress bar
 
     # Test complete; clear terminal for results
     clear_terminal()
 
+    # Display the overall score and its interpretation
+    print(f"Overall Score: {total_score:.2f}")
+    interpretation = interpret_score(total_score)
+    print(f"Interpretation: {interpretation}")
+
     # Calculate bias score breakdown
-    print("\n--- Bias Breakdown ---")
+    print("\n--- Detailed Report ---")
     for bias_name, bias_data in biases.items():
-        bias_score = bias_scores[bias_name]
-        questions = bias_data["questions"]
-        avg_score = bias_score / len(questions)
-        
+        bias_score = bias_scores.get(bias_name, 0)
+        avg_score = bias_score / len(bias_data["questions"])
         print(f"\n{bias_name}:")
         print(f"  Average Score: {avg_score:.2f}")
         print(f"  {bias_data['description']}")
-
-    # Calculate overall bias score
-    average_total_score = total_score / total_questions_count
-    bias_level = "Low Bias"
     
-    if average_total_score > 1.0:
-        bias_level = "High Bias"
-    elif 0.5 < average_total_score <= 1.0:
-        bias_level = "Moderate Bias"
-    elif -0.5 <= average_total_score <= 0.5:
-        bias_level = "Neutral"
-    elif -1.0 <= average_total_score < -0.5:
-        bias_level = "Low Bias"
-    else:
-        bias_level = "No Bias"
-    
-    print("\n--- Overall Results ---")
-    print(f"Your overall score is: {average_total_score:.2f}")
-    print(f"Your bias level is: {bias_level}")
-    print("--------------------")
+    # Text-based heatmap
+    print("\n--- Heatmap ---")
+    for bias_name, bias_data in biases.items():
+        avg_score = bias_scores.get(bias_name, 0) / len(bias_data["questions"])
+        heatmap = "#" * int((avg_score + 2) * 5) + "-" * (10 - int((avg_score + 2) * 5))
+        print(f"{bias_name[:20].ljust(20)} | {heatmap} | Avg Score: {avg_score:.2f}")
 
 # Run the test
 if __name__ == "__main__":
