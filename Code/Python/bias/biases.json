@@ -1,0 +1,728 @@
+{
+    "Confirmation Bias": {
+        "questions": [
+            {
+                "text": "Do you often seek out information that supports your existing views?",
+                "reverse": false
+            },
+            {
+                "text": "Do you make an effort to consider viewpoints that differ from your own?",
+                "reverse": true
+            },
+            {
+                "text": "When discussing topics, do you prefer engaging with those who agree with you?",
+                "reverse": false
+            },
+            {
+                "text": "Are you open to changing your opinion when presented with new evidence?",
+                "reverse": true
+            }
+        ],
+        "weight": 1.5,
+        "description": "A tendency to favor information that confirms your existing beliefs and disregard evidence to the contrary."
+    },
+    "Anchoring Bias": {
+        "questions": [
+            {
+                "text": "Do you rely heavily on initial information when making decisions?",
+                "reverse": false
+            },
+            {
+                "text": "Is it easy for you to adjust your opinions when you receive new data?",
+                "reverse": true
+            },
+            {
+                "text": "Are your first impressions of situations usually the most influential?",
+                "reverse": false
+            },
+            {
+                "text": "Do you often revise your estimates after considering additional information?",
+                "reverse": true
+            }
+        ],
+        "weight": 1.0,
+        "description": "Relying too heavily on the first piece of information encountered when making decisions."
+    },
+    "Availability Heuristic": {
+        "questions": [
+            {
+                "text": "Do vivid examples influence your perception of how common something is?",
+                "reverse": false
+            },
+            {
+                "text": "Do you prioritize statistical data over personal anecdotes when evaluating risks?",
+                "reverse": true
+            },
+            {
+                "text": "Are you more swayed by stories you've heard recently than by long-term trends?",
+                "reverse": false
+            },
+            {
+                "text": "Do you consider a wide range of information before forming an opinion?",
+                "reverse": true
+            }
+        ],
+        "weight": 1.0,
+        "description": "Estimating the likelihood of events based on how easily examples come to mind."
+    },
+    "Hindsight Bias": {
+        "questions": [
+            {
+                "text": "Do you often feel that you could have predicted events after they occur?",
+                "reverse": false
+            },
+            {
+                "text": "Do you acknowledge that many outcomes are unpredictable?",
+                "reverse": true
+            },
+            {
+                "text": "Are you surprised by unexpected results?",
+                "reverse": true
+            },
+            {
+                "text": "Do you believe that events are obvious in retrospect?",
+                "reverse": false
+            }
+        ],
+        "weight": 1.2,
+        "description": "Seeing past events as being more predictable than they were before they took place."
+    },
+    "Overconfidence Bias": {
+        "questions": [
+            {
+                "text": "Do you trust your judgments even when lacking complete information?",
+                "reverse": false
+            },
+            {
+                "text": "Do you frequently seek input from others when making decisions?",
+                "reverse": true
+            },
+            {
+                "text": "Are you confident in your ability to predict future events?",
+                "reverse": false
+            },
+            {
+                "text": "Do you recognize the limits of your knowledge?",
+                "reverse": true
+            }
+        ],
+        "weight": 1.3,
+        "description": "Having excessive confidence in one's own answers or abilities."
+    },
+    "Sunk Cost Fallacy": {
+        "questions": [
+            {
+                "text": "Do you continue with endeavors because of the time or money already invested?",
+                "reverse": false
+            },
+            {
+                "text": "Is it easy for you to abandon projects that are not yielding results?",
+                "reverse": true
+            },
+            {
+                "text": "Do you feel compelled to follow through on plans due to previous commitments?",
+                "reverse": false
+            },
+            {
+                "text": "Can you change course without worrying about past investments?",
+                "reverse": true
+            }
+        ],
+        "weight": 1.2,
+        "description": "Continuing an endeavor due to previously invested resources."
+    },
+    "Framing Effect": {
+        "questions": [
+            {
+                "text": "Does the way information is presented influence your decisions?",
+                "reverse": false
+            },
+            {
+                "text": "Do you focus on the content rather than the presentation when evaluating information?",
+                "reverse": true
+            },
+            {
+                "text": "Are you more persuaded by positive wording than negative wording?",
+                "reverse": false
+            },
+            {
+                "text": "Do you make decisions based solely on facts, regardless of presentation?",
+                "reverse": true
+            }
+        ],
+        "weight": 1.2,
+        "description": "Drawing different conclusions from the same information depending on how it's presented."
+    },
+    "Bandwagon Effect": {
+        "questions": [
+            {
+                "text": "Do you often adopt opinions because they are popular?",
+                "reverse": false
+            },
+            {
+                "text": "Do you form your opinions independently of others?",
+                "reverse": true
+            },
+            {
+                "text": "Are you influenced by the choices of your peers?",
+                "reverse": false
+            },
+            {
+                "text": "Do you feel comfortable holding views that differ from the majority?",
+                "reverse": true
+            }
+        ],
+        "weight": 1.0,
+        "description": "Doing or believing things because many other people do."
+    },
+    "Self-Serving Bias": {
+        "questions": [
+            {
+                "text": "Do you credit your successes to your abilities and failures to external factors?",
+                "reverse": false
+            },
+            {
+                "text": "Do you take responsibility for mistakes you make?",
+                "reverse": true
+            },
+            {
+                "text": "Are you more likely to blame others when things go wrong?",
+                "reverse": false
+            },
+            {
+                "text": "Do you recognize external factors in your successes?",
+                "reverse": true
+            }
+        ],
+        "weight": 1.3,
+        "description": "Attributing positive events to oneself and negative events to external factors."
+    },
+    "Fundamental Attribution Error": {
+        "questions": [
+            {
+                "text": "Do you believe people's actions are mainly due to their character?",
+                "reverse": false
+            },
+            {
+                "text": "Do you consider situational factors when evaluating others' behaviors?",
+                "reverse": true
+            },
+            {
+                "text": "Are you quick to judge others without knowing their circumstances?",
+                "reverse": false
+            },
+            {
+                "text": "Do you try to understand the context before forming opinions about others?",
+                "reverse": true
+            }
+        ],
+        "weight": 1.1,
+        "description": "Overemphasizing personality traits and underemphasizing situational factors when explaining others' behaviors."
+    },
+    "Halo Effect": {
+        "questions": [
+            {
+                "text": "Do positive impressions in one area influence your overall opinion of someone?",
+                "reverse": false
+            },
+            {
+                "text": "Can you separate different aspects of a person's abilities when evaluating them?",
+                "reverse": true
+            },
+            {
+                "text": "Do you assume someone is good at everything if they excel in one thing?",
+                "reverse": false
+            },
+            {
+                "text": "Do you assess each of a person's qualities independently?",
+                "reverse": true
+            }
+        ],
+        "weight": 1.0,
+        "description": "Letting one positive trait influence overall perception of a person or thing."
+    },
+    "Horn Effect": {
+        "questions": [
+            {
+                "text": "Does a negative trait overshadow your overall impression of someone?",
+                "reverse": false
+            },
+            {
+                "text": "Are you able to recognize positive qualities in someone you dislike?",
+                "reverse": true
+            },
+            {
+                "text": "Do you dismiss people entirely based on a single flaw?",
+                "reverse": false
+            },
+            {
+                "text": "Can you appreciate strengths in others despite their weaknesses?",
+                "reverse": true
+            }
+        ],
+        "weight": 1.0,
+        "description": "Allowing one negative trait to overshadow other, more positive traits."
+    },
+    "Ingroup Bias": {
+        "questions": [
+            {
+                "text": "Do you prefer the company of people who are similar to you?",
+                "reverse": false
+            },
+            {
+                "text": "Are you equally open to collaborating with anyone, regardless of background?",
+                "reverse": true
+            },
+            {
+                "text": "Do you trust people more if they belong to your own social group?",
+                "reverse": false
+            },
+            {
+                "text": "Do you evaluate others based on individual merits rather than group affiliations?",
+                "reverse": true
+            }
+        ],
+        "weight": 1.2,
+        "description": "Favoring members of one's own group over those in other groups."
+    },
+    "Belief Bias": {
+        "questions": [
+            {
+                "text": "Are you more convinced by arguments that align with your beliefs?",
+                "reverse": false
+            },
+            {
+                "text": "Do you assess arguments based on their logic, regardless of the conclusion?",
+                "reverse": true
+            },
+            {
+                "text": "Do you find it hard to accept valid arguments that contradict your views?",
+                "reverse": false
+            },
+            {
+                "text": "Are you open to changing your beliefs when presented with sound reasoning?",
+                "reverse": true
+            }
+        ],
+        "weight": 1.3,
+        "description": "Judging arguments based on whether their conclusions align with one's beliefs."
+    },
+    "Negativity Bias": {
+        "questions": [
+            {
+                "text": "Do negative experiences affect you more than positive ones?",
+                "reverse": false
+            },
+            {
+                "text": "Do you give equal attention to both positive and negative feedback?",
+                "reverse": true
+            },
+            {
+                "text": "Are you more likely to remember criticisms over compliments?",
+                "reverse": false
+            },
+            {
+                "text": "Do you focus on successes as much as setbacks?",
+                "reverse": true
+            }
+        ],
+        "weight": 1.1,
+        "description": "Giving more weight to negative experiences over positive ones."
+    },
+    "Gambler's Fallacy": {
+        "questions": [
+            {
+                "text": "Do you believe that a random event is less likely to happen if it has occurred recently?",
+                "reverse": false
+            },
+            {
+                "text": "Do you understand that each random event is independent of previous ones?",
+                "reverse": true
+            },
+            {
+                "text": "Do you expect outcomes to 'even out' in the short term?",
+                "reverse": false
+            },
+            {
+                "text": "Are you aware that patterns in random events are coincidental?",
+                "reverse": true
+            }
+        ],
+        "weight": 1.0,
+        "description": "Believing that future probabilities are altered by past events."
+    },
+    "Status Quo Bias": {
+        "questions": [
+            {
+                "text": "Do you prefer to stick with familiar routines over trying new things?",
+                "reverse": false
+            },
+            {
+                "text": "Are you open to making changes when presented with better options?",
+                "reverse": true
+            },
+            {
+                "text": "Do you feel uncomfortable with change, even if it might be beneficial?",
+                "reverse": false
+            },
+            {
+                "text": "Do you actively seek out new experiences?",
+                "reverse": true
+            }
+        ],
+        "weight": 1.2,
+        "description": "The preference to keep things the same by doing nothing or by sticking with a decision made previously."
+    },
+    "Outcome Bias": {
+        "questions": [
+            {
+                "text": "Do you judge decisions based solely on their outcomes?",
+                "reverse": false
+            },
+            {
+                "text": "Do you consider the decision-making process regardless of the result?",
+                "reverse": true
+            },
+            {
+                "text": "Are you more critical of choices that lead to poor results?",
+                "reverse": false
+            },
+            {
+                "text": "Do you evaluate actions based on the information available at the time?",
+                "reverse": true
+            }
+        ],
+        "weight": 1.1,
+        "description": "Judging a decision based on its outcome rather than on the quality of the decision at the time it was made."
+    },
+    "Dunning-Kruger Effect": {
+        "questions": [
+            {
+                "text": "Do you believe you are highly skilled in areas where you have little experience?",
+                "reverse": false
+            },
+            {
+                "text": "Do you recognize when you need to learn more about a subject?",
+                "reverse": true
+            },
+            {
+                "text": "Are you confident in your abilities even when you lack expertise?",
+                "reverse": false
+            },
+            {
+                "text": "Do you seek feedback to improve your understanding?",
+                "reverse": true
+            }
+        ],
+        "weight": 1.3,
+        "description": "Overestimating one's abilities due to a lack of self-awareness."
+    },
+    "Optimism Bias": {
+        "questions": [
+            {
+                "text": "Do you expect things to turn out well for you?",
+                "reverse": false
+            },
+            {
+                "text": "Are you cautious about potential risks in your plans?",
+                "reverse": true
+            },
+            {
+                "text": "Do you believe negative events are unlikely to happen to you?",
+                "reverse": false
+            },
+            {
+                "text": "Do you consider possible challenges when making decisions?",
+                "reverse": true
+            }
+        ],
+        "weight": 1.2,
+        "description": "Believing that one is less likely to experience negative events."
+    },
+    "Pessimism Bias": {
+        "questions": [
+            {
+                "text": "Do you often anticipate negative outcomes?",
+                "reverse": false
+            },
+            {
+                "text": "Are you hopeful about future possibilities?",
+                "reverse": true
+            },
+            {
+                "text": "Do you focus on what might go wrong rather than what could go right?",
+                "reverse": false
+            },
+            {
+                "text": "Do you expect positive results from your efforts?",
+                "reverse": true
+            }
+        ],
+        "weight": 1.2,
+        "description": "Overestimating the likelihood of negative outcomes."
+    },
+    "Survivorship Bias": {
+        "questions": [
+            {
+                "text": "Do you focus on success stories without considering failures?",
+                "reverse": false
+            },
+            {
+                "text": "Do you take into account examples of both success and failure?",
+                "reverse": true
+            },
+            {
+                "text": "Are you influenced mainly by people who have succeeded in a field?",
+                "reverse": false
+            },
+            {
+                "text": "Do you research unsuccessful attempts to gain a balanced perspective?",
+                "reverse": true
+            }
+        ],
+        "weight": 1.0,
+        "description": "Focusing on the surviving examples and ignoring those that failed."
+    },
+    "Illusory Correlation": {
+        "questions": [
+            {
+                "text": "Do you see connections between events that may be unrelated?",
+                "reverse": false
+            },
+            {
+                "text": "Do you require evidence before believing events are linked?",
+                "reverse": true
+            },
+            {
+                "text": "Are you inclined to associate coincidences with meaningful patterns?",
+                "reverse": false
+            },
+            {
+                "text": "Do you recognize when patterns are due to chance?",
+                "reverse": true
+            }
+        ],
+        "weight": 1.1,
+        "description": "Perceiving a relationship between variables even when no such relationship exists."
+    },
+    "Recency Bias": {
+        "questions": [
+            {
+                "text": "Do recent events influence your decisions more than past experiences?",
+                "reverse": false
+            },
+            {
+                "text": "Do you consider historical data equally when evaluating situations?",
+                "reverse": true
+            },
+            {
+                "text": "Are your judgments heavily affected by the latest information?",
+                "reverse": false
+            },
+            {
+                "text": "Do you balance recent developments with long-term trends?",
+                "reverse": true
+            }
+        ],
+        "weight": 1.1,
+        "description": "Giving greater importance to the most recent event."
+    },
+    "Clustering Illusion": {
+        "questions": [
+            {
+                "text": "Do you perceive patterns in random sequences?",
+                "reverse": false
+            },
+            {
+                "text": "Are you aware that random events can appear to have patterns?",
+                "reverse": true
+            },
+            {
+                "text": "Do you believe that streaks in random events are meaningful?",
+                "reverse": false
+            },
+            {
+                "text": "Do you understand that chance events are not influenced by prior outcomes?",
+                "reverse": true
+            }
+        ],
+        "weight": 1.0,
+        "description": "Seeing patterns in random data."
+    },
+    "Authority Bias": {
+        "questions": [
+            {
+                "text": "Do you accept opinions from authority figures without questioning?",
+                "reverse": false
+            },
+            {
+                "text": "Do you evaluate information critically regardless of the source?",
+                "reverse": true
+            },
+            {
+                "text": "Are you more likely to agree with someone because of their status?",
+                "reverse": false
+            },
+            {
+                "text": "Do you form your own opinions even when they differ from experts?",
+                "reverse": true
+            }
+        ],
+        "weight": 1.2,
+        "description": "Placing undue trust in authority figures."
+    },
+    "Blind Spot Bias": {
+        "questions": [
+            {
+                "text": "Do you believe you are less biased than others?",
+                "reverse": false
+            },
+            {
+                "text": "Are you aware of your own potential biases?",
+                "reverse": true
+            },
+            {
+                "text": "Do you find it easier to spot biases in others than in yourself?",
+                "reverse": false
+            },
+            {
+                "text": "Do you reflect on how your beliefs may be influenced?",
+                "reverse": true
+            }
+        ],
+        "weight": 1.1,
+        "description": "Recognizing biases in others but failing to see them in oneself."
+    },
+    "Placebo Effect": {
+        "questions": [
+            {
+                "text": "Do you notice improvements when you believe in the effectiveness of a treatment?",
+                "reverse": false
+            },
+            {
+                "text": "Are you skeptical about results that may be due to expectations?",
+                "reverse": true
+            },
+            {
+                "text": "Does your belief in something enhance its effectiveness for you?",
+                "reverse": false
+            },
+            {
+                "text": "Do you require evidence before attributing improvements to a treatment?",
+                "reverse": true
+            }
+        ],
+        "weight": 1.0,
+        "description": "Experiencing a benefit after a treatment due to expectations."
+    },
+    "Reactive Devaluation": {
+        "questions": [
+            {
+                "text": "Does knowing who proposed an idea affect your acceptance of it?",
+                "reverse": false
+            },
+            {
+                "text": "Do you evaluate suggestions based on their merits rather than their source?",
+                "reverse": true
+            },
+            {
+                "text": "Are you less receptive to ideas from people you disagree with?",
+                "reverse": false
+            },
+            {
+                "text": "Can you appreciate good ideas regardless of who presents them?",
+                "reverse": true
+            }
+        ],
+        "weight": 1.1,
+        "description": "Devaluing proposals because of their source."
+    },
+    "Hyperbolic Discounting": {
+        "questions": [
+            {
+                "text": "Do you prefer immediate rewards over larger future benefits?",
+                "reverse": false
+            },
+            {
+                "text": "Are you willing to wait for greater rewards in the future?",
+                "reverse": true
+            },
+            {
+                "text": "Is it difficult for you to delay gratification?",
+                "reverse": false
+            },
+            {
+                "text": "Do you plan for long-term benefits over short-term gains?",
+                "reverse": true
+            }
+        ],
+        "weight": 1.2,
+        "description": "Preferring smaller, immediate rewards over larger, later rewards."
+    },
+    "Mere Exposure Effect": {
+        "questions": [
+            {
+                "text": "Do you prefer things simply because they are familiar to you?",
+                "reverse": false
+            },
+            {
+                "text": "Are you open to new experiences and options?",
+                "reverse": true
+            },
+            {
+                "text": "Does repeated exposure increase your liking for something?",
+                "reverse": false
+            },
+            {
+                "text": "Do you evaluate things based on their merits rather than familiarity?",
+                "reverse": true
+            }
+        ],
+        "weight": 1.0,
+        "description": "Developing a preference for things merely because they are familiar."
+    },
+    "False Consensus Effect": {
+        "questions": [
+            {
+                "text": "Do you assume others share your opinions and beliefs?",
+                "reverse": false
+            },
+            {
+                "text": "Are you aware that others may think differently from you?",
+                "reverse": true
+            },
+            {
+                "text": "Are you surprised when people disagree with your views?",
+                "reverse": false
+            },
+            {
+                "text": "Do you recognize the diversity of perspectives among people?",
+                "reverse": true
+            }
+        ],
+        "weight": 1.1,
+        "description": "Overestimating how much others agree with us."
+    },
+    "Projection Bias": {
+        "questions": [
+            {
+                "text": "Do you expect your future preferences to be the same as your current ones?",
+                "reverse": false
+            },
+            {
+                "text": "Do you consider that your tastes and opinions may change over time?",
+                "reverse": true
+            },
+            {
+                "text": "Is it hard for you to imagine your feelings changing in the future?",
+                "reverse": false
+            },
+            {
+                "text": "Do you plan for future changes in your preferences?",
+                "reverse": true
+            }
+        ],
+        "weight": 1.2,
+        "description": "Assuming that future preferences will align with current ones."
+    }
+}
