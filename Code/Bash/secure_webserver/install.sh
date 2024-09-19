@@ -11,6 +11,7 @@ set -euo pipefail
 # User Configuration
 NEW_USER="your_username"                # Replace with your desired username
 SSH_PORT="30080"                        # Replace with your desired SSH port
+DOMAIN="0.0.0.0"
 
 # Backup Configuration
 BACKUP_DIR="/var/backups"               # Replace with your desired backup directory
@@ -102,7 +103,7 @@ if id "$NEW_USER" &>/dev/null; then
 else
     echo_info "Creating a new user: $NEW_USER"
     adduser --disabled-password --gecos "" "$NEW_USER" &>> "$LOG_FILE"
-    
+
     echo_info "Adding $NEW_USER to sudo group..."
     usermod -aG sudo "$NEW_USER" &>> "$LOG_FILE"
 fi
@@ -174,7 +175,7 @@ function update_sshd_config {
     local PARAM="$1"
     local VALUE="$2"
     local FILE="/etc/ssh/sshd_config"
-    
+
     if grep -q "^$PARAM" "$FILE"; then
         sed -i "s/^$PARAM.*/$PARAM $VALUE/" "$FILE"
     else
@@ -268,11 +269,11 @@ else
     # Define Tor hidden service
     # Nginx will listen on localhost:80, Tor will forward to it
     cat >> /etc/tor/torrc <<EOL
-    
-    # Hidden Service Configuration
-    HiddenServiceDir $HIDDEN_SERVICE_DIR
-    HiddenServicePort 80 127.0.0.1:80
-    EOL
+
+# Hidden Service Configuration
+HiddenServiceDir $HIDDEN_SERVICE_DIR
+HiddenServicePort 80 127.0.0.1:80
+EOL
 fi
 
 # Restart Tor to apply changes and generate the onion address
@@ -285,7 +286,7 @@ sleep 10
 # Retrieve the onion address
 if [ -f "${HIDDEN_SERVICE_DIR}/hostname" ]; then
     ONION_ADDRESS=$(cat "${HIDDEN_SERVICE_DIR}/hostname")
-    
+
     if [[ -z "$ONION_ADDRESS" ]]; then
         echo_error "Failed to retrieve onion address."
     else
@@ -522,10 +523,10 @@ if [ -d /etc/modsecurity/crs ]; then
 else
     # Install dependencies
     apt install git -y &>> "$LOG_FILE"
-    
+
     # Clone CRS repository
     git clone https://github.com/coreruleset/coreruleset.git /etc/modsecurity/crs &>> "$LOG_FILE"
-    
+
     # Copy example setup
     cp /etc/modsecurity/crs/crs-setup.conf.example /etc/modsecurity/crs/crs-setup.conf &>> "$LOG_FILE"
 fi
@@ -553,7 +554,7 @@ if grep -q "net.ipv4.ip_forward = 0" /etc/sysctl.conf; then
     echo_warn "Kernel parameters already hardened. Skipping."
 else
     cat >> /etc/sysctl.conf <<EOL
-    
+
 # Hardened kernel parameters
 
 # Disable IP forwarding
@@ -651,7 +652,7 @@ for service in "${UNNECESSARY_SERVICES[@]}"; do
     else
         echo_warn "$service is already disabled or not installed. Skipping."
     fi
-    
+
     if systemctl is-active --quiet "$service"; then
         systemctl stop "$service" &>> "$LOG_FILE"
         echo_info "Stopped $service"
@@ -870,10 +871,10 @@ EOL
 
     # Replace placeholder in backup script with actual username
     sed -i "s/your_username/$NEW_USER/" "$BACKUP_SCRIPT"
-    
+
     # Make backup script executable
     chmod +x "$BACKUP_SCRIPT"
-    
+
     echo_info "Backup script created at $BACKUP_SCRIPT."
 fi
 
@@ -906,7 +907,16 @@ ufw reload &>> "$LOG_FILE"
 # ----------------------------
 echo_info "Server configuration completed successfully!"
 
-echo_warn "Your Tor hidden service is available at: $DOMAIN"
+# Display the Onion URL prominently
+if [[ -n "${DOMAIN:-}" ]]; then
+    echo -e "\e[34m========================================\e[0m"
+    echo -e "\e[32m[SUCCESS]\e[0m Your Tor hidden service is running at:"
+    echo -e "\e[32m$DOMAIN\e[0m"
+    echo -e "\e[34m========================================\e[0m"
+else
+    echo_warn "Tor hidden service domain not found."
+fi
+
 echo_warn "Please securely download your SSH private key from /home/$NEW_USER/.ssh/id_ed25519."
 echo_warn "Verify SSH access with the new user before closing your current session."
 
