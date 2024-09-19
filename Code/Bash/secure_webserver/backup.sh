@@ -14,9 +14,6 @@ NEW_USER="your_username"                # Replace with your actual username
 BACKUP_DIR="/var/backups"               # Backup storage directory
 RETENTION_DAYS=7                        # Number of days to keep backups
 
-# Backup Script Configuration
-BACKUP_SCRIPT="/usr/local/bin/backup.sh"
-
 # ----------------------------
 # 2. Function Definitions
 # ----------------------------
