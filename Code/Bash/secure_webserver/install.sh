@@ -25,7 +25,7 @@ NGINX_DEFAULT_SITE="/etc/nginx/sites-available/default"
 BACKUP_SCRIPT="/usr/local/bin/backup.sh"
 
 # Services to Disable
-UNNECESSARY_SERVICES=("bluetooth.service" "avahi-daemon.service" "cups.service")
+UNNECESSARY_SERVICES=("bluetooth.service" "avahi-daemon.service" "cups.service" "ftp.service" "smtp.service")
 
 # ----------------------------
 # 2. Function Definitions
@@ -41,9 +41,10 @@ function echo_warn {
     echo -e "\e[33m[WARN]\e[0m $1"
 }
 
-# Function to display error messages
+# Function to display error messages and exit
 function echo_error {
     echo -e "\e[31m[ERROR]\e[0m $1"
+    exit 1
 }
 
 # ----------------------------
@@ -101,6 +102,10 @@ sed -i "s/^PermitRootLogin.*/PermitRootLogin no/" /etc/ssh/sshd_config
 sed -i "s/^PasswordAuthentication.*/PasswordAuthentication no/" /etc/ssh/sshd_config
 sed -i "s/^#PubkeyAuthentication.*/PubkeyAuthentication yes/" /etc/ssh/sshd_config
 
+# Disable SSH Agent Forwarding and enable strict modes
+sed -i "s/^#AllowAgentForwarding.*/AllowAgentForwarding no/" /etc/ssh/sshd_config
+sed -i "s/^#StrictModes.*/StrictModes yes/" /etc/ssh/sshd_config
+
 # Restart SSH service
 echo_info "Restarting SSH service..."
 systemctl restart sshd
@@ -118,9 +123,8 @@ ufw default allow outgoing
 # Allow SSH on the new port
 ufw allow "$SSH_PORT"/tcp
 
-# Allow Tor and other necessary ports (if any)
-# Since the blog is on the Tor network, we don't need to allow HTTP/HTTPS externally
-# Nginx will listen on localhost only
+# Do NOT allow HTTP/HTTPS externally since Tor will handle it
+# Nginx will listen only on localhost
 
 # Enable UFW
 echo_info "Enabling UFW..."
@@ -238,8 +242,8 @@ EOL
 # Configure default site with security enhancements and CSP
 cat > "$NGINX_DEFAULT_SITE" <<EOL
 server {
-    listen 80 default_server;
-    listen [::]:80 default_server;
+    listen 127.0.0.1:80 default_server;
+    listen [::1]:80 default_server;
 
     server_name $DOMAIN;
 
@@ -278,6 +282,9 @@ server {
     if (\$request_method !~ ^(GET|HEAD|POST)$ ) {
         return 444;
     }
+
+    # Uniform Response Times
+    # Add delay uniformly if needed using ngx_http_delay_module or similar (optional)
 }
 EOL
 
@@ -349,7 +356,7 @@ echo_info "Restarting Nginx to apply ModSecurity..."
 systemctl restart nginx
 
 # ----------------------------
-# 13. Install and Configure ModSecurity with OWASP Core Rule Set (CRS)
+# 13. Configure ModSecurity with OWASP Core Rule Set (CRS)
 # ----------------------------
 echo_info "Configuring ModSecurity with OWASP Core Rule Set (CRS)..."
 
@@ -371,9 +378,9 @@ echo_info "Restarting Nginx to apply ModSecurity CRS..."
 systemctl restart nginx
 
 # ----------------------------
-# 14. Harden Kernel Parameters
+# 14. Harden Kernel Parameters and Disable IPv6
 # ----------------------------
-echo_info "Hardening kernel parameters..."
+echo_info "Hardening kernel parameters and disabling IPv6..."
 
 cat >> /etc/sysctl.conf <<EOL
 
@@ -401,7 +408,7 @@ net.ipv4.tcp_synack_retries = 2
 # Log Martian Packets
 net.ipv4.conf.all.log_martians = 1
 
-# Disable IPv6 if not used
+# Disable IPv6
 net.ipv6.conf.all.disable_ipv6 = 1
 EOL
 
@@ -463,24 +470,18 @@ ufw deny in from any to any proto tcp flags all FIN,SYN,RST,ACK,URG,PSH
 # ----------------------------
 # 19. Enable TCP SYN Cookies
 # ----------------------------
-echo_info "Enabling TCP SYN Cookies..."
-echo "net.ipv4.tcp_syncookies = 1" >> /etc/sysctl.conf
-sysctl -p
+echo_info "Ensuring TCP SYN Cookies are enabled..."
+# Already enabled in kernel parameters above
 
 # ----------------------------
 # 20. Implement Zero Trust Principles
 # ----------------------------
 echo_info "Implementing Zero Trust principles..."
-# While comprehensive Zero Trust implementation may require additional tools and configurations,
-# the following steps contribute to a Zero Trust architecture:
-# a. Ensure all services authenticate and authorize requests properly.
-# b. Limit user privileges to the minimum necessary.
-# c. Regularly audit and monitor access logs.
-# These principles are partially addressed by previous configurations:
+# Enforced through previous configurations:
 # - Strict SSH access controls
 # - Firewall rules limiting access
 # - Fail2Ban protecting against unauthorized access attempts
-
+# - AppArmor providing MAC
 # Further Zero Trust implementations may involve using VPNs, mutual TLS, etc., which are beyond the scope of this script.
 
 # ----------------------------
