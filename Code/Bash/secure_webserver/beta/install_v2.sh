@@ -32,6 +32,13 @@ UNNECESSARY_SERVICES=("bluetooth.service" "avahi-daemon.service" "cups.service" 
 # Log File Configuration
 LOG_FILE="/var/log/vps_setup.log"
 
+# Shell History Configuration
+HISTORY_CONFIG_DIR="/etc/profile.d"
+HISTORY_CONFIG_FILE="history_limits.sh"
+HISTORY_MAX_LINES=5
+HISTORY_CLEANUP_SCRIPT="/usr/local/bin/cleanup_history.sh"
+CRON_JOB_FILE="/etc/cron.d/cleanup_history"
+
 # ----------------------------
 # 2. Function Definitions
 # ----------------------------
@@ -218,6 +225,7 @@ if ufw status | grep -qw "$SSH_PORT/tcp"; then
     echo_warn "UFW already allows port $SSH_PORT/tcp. Skipping."
 else
     ufw allow "$SSH_PORT"/tcp &>> "$LOG_FILE"
+    echo_info "Allowed SSH port $SSH_PORT/tcp in UFW."
 fi
 
 # Allow HTTP and HTTPS
@@ -251,14 +259,16 @@ fi
 
 # Enable UFW logging
 ufw logging high &>> "$LOG_FILE"
+echo_info "Enabled high-level logging in UFW."
 
 # Configure UFW for IPv6 appropriately
 echo_info "Configuring UFW for IPv6..."
 # Ensure UFW is set to manage IPv6
-sed -i 's/^IPV6=yes/IPV6=yes/' /etc/default/ufw
+sed -i 's/^IPV6=.*/IPV6=yes/' /etc/default/ufw
 
 # Reload UFW to apply IPv6 settings
 ufw reload &>> "$LOG_FILE"
+echo_info "Reloaded UFW to apply IPv6 settings."
 
 # ----------------------------
 # 9. Install Tor and Nyx
@@ -295,6 +305,7 @@ else
 HiddenServiceDir $HIDDEN_SERVICE_DIR
 HiddenServicePort 80 127.0.0.1:80
 EOL
+    echo_info "Added hidden service configuration to torrc."
 fi
 
 # Restart Tor to apply changes and generate the onion address
@@ -370,6 +381,7 @@ SECURITY_HEADERS_CONF="/etc/nginx/snippets/security_headers.conf"
 
 if [ ! -f "$SECURITY_HEADERS_CONF" ]; then
     echo_info "Creating Nginx security headers snippet..."
+    mkdir -p /etc/nginx/snippets
     cat > "$SECURITY_HEADERS_CONF" <<EOL
 # Security Headers
 add_header Content-Security-Policy "default-src 'self';" always;
@@ -485,13 +497,15 @@ sed -i 's/^listen.owner.*/listen.owner = www-data/' /etc/php/*/fpm/pool.d/www.co
 sed -i 's/^listen.group.*/listen.group = www-data/' /etc/php/*/fpm/pool.d/www.conf
 sed -i 's/^listen.mode.*/listen.mode = 0660/' /etc/php/*/fpm/pool.d/www.conf
 
-# Harden PHP by disabling unnecessary functions and setting appropriate directives
-PHP_INI_DIR="/etc/php/$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;')/fpm"
-PHP_INI_FILE="$PHP_INI_DIR/php.ini"
-
 echo_info "Hardening PHP by disabling unnecessary functions..."
 # List of functions to disable
 DISABLED_FUNCTIONS="exec,passthru,shell_exec,system,proc_open,popen,curl_exec,curl_multi_exec,parse_ini_file,show_source"
+
+# Identify the PHP version
+PHP_VERSION=$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;')
+
+PHP_INI_DIR="/etc/php/$PHP_VERSION/fpm"
+PHP_INI_FILE="$PHP_INI_DIR/php.ini"
 
 # Backup php.ini if backup doesn't exist
 if [ ! -f "$PHP_INI_FILE.bak" ]; then
@@ -521,8 +535,8 @@ sed -i 's/^allow_url_include = .*/allow_url_include = Off/' "$PHP_INI_FILE"
 
 echo_info "Isolating PHP-FPM processes for enhanced security..."
 # Ensure PHP-FPM runs under the www-data user and group
-sed -i 's/^user = .*/user = www-data/' "$PHP_INI_DIR/fpm-pool.conf"
-sed -i 's/^group = .*/group = www-data/' "$PHP_INI_DIR/fpm-pool.conf"
+sed -i 's/^user = .*/user = www-data/' "$PHP_INI_DIR/pool.d/www.conf"
+sed -i 's/^group = .*/group = www-data/' "$PHP_INI_DIR/pool.d/www.conf"
 
 # Restart PHP-FPM and Nginx
 echo_info "Restarting PHP-FPM and Nginx..."
@@ -977,7 +991,77 @@ else
 fi
 
 # ----------------------------
-# 26. Final Security Enhancements
+# 26. Configure Shell History
+# ----------------------------
+echo_info "Configuring shell history settings for $NEW_USER..."
+
+# Configure bash_history
+BASH_HISTORY_FILE="/home/$NEW_USER/.bashrc"
+
+if grep -q "HISTSIZE=$HISTORY_MAX_LINES" "$BASH_HISTORY_FILE"; then
+    echo_warn "Bash history size already configured. Skipping."
+else
+    echo_info "Setting HISTSIZE and HISTFILESIZE to $HISTORY_MAX_LINES in .bashrc..."
+    echo "export HISTSIZE=$HISTORY_MAX_LINES" >> "$BASH_HISTORY_FILE"
+    echo "export HISTFILESIZE=$HISTORY_MAX_LINES" >> "$BASH_HISTORY_FILE"
+fi
+
+# Configure zsh_history (if zsh is installed)
+if is_installed zsh; then
+    ZSH_HISTORY_FILE="/home/$NEW_USER/.zshrc"
+    if grep -q "HISTSIZE=$HISTORY_MAX_LINES" "$ZSH_HISTORY_FILE"; then
+        echo_warn "Zsh history size already configured. Skipping."
+    else
+        echo_info "Setting HISTSIZE and SAVEHIST to $HISTORY_MAX_LINES in .zshrc..."
+        echo "export HISTSIZE=$HISTORY_MAX_LINES" >> "$ZSH_HISTORY_FILE"
+        echo "export SAVEHIST=$HISTORY_MAX_LINES" >> "$ZSH_HISTORY_FILE"
+    fi
+else
+    echo_warn "Zsh is not installed. Skipping zsh_history configuration."
+fi
+
+# Create a script to clean history files
+if [ -f "$HISTORY_CLEANUP_SCRIPT" ]; then
+    echo_warn "History cleanup script already exists at $HISTORY_CLEANUP_SCRIPT. Skipping creation."
+else
+    echo_info "Creating history cleanup script at $HISTORY_CLEANUP_SCRIPT..."
+    cat > "$HISTORY_CLEANUP_SCRIPT" <<EOL
+#!/bin/bash
+
+# Exit immediately if a command exits with a non-zero status.
+set -euo pipefail
+
+# Paths to history files
+BASH_HISTORY="/home/$NEW_USER/.bash_history"
+ZSH_HISTORY="/home/$NEW_USER/.zsh_history"
+
+# Truncate history files to $HISTORY_MAX_LINES lines
+if [ -f "\$BASH_HISTORY" ]; then
+    tail -n $HISTORY_MAX_LINES "\$BASH_HISTORY" > "\$BASH_HISTORY.tmp" && mv "\$BASH_HISTORY.tmp" "\$BASH_HISTORY"
+    chmod 600 "\$BASH_HISTORY"
+fi
+
+if [ -f "\$ZSH_HISTORY" ]; then
+    tail -n $HISTORY_MAX_LINES "\$ZSH_HISTORY" > "\$ZSH_HISTORY.tmp" && mv "\$ZSH_HISTORY.tmp" "\$ZSH_HISTORY"
+    chmod 600 "\$ZSH_HISTORY"
+fi
+EOL
+    # Make the cleanup script executable
+    chmod +x "$HISTORY_CLEANUP_SCRIPT"
+    echo_info "History cleanup script created at $HISTORY_CLEANUP_SCRIPT."
+fi
+
+# Create cron job to erase history files every 10 minutes
+if [ -f "$CRON_JOB_FILE" ]; then
+    echo_warn "Cron job for cleaning history already exists. Skipping."
+else
+    echo_info "Setting up cron job to clean history files every 10 minutes..."
+    echo "*/10 * * * * root $HISTORY_CLEANUP_SCRIPT" > "$CRON_JOB_FILE" &>> "$LOG_FILE"
+    echo_info "Cron job for cleaning history files created at $CRON_JOB_FILE."
+fi
+
+# ----------------------------
+# 27. Final Security Enhancements
 # ----------------------------
 echo_info "Performing final security enhancements..."
 
@@ -990,7 +1074,7 @@ echo_info "Reloading UFW to apply all firewall rules..."
 ufw reload &>> "$LOG_FILE"
 
 # ----------------------------
-# 27. Completion Message
+# 28. Completion Message
 # ----------------------------
 echo_info "Server configuration completed successfully!"
 
