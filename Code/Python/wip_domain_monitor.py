@@ -8,6 +8,7 @@ import dns.resolver
 import subprocess
 import re
 import ssl
+import datetime
 from urllib.parse import urlparse
 from logging.handlers import RotatingFileHandler
 from bs4 import BeautifulSoup
@@ -32,17 +33,15 @@ def ensure_scheme(url):
 def get_ip(domain, retries=3, delay=2):
     for attempt in range(retries):
         try:
-            logging.info(f"Resolving IP for domain {domain} (Attempt {attempt + 1})")
             addr_info = socket.getaddrinfo(domain, None)
             for result in addr_info:
                 ip_address = result[4][0]
-                if re.match(r'(\d{1,3}\.){3}\d{1,3}|\[([0-9a-fA-F:]+)\]', ip_address):
+                if ip_address:
                     return ip_address
         except Exception as e:
-            logging.error(f"Error resolving IP for domain {domain}: {str(e)} (Attempt {attempt + 1} of {retries})")
+            logging.error(f"Error resolving IP for domain {domain}: {str(e)}")
             if attempt < retries - 1:
                 time.sleep(delay)
-    logging.info(f"Skipping domain {domain} due to invalid IP after {retries} attempts")
     return None
 
 # Function to get DNS records
@@ -62,26 +61,28 @@ def get_dns_records(domain):
         return records
     except Exception as e:
         logging.error(f"Error retrieving DNS records for domain {domain}: {str(e)}")
-        return 'DNS records not available'
+        return {}
 
-# Function to get SSL certificate details and check for misconfigurations
+# Function to get SSL certificate details
 def get_ssl_info(domain):
     context = ssl.create_default_context()
     try:
-        with context.wrap_socket(socket.socket(), server_hostname=domain) as s:
-            s.connect((domain, 443))
-            cert = s.getpeercert()
-            ssl_info = ssl.get_server_certificate((domain, 443))
-            return {
-                'cert': cert,
-                'ssl_info': ssl_info
-            }
-    except ssl.SSLError as e:
-        logging.error(f"SSL error for domain {domain}: {str(e)}")
-        return 'SSL error'
+        with socket.create_connection((domain, 443)) as sock:
+            with context.wrap_socket(sock, server_hostname=domain) as ssock:
+                cert = ssock.getpeercert()
+        # Convert any datetime objects in cert to strings
+        cert_serializable = {}
+        for key, value in cert.items():
+            if isinstance(value, tuple):
+                cert_serializable[key] = tuple(str(v) if isinstance(v, (datetime.datetime, datetime.date)) else v for v in value)
+            elif isinstance(value, (datetime.datetime, datetime.date)):
+                cert_serializable[key] = str(value)
+            else:
+                cert_serializable[key] = value
+        return {'cert': cert_serializable}
     except Exception as e:
         logging.error(f"Error retrieving SSL info for domain {domain}: {str(e)}")
-        return 'SSL info not available'
+        return {'cert': None}
 
 # Function to get WHOIS information using the native Linux whois command
 def get_whois_info(domain):
@@ -113,13 +114,10 @@ def get_page_title_and_redirection(url, retries=config['retry_attempts'], domain
                     continue  # Follow the redirection
             response.raise_for_status()
             soup = BeautifulSoup(response.content, 'html.parser')
-            return soup.title.string if soup.title else 'No title found', redirections, response.headers
+            return soup.title.string if soup.title else 'No title found', redirections, dict(response.headers)
         except requests.RequestException as e:
-            logging.error(f"Error retrieving page title for URL {url}, attempt {attempt + 1}: {str(e)}")
-            if attempt < retries - 1:
-                time.sleep(2)
-            else:
-                return 'Page title not available', redirections, {}
+            logging.error(f"Error retrieving page title for URL {url}: {str(e)}")
+            return 'Page title not available', redirections, {}
 
 # Function to detect technologies using BuiltWith
 def detect_technologies(url):
@@ -132,12 +130,63 @@ def detect_technologies(url):
 # Function to run AssetFinder for subdomain enumeration
 def get_subdomains(domain):
     try:
-        result = subprocess.run(["assetfinder", domain], stdout=subprocess.PIPE, check=True)
-        subdomains = result.stdout.decode().splitlines()
+        result = subprocess.run(
+            ["assetfinder", domain],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            check=True
+        )
+        if result.stderr:
+            logging.error(f"AssetFinder error for domain {domain}: {result.stderr}")
+        subdomains = result.stdout.strip().split('\n')
         return sorted(set(subdomains))
     except Exception as e:
         logging.error(f"Error running AssetFinder for domain {domain}: {str(e)}")
         return 'Subdomain enumeration not available'
+
+# Function to run Shodan info collection
+def get_shodan_info(ip):
+    try:
+        response = requests.get(f"https://internetdb.shodan.io/{ip}")
+        response.raise_for_status()
+        return response.json()
+    except requests.HTTPError as e:
+        logging.error(f"HTTP error retrieving Shodan info for IP {ip}: {str(e)}")
+        return {"detail": "No information available"}
+    except Exception as e:
+        logging.error(f"Error retrieving Shodan info for IP {ip}: {str(e)}")
+        return {"detail": "No information available"}
+
+# Function to perform banner grabbing
+def banner_grab(ip, port):
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(5)
+        sock.connect((ip, port))
+        sock.sendall(b'HEAD / HTTP/1.0\r\n\r\n')
+        banner = sock.recv(1024).decode()
+        sock.close()
+        return banner
+    except Exception as e:
+        logging.error(f"Error banner grabbing on {ip}:{port}: {str(e)}")
+        return 'Banner grabbing not available'
+
+# Function to run Nuclei scan
+def run_nuclei_scan(domain):
+    try:
+        result = subprocess.run(
+            ["nuclei", "-silent", "-target", domain, "-json"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            check=True
+        )
+        nuclei_data = [json.loads(line) for line in result.stdout.strip().split('\n') if line.strip()]
+        return nuclei_data
+    except Exception as e:
+        logging.error(f"Error running Nuclei scan for domain {domain}: {str(e)}")
+        return 'Nuclei scan not available'
 
 # Function to gather all details for a domain
 def gather_domain_details(url, domain_list):
@@ -149,47 +198,54 @@ def gather_domain_details(url, domain_list):
         logging.info(f"Skipping domain {domain} due to invalid IP")
         return None
 
-    ssl_info = get_ssl_info(domain)
+    # Gathering details with error handling
     page_title, redirections, headers = get_page_title_and_redirection(url, domain_list=domain_list)
-    technologies = detect_technologies(url)
-    whois_info = get_whois_info(domain)
-    dns_records = get_dns_records(domain)
-    subdomains = get_subdomains(domain)
-
     details = {
         'domain': domain,
         'network': {
             'ip_address': ip_address,
-            'dns_records': dns_records,
-            'ssl_info': ssl_info,
-            'whois_info': whois_info
+            'dns_records': get_dns_records(domain),
+            'ssl_info': get_ssl_info(domain),
+            'whois_info': get_whois_info(domain),
+            'shodan_info': get_shodan_info(ip_address)
         },
         'web': {
             'page_title': page_title,
-            'technologies': technologies,
-            'security_headers': headers
+            'technologies': detect_technologies(url),
+            'security_headers': headers  # headers is already converted to dict
         },
-        'subdomains': subdomains,
-        'redirect_sources': redirections
+        'subdomains': get_subdomains(domain),
+        'nuclei_data': run_nuclei_scan(domain),
+        'banners': {}
     }
 
-    logging.info(f"Processed domain {domain}: IP={ip_address}, SSL={'Available' if ssl_info != 'SSL info not available' else 'Not available'}, Title={page_title}")
+    # Adding banners from Shodan data if available
+    if 'ports' in details['network']['shodan_info']:
+        for port in details['network']['shodan_info']['ports']:
+            details['banners'][port] = banner_grab(ip_address, port)
+
+    logging.info(f"Processed domain {domain}: IP={ip_address}")
     return details
 
 # Function to save details to a JSON file
 def save_to_json(data, file_path):
-    with open(file_path, 'w') as f:
-        json.dump(data, f, indent=4)
-    logging.info(f"Saved data to {file_path}")
+    try:
+        with open(file_path, 'w') as f:
+            json.dump(data, f, indent=4)
+        logging.info(f"Saved data to {file_path}")
+    except TypeError as e:
+        logging.error(f"TypeError when saving data to {file_path}: {str(e)}")
+    except Exception as e:
+        logging.error(f"Error saving data to {file_path}: {str(e)}")
 
 # Function to read domains from file
 def read_domains(file_path):
     if os.path.exists(file_path):
         with open(file_path, 'r') as file:
-            domains = [line.strip() for line in file.readlines()]
-        logging.info(f"Read {len(domains)} domains from {file_path}")
+            domains = [line.strip() for line in file if line.strip()]
         return domains
     else:
+        logging.error(f"Domains file {file_path} not found")
         return []
 
 # Function to process a single domain
@@ -198,7 +254,8 @@ def process_domain(url, domain_list, index, total_domains, invalid_domains_count
         print(f"Processing domain: {url} ({index + 1}/{total_domains}) | Invalid domains: {invalid_domains_count}")
         domain_details = gather_domain_details(url, domain_list)
         if domain_details:
-            save_to_json(domain_details, f"{config['output_dir']}{domain_details['domain']}.json")
+            output_file_path = os.path.join(config['output_dir'], f"{domain_details['domain']}.json")
+            save_to_json(domain_details, output_file_path)
             return None
         else:
             return url
@@ -261,15 +318,18 @@ if not os.path.exists(config['output_dir']):
 
 # Schedule the script to run at the specified interval
 def schedule_tasks():
-    schedule.every(config['check_interval']).seconds.do(update_all_domains)
-    schedule.every(config['check_interval']).seconds.do(generate_statistics_report)
+    if config.get('run_once', False):
+        update_all_domains()
+        generate_statistics_report()
+    else:
+        schedule.every(config['check_interval']).seconds.do(update_all_domains)
+        schedule.every(config['check_interval']).seconds.do(generate_statistics_report)
 
-# Initial run
-update_all_domains()
-generate_statistics_report()
-
-# Keep the script running
+# Initial run or scheduled execution
 schedule_tasks()
-while True:
-    schedule.run_pending()
-    time.sleep(1)
+
+# Keep the script running if it's not a one-time run
+if not config.get('run_once', False):
+    while True:
+        schedule.run_pending()
+        time.sleep(1)
