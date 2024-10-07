@@ -12,7 +12,6 @@ import json
 
 # Import libraries for different file types
 import docx
-import xlrd
 import pptx
 import csv
 import json as json_module
@@ -27,6 +26,11 @@ try:
     from odf.opendocument import load as load_odf
 except ImportError:
     load_odf = None  # Optional, for LibreOffice support
+
+try:
+    import openpyxl
+except ImportError:
+    openpyxl = None  # Optional, for .xlsx support
 
 # Thread-safe statistics collector
 class Statistics:
@@ -107,12 +111,26 @@ def extract_text(file_path):
             doc = docx.Document(file_path)
             text_content = '\n'.join([para.text for para in doc.paragraphs])
         elif ext in ['.xlsx', '.xls', '.xlsm', '.xltx', '.xltm']:
-            workbook = xlrd.open_workbook(file_path, on_demand=True)
-            sheets = workbook.sheet_names()
-            for sheet in sheets:
-                worksheet = workbook.sheet_by_name(sheet)
-                for row in range(worksheet.nrows):
-                    text_content += ' '.join([str(cell) for cell in worksheet.row(row)]) + '\n'
+            if ext == '.xlsx' and openpyxl:
+                wb = openpyxl.load_workbook(file_path, read_only=True, data_only=True)
+                for sheet in wb.sheetnames:
+                    ws = wb[sheet]
+                    for row in ws.iter_rows(values_only=True):
+                        row_text = ' '.join([str(cell) for cell in row if cell is not None])
+                        text_content += row_text + '\n'
+                wb.close()
+            else:
+                # For .xls and other formats handled by xlrd
+                try:
+                    import xlrd
+                    workbook = xlrd.open_workbook(file_path, on_demand=True)
+                    sheets = workbook.sheet_names()
+                    for sheet in sheets:
+                        worksheet = workbook.sheet_by_name(sheet)
+                        for row in range(worksheet.nrows):
+                            text_content += ' '.join([str(cell) for cell in worksheet.row(row)]) + '\n'
+                except ImportError:
+                    logging.error("xlrd is not installed. Install it or switch to openpyxl for .xlsx files.")
         elif ext in ['.pptx', '.pptm', '.potx', '.potm']:
             prs = pptx.Presentation(file_path)
             for slide in prs.slides:
