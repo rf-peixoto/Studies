@@ -4,3 +4,4 @@ PyPDF2
 pyyaml
 openpyxl
 xlrd
+toml
