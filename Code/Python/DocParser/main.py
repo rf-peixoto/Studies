@@ -10,6 +10,9 @@ from collections import defaultdict
 import threading
 import json
 import re
+import email
+from email import policy
+from email.parser import BytesParser
 
 # Import libraries for different file types
 import docx
@@ -38,7 +41,13 @@ try:
 except ImportError:
     toml = None  # Optional, for TOML support
 
+try:
+    import extract_msg
+except ImportError:
+    extract_msg = None  # Optional, for .msg support
+
 import xml.etree.ElementTree as ET  # Standard library for XML parsing
+
 
 # Thread-safe statistics collector
 class Statistics:
@@ -74,6 +83,7 @@ class Statistics:
                 "Files_With_Multiple_Keywords": self.files_with_multiple_keywords
             }
 
+
 # Function to load and validate configuration
 def load_config(config_path):
     with open(config_path, 'r', encoding='utf-8') as f:
@@ -92,6 +102,7 @@ def load_config(config_path):
             sys.exit(1)
     return keyword_groups
 
+
 # Function to setup logging
 def setup_logging(log_file):
     logging.basicConfig(
@@ -106,6 +117,7 @@ def setup_logging(log_file):
     formatter = logging.Formatter('%(levelname)s - %(message)s')
     console.setFormatter(formatter)
     logging.getLogger().addHandler(console)
+
 
 # Function to extract text from different file types
 def extract_text(file_path):
@@ -182,6 +194,36 @@ def extract_text(file_path):
                 logging.error(f"Error parsing XML file {file_path}: {e}")
             except Exception as e:
                 logging.error(f"Unexpected error processing XML file {file_path}: {e}")
+        elif ext == '.eml':
+            try:
+                with open(file_path, 'rb') as f:
+                    msg = BytesParser(policy=policy.default).parse(f)
+                # Extract plain text parts
+                for part in msg.walk():
+                    if part.get_content_type() == 'text/plain':
+                        text_content += part.get_content()
+                    elif part.get_content_type() == 'text/html':
+                        # Optionally, you can strip HTML tags or use BeautifulSoup to extract text
+                        html_content = part.get_content()
+                        # Simple regex to remove HTML tags
+                        clean_text = re.sub('<[^<]+?>', '', html_content)
+                        text_content += clean_text + '\n'
+            except Exception as e:
+                logging.error(f"Error reading EML file {file_path}: {e}")
+        elif ext == '.msg':
+            if extract_msg:
+                try:
+                    msg = extract_msg.Message(file_path)
+                    msg_sender = msg.sender
+                    msg_date = msg.date
+                    msg_subject = msg.subject
+                    msg_body = msg.body
+                    msg_text = f"Sender: {msg_sender}\nDate: {msg_date}\nSubject: {msg_subject}\n\n{msg_body}"
+                    text_content = msg_text
+                except Exception as e:
+                    logging.error(f"Error reading MSG file {file_path}: {e}")
+            else:
+                logging.error("extract-msg library is not installed. Install it to handle .msg files.")
         elif ext in ['.ini', '.toml']:
             with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
                 text_content = f.read()
@@ -191,6 +233,7 @@ def extract_text(file_path):
         logging.error(f"Error reading {file_path}: {e}")
     return text_content.lower()
 
+
 def extract_text_from_xml(element):
     """Recursively extract text from XML elements."""
     text_content = element.text or ""
@@ -199,6 +242,7 @@ def extract_text_from_xml(element):
         if child.tail:
             text_content += '\n' + child.tail
     return text_content
+
 
 # Function to compile regex patterns for all keywords
 def compile_keyword_patterns(keyword_groups):
@@ -210,7 +254,7 @@ def compile_keyword_patterns(keyword_groups):
             escaped_keyword = re.escape(keyword.lower())
             # Determine if keyword is a single word or a phrase
             if ' ' in keyword:
-                # For phrases, use lookbehind and lookahead to ensure exact phrase match
+                # For phrases, use word boundaries around the entire phrase
                 pattern = r'(?<!\w)' + escaped_keyword + r'(?!\w)'
             else:
                 # For single words, use word boundaries
@@ -222,6 +266,7 @@ def compile_keyword_patterns(keyword_groups):
                 logging.error(f"Invalid regex pattern for keyword '{keyword}' in group '{group}': {e}")
     return compiled_patterns
 
+
 # Function to search keywords in text using compiled regex patterns
 def search_keywords(text_content, compiled_patterns):
     found_groups = {}
@@ -232,6 +277,7 @@ def search_keywords(text_content, compiled_patterns):
                     found_groups[group] = set()
                 found_groups[group].add(keyword)
     return found_groups
+
 
 # Function to handle file copying with naming conflict resolution
 def copy_file_to_groups(file_path, groups, output_dir):
@@ -259,6 +305,7 @@ def copy_file_to_groups(file_path, groups, output_dir):
             logging.error(f"Error copying {file_path} to {destination}: {e}")
     return copied_groups
 
+
 # Function to process a single file
 def process_file(file_path, compiled_patterns, output_dir, stats):
     logging.info(f"Processing file: {file_path}")
@@ -284,6 +331,7 @@ def process_file(file_path, compiled_patterns, output_dir, stats):
     else:
         logging.warning(f"No text extracted from {file_path}")
 
+
 # Function to generate statistics output
 def generate_statistics(stats, output_dir):
     stats_data = stats.to_dict()
@@ -294,6 +342,7 @@ def generate_statistics(stats, output_dir):
         logging.info(f"Statistics written to {stats_file}")
     except Exception as e:
         logging.error(f"Error writing statistics to {stats_file}: {e}")
+
 
 # Main function
 def main(data_dir, config_path, output_dir, log_file):
@@ -314,7 +363,8 @@ def main(data_dir, config_path, output_dir, log_file):
         '.xlsx', '.xls', '.xlsm', '.xltx', '.xltm',
         '.pptx', '.pptm', '.potx', '.potm',
         '.odt', '.ods', '.odp',
-        '.pdf', '.xml', '.ini', '.toml'
+        '.pdf', '.xml', '.ini', '.toml',
+        '.eml', '.msg'  # Added email formats
     ]
     # Gather all supported files
     all_files = []
@@ -349,6 +399,7 @@ def main(data_dir, config_path, output_dir, log_file):
     generate_statistics(stats, output_path)
 
     logging.info("Processing completed.")
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Keyword Search and File Organizer")
