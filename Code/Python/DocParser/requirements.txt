@@ -2,4 +2,5 @@ python-docx
 python-pptx
 PyPDF2
 pyyaml
+openpyxl
 xlrd
