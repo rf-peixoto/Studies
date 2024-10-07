@@ -1,0 +1,9 @@
+Keyword_Groups:
+  GroupA:
+    - keyword1
+    - keyword2
+    - keyword3
+  GroupB:
+    - keyword4
+    - keyword5
+    - keyword6
