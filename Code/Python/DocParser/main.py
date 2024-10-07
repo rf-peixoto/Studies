@@ -9,6 +9,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from collections import defaultdict
 import threading
 import json
+import re
 
 # Import libraries for different file types
 import docx
@@ -199,12 +200,34 @@ def extract_text_from_xml(element):
             text_content += '\n' + child.tail
     return text_content
 
-# Function to search keywords in text
-def search_keywords(text_content, keyword_groups):
-    found_groups = {}
+# Function to compile regex patterns for all keywords
+def compile_keyword_patterns(keyword_groups):
+    compiled_patterns = {}
     for group, keywords in keyword_groups.items():
+        compiled_patterns[group] = []
         for keyword in keywords:
-            if keyword.lower() in text_content:
+            # Escape regex special characters in keyword
+            escaped_keyword = re.escape(keyword.lower())
+            # Determine if keyword is a single word or a phrase
+            if ' ' in keyword:
+                # For phrases, use lookbehind and lookahead to ensure exact phrase match
+                pattern = r'(?<!\w)' + escaped_keyword + r'(?!\w)'
+            else:
+                # For single words, use word boundaries
+                pattern = r'\b' + escaped_keyword + r'\b'
+            try:
+                compiled = re.compile(pattern)
+                compiled_patterns[group].append((keyword, compiled))
+            except re.error as e:
+                logging.error(f"Invalid regex pattern for keyword '{keyword}' in group '{group}': {e}")
+    return compiled_patterns
+
+# Function to search keywords in text using compiled regex patterns
+def search_keywords(text_content, compiled_patterns):
+    found_groups = {}
+    for group, patterns in compiled_patterns.items():
+        for keyword, pattern in patterns:
+            if pattern.search(text_content):
                 if group not in found_groups:
                     found_groups[group] = set()
                 found_groups[group].add(keyword)
@@ -237,11 +260,11 @@ def copy_file_to_groups(file_path, groups, output_dir):
     return copied_groups
 
 # Function to process a single file
-def process_file(file_path, keyword_groups, output_dir, stats):
+def process_file(file_path, compiled_patterns, output_dir, stats):
     logging.info(f"Processing file: {file_path}")
     text_content = extract_text(file_path)
     if text_content:
-        found = search_keywords(text_content, keyword_groups)
+        found = search_keywords(text_content, compiled_patterns)
         if found:
             # Update statistics
             for group, keywords in found.items():
@@ -276,6 +299,7 @@ def generate_statistics(stats, output_dir):
 def main(data_dir, config_path, output_dir, log_file):
     setup_logging(log_file)
     keyword_groups = load_config(config_path)
+    compiled_patterns = compile_keyword_patterns(keyword_groups)
     stats = Statistics()
     data_path = Path(data_dir)
     if not data_path.exists():
@@ -312,7 +336,7 @@ def main(data_dir, config_path, output_dir, log_file):
     # Process files in parallel
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = [
-            executor.submit(process_file, file_path, keyword_groups, output_path, stats)
+            executor.submit(process_file, file_path, compiled_patterns, output_path, stats)
             for file_path in all_files
         ]
         for future in as_completed(futures):
