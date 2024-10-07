@@ -6,7 +6,7 @@ import sys
 import argparse
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from collections import defaultdict, Counter
+from collections import defaultdict
 import threading
 import json
 
@@ -31,6 +31,13 @@ try:
     import openpyxl
 except ImportError:
     openpyxl = None  # Optional, for .xlsx support
+
+try:
+    import toml
+except ImportError:
+    toml = None  # Optional, for TOML support
+
+import xml.etree.ElementTree as ET  # Standard library for XML parsing
 
 # Thread-safe statistics collector
 class Statistics:
@@ -104,7 +111,7 @@ def extract_text(file_path):
     ext = file_path.suffix.lower()
     text_content = ""
     try:
-        if ext in ['.txt', '.csv', '.json', '.sql']:
+        if ext in ['.txt', '.csv', '.json', '.sql', '.conf', '.cfg']:
             with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
                 text_content = f.read()
         elif ext in ['.docx', '.docm', '.dotx', '.dotm']:
@@ -165,11 +172,32 @@ def extract_text(file_path):
                     extracted = page.extract_text()
                     if extracted:
                         text_content += extracted + '\n'
+        elif ext == '.xml':
+            try:
+                tree = ET.parse(file_path)
+                root = tree.getroot()
+                text_content = extract_text_from_xml(root)
+            except ET.ParseError as e:
+                logging.error(f"Error parsing XML file {file_path}: {e}")
+            except Exception as e:
+                logging.error(f"Unexpected error processing XML file {file_path}: {e}")
+        elif ext in ['.ini', '.toml']:
+            with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                text_content = f.read()
         else:
             logging.warning(f"Unsupported file type: {file_path}")
     except Exception as e:
         logging.error(f"Error reading {file_path}: {e}")
     return text_content.lower()
+
+def extract_text_from_xml(element):
+    """Recursively extract text from XML elements."""
+    text_content = element.text or ""
+    for child in element:
+        text_content += '\n' + extract_text_from_xml(child)
+        if child.tail:
+            text_content += '\n' + child.tail
+    return text_content
 
 # Function to search keywords in text
 def search_keywords(text_content, keyword_groups):
@@ -216,12 +244,10 @@ def process_file(file_path, keyword_groups, output_dir, stats):
         found = search_keywords(text_content, keyword_groups)
         if found:
             # Update statistics
-            keyword_triggered = []
             for group, keywords in found.items():
                 stats.update_keyword_group(group)
                 for keyword in keywords:
                     stats.update_keyword(group, keyword)
-                    keyword_triggered.append((group, keyword))
             if len(found) > 1:
                 stats.increment_multiple_keywords()
             # Copy file to corresponding group folders
@@ -259,12 +285,12 @@ def main(data_dir, config_path, output_dir, log_file):
     output_path.mkdir(parents=True, exist_ok=True)
     # Supported file extensions
     supported_exts = [
-        '.txt', '.csv', '.json', '.sql',
+        '.txt', '.csv', '.json', '.sql', '.conf', '.cfg',
         '.docx', '.docm', '.dotx', '.dotm',
         '.xlsx', '.xls', '.xlsm', '.xltx', '.xltm',
         '.pptx', '.pptm', '.potx', '.potm',
         '.odt', '.ods', '.odp',
-        '.pdf'
+        '.pdf', '.xml', '.ini', '.toml'
     ]
     # Gather all supported files
     all_files = []
