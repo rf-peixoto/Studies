@@ -1,9 +1,14 @@
 Keyword_Groups:
   GroupA:
-    - keyword1
-    - keyword2
-    - keyword3
+    - "This thing"
+    - "another keyword"
+    - "special@keyword.com"
   GroupB:
-    - keyword4
-    - keyword5
-    - keyword6
+    - 'Multi word keyword'
+    - "email@example.com"
+    - "key-word_with_special#chars"
+  GroupC:
+    - "Exact Match"
+    - "another-example@domain.org"
+    - "some_keyword"
+  
