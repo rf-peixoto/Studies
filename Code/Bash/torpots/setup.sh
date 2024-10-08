@@ -3,14 +3,14 @@
 # =============================================================================
 # Script: setup_tor_monitoring.sh
 # Description: Automates the setup of multiple Dockerized Tor nodes for
-#              monitoring malicious traffic on the Tor network.
+#              monitoring malicious traffic on the Tor network with enhanced logging.
 # =============================================================================
 
 set -e
 
 # ---------------------------- Helper Functions ----------------------------
 
-# Function to print messages
+# Function to print messages with separators
 print_message() {
     echo "====================================================================="
     echo "$1"
@@ -177,7 +177,7 @@ EOF
 
 # ---------------------------- Create torrc Template ----------------------------
 
-print_message "Creating torrc configuration template..."
+print_message "Creating torrc configuration template with enhanced logging..."
 
 cat > "$TOR_NODE_DIR/torrc" <<EOF
 RunAsDaemon 1
@@ -186,10 +186,10 @@ ORPort __ORPORT__
 DirPort __DIRPORT__
 DataDirectory /var/lib/tor
 
-# Log settings
-Log notice file /var/log/tor/notices.log
+# Enhanced Log Settings for Correlation
+Log debug file /var/log/tor/notices.log
 
-# Relay configuration (customize as needed)
+# Relay configuration
 RelayBandwidthRate 100 KBytes
 RelayBandwidthBurst 200 KBytes
 
@@ -209,6 +209,7 @@ version: '3.8'
 services:
 EOF
 
+# Generate service definitions
 for i in $(seq 1 "$NUM_NODES"); do
     NODE_NAME="tor-node$i"
     HOST_ORPORT=$((9000 + i))
@@ -219,24 +220,9 @@ for i in $(seq 1 "$NUM_NODES"); do
     mkdir -p "$LOG_DIR"
 
     # Customize torrc for each node by replacing placeholders
-    # Create a unique torrc for each node
-    cat > "$TOR_NODE_DIR/torrc.node$i" <<EOL
-RunAsDaemon 1
-SocksPort 0
-ORPort 9001
-DirPort 9030
-DataDirectory /var/lib/tor
-
-# Log settings
-Log notice file /var/log/tor/notices.log
-
-# Relay configuration (customize as needed)
-RelayBandwidthRate 100 KBytes
-RelayBandwidthBurst 200 KBytes
-
-# Exit policy (reject all exit traffic by default)
-ExitPolicy reject *:*
-EOF
+    # Create a unique torrc for each node by substituting ORPort and DirPort
+    TORRC_FILE="$TOR_NODE_DIR/torrc.node$i"
+    sed "s/__ORPORT__/$HOST_ORPORT/g; s/__DIRPORT__/$HOST_DIRPORT/g" "$TOR_NODE_DIR/torrc" > "$TOR_NODE_DIR/torrc.node$i"
 
     # Append service definition to docker-compose.yml
     cat >> "$DOCKER_COMPOSE_FILE" <<EOL
@@ -249,6 +235,7 @@ EOF
     volumes:
       - ./logs/node$i:/var/log/tor
       - $DATA_VOLUME:/var/lib/tor
+      - ./tor-node/torrc.node$i:/etc/tor/torrc
     restart: unless-stopped
 
 EOL
@@ -259,24 +246,6 @@ echo "volumes:" >> "$DOCKER_COMPOSE_FILE"
 for i in $(seq 1 "$NUM_NODES"); do
     echo "  tor-node${i}-data:" >> "$DOCKER_COMPOSE_FILE"
 done
-
-# ---------------------------- Modify torrc for Each Node ----------------------------
-
-print_message "Configuring torrc for each Tor node..."
-
-for i in $(seq 1 "$NUM_NODES"); do
-    NODE_TORRC="$TOR_NODE_DIR/torrc.node$i"
-    # Replace ORPort and DirPort with internal container ports if necessary
-    # Currently, all nodes use the same internal ports (9001 and 9030)
-    # Host ports are mapped uniquely
-    # If you need unique internal ports, modify accordingly
-    :
-done
-
-# ---------------------------- Create Project Script ----------------------------
-
-# The Dockerfile copies a generic torrc; to have unique configurations per node,
-# it's better to modify the Dockerfile or use environment variables.
 
 # ---------------------------- Deploy Docker Containers ----------------------------
 
