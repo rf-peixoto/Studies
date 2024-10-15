@@ -365,6 +365,8 @@ inurl:en-us/community/liveupdates/live_updat
 intitle:"index of" "parameters.yml.test" OR "parameters.yml.dist"
 site:app.powerbi.com ("Financeiro" OR "DRE") # "Senha" "password"
 
+inurl:apidocs | inurl:api-docs | inurl:swagger | inurl:api-explorer site:"com"
+
 Classified docs:
 intitle:report (nessus | qualys | acunetix | arachini) ext:pdf
 site:DOMAIN ext:pdf ("internal use" | "confidential" | "redacted" | "classified" | "secret") 
