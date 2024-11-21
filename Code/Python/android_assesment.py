@@ -4,6 +4,7 @@ import subprocess
 import socket
 import psutil
 import re
+import datetime
 
 def is_device_rooted():
     root_files = [
@@ -25,6 +26,7 @@ def get_system_info():
         print("Version:", platform.version())
         print("Machine:", platform.machine())
         print("Processor:", platform.processor())
+        print("Python Version:", platform.python_version())
     except Exception as e:
         print("Error retrieving system information:", e)
 
@@ -32,16 +34,18 @@ def list_installed_packages():
     print("\n--- Installed Packages ---")
     try:
         packages = subprocess.check_output(['pm', 'list', 'packages'], stderr=subprocess.STDOUT).decode()
-        package_list = packages.strip().split('\n')
+        package_list = [pkg.replace('package:', '') for pkg in packages.strip().split('\n')]
         for package in package_list:
-            print(package.replace('package:', ''))
+            print(package)
+        return package_list
     except Exception as e:
         print("Error listing installed packages:", e)
+        return []
 
 def get_app_permissions(package_name):
     try:
         permissions_output = subprocess.check_output(['dumpsys', 'package', package_name], stderr=subprocess.STDOUT).decode()
-        permissions = re.findall(r'android.permission.[A-Z_]+', permissions_output)
+        permissions = re.findall(r'android\.permission\.[A-Z_]+', permissions_output)
         return set(permissions)
     except Exception as e:
         print(f"Error retrieving permissions for {package_name}:", e)
@@ -50,7 +54,7 @@ def get_app_permissions(package_name):
 def scan_open_ports():
     print("\n--- Open Ports ---")
     try:
-        scan_result = subprocess.check_output(['nmap', '-p-', 'localhost'], stderr=subprocess.STDOUT).decode()
+        scan_result = subprocess.check_output(['nmap', '-p-', '127.0.0.1'], stderr=subprocess.STDOUT).decode()
         print(scan_result)
     except Exception as e:
         print("Error scanning open ports:", e)
@@ -75,14 +79,11 @@ def search_sensitive_files():
         for root, dirs, files in os.walk(path):
             for file in files:
                 if any(file.endswith(ext) for ext in sensitive_extensions):
-                    found_files.append(os.path.join(root, file))
-    if found_files:
-        for file in found_files:
-            print(f"Sensitive file found: {file}")
-    else:
-        print("No sensitive files found.")
+                    file_path = os.path.join(root, file)
+                    found_files.append(file_path)
+                    print(f"Sensitive file found: {file_path}")
     if not found_files:
-        print("Ensure you have storage permissions enabled for Termux.")
+        print("No sensitive files found.")
 
 def check_security_settings():
     print("\n--- Security Settings ---")
@@ -98,9 +99,65 @@ def check_security_settings():
         print("Unknown Sources:", "Enabled" if unknown_sources == '1' else "Disabled")
     except Exception as e:
         print("Error checking Unknown Sources setting:", e)
+    # Check if ADB is enabled
+    try:
+        adb_enabled = subprocess.check_output(['settings', 'get', 'global', 'adb_enabled'], stderr=subprocess.STDOUT).decode().strip()
+        print("ADB Debugging:", "Enabled" if adb_enabled == '1' else "Disabled")
+    except Exception as e:
+        print("Error checking ADB setting:", e)
+
+def check_outdated_packages():
+    print("\n--- Outdated Termux Packages ---")
+    try:
+        updates = subprocess.check_output(['pkg', 'list-upgradable'], stderr=subprocess.STDOUT).decode()
+        if updates.strip():
+            print("The following packages can be upgraded:")
+            print(updates)
+        else:
+            print("All Termux packages are up to date.")
+    except Exception as e:
+        print("Error checking for package updates:", e)
+
+def analyze_processes():
+    print("\n--- Running Processes ---")
+    try:
+        suspicious_keywords = ['keylogger', 'sniff', 'spy', 'hack']
+        suspicious_processes = []
+        for proc in psutil.process_iter(['pid', 'name', 'username']):
+            name = proc.info['name'].lower()
+            if any(keyword in name for keyword in suspicious_keywords):
+                suspicious_processes.append(proc.info)
+        if suspicious_processes:
+            print("Suspicious processes found:")
+            for proc in suspicious_processes:
+                print(f"PID: {proc['pid']}, Name: {proc['name']}, User: {proc['username']}")
+        else:
+            print("No suspicious processes detected.")
+    except Exception as e:
+        print("Error analyzing processes:", e)
+
+def check_wifi_security():
+    print("\n--- Wi-Fi Security Assessment ---")
+    try:
+        wifi_info = subprocess.check_output(['dumpsys', 'wifi'], stderr=subprocess.STDOUT).decode()
+        ssid_match = re.search(r'SSID: "(.*?)"', wifi_info)
+        security_match = re.search(r'KeyMgmt: (\S+)', wifi_info)
+        if ssid_match and security_match:
+            ssid = ssid_match.group(1)
+            security = security_match.group(1)
+            print(f"Connected to SSID: {ssid}")
+            if 'NONE' in security:
+                print("Warning: Connected to an unsecured Wi-Fi network.")
+            else:
+                print(f"Wi-Fi security protocol: {security}")
+        else:
+            print("Unable to retrieve Wi-Fi security details.")
+    except Exception as e:
+        print("Error assessing Wi-Fi security:", e)
 
 def main():
-    print("Starting Security Assessment...\n")
+    start_time = datetime.datetime.now()
+    print("Starting Comprehensive Security Assessment...\n")
     # Check if device is rooted
     print("--- Root Access Check ---")
     try:
@@ -111,16 +168,15 @@ def main():
     # Get system information
     get_system_info()
     # List installed packages
-    list_installed_packages()
-    # Analyze permissions for a specific app (e.g., Termux)
-    package_name = 'com.termux'
-    print(f"\n--- Permissions for {package_name} ---")
-    permissions = get_app_permissions(package_name)
-    if permissions:
-        for perm in permissions:
-            print(perm)
-    else:
-        print(f"No permissions found or cannot retrieve permissions for {package_name}.")
+    installed_packages = list_installed_packages()
+    # Analyze permissions for each installed app
+    print("\n--- Applications and Permissions ---")
+    for package_name in installed_packages:
+        permissions = get_app_permissions(package_name)
+        if permissions:
+            print(f"\nApp: {package_name}")
+            for perm in permissions:
+                print(f"- {perm}")
     # Scan open ports
     scan_open_ports()
     # Monitor network connections
@@ -129,7 +185,15 @@ def main():
     search_sensitive_files()
     # Check security settings
     check_security_settings()
-    print("\nSecurity Assessment Completed.")
+    # Check outdated packages
+    check_outdated_packages()
+    # Analyze running processes
+    analyze_processes()
+    # Assess Wi-Fi security
+    check_wifi_security()
+    end_time = datetime.datetime.now()
+    duration = end_time - start_time
+    print(f"\nSecurity Assessment Completed in {duration}.")
 
 if __name__ == "__main__":
     main()
