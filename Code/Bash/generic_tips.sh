@@ -127,6 +127,15 @@ hostnamectl
 
 # Enviar saída do microfone para áudio de máquina externa:
 arecord -f dat | ssh user@host aplay -f dat
+# Or:
+arecord -f dat | ssh user@host aplay -f dat
+arecord -f dat | sox -t raw -r 48000 -b 16 -c 2 - - | ssh user@host play -t raw -r 48000 -b 16 -c 2 -
+
+# Other alternative: On client:
+arecord -f dat | ffmpeg -i - -f alsa -acodec pcm_s16le -ar 48000 -ac 2 tcp://host:port
+
+# On target:
+ffmpeg -i tcp://0.0.0.0:port -f alsa default
 
 # Enviar arquivo criptografado:
 cat $1 | openssl aes-256-cbc -a -e -pass pass:password | netcat -l -p 8080
