@@ -4,6 +4,8 @@ import argparse
 import time
 import os
 import sys
+import json
+import requests
 from bleak import BleakScanner, BleakClient
 from bleak.exc import BleakError
 
@@ -110,7 +112,7 @@ async def get_device_info(address):
                     if key in ['manufacturer_name', 'model_number', 'serial_number',
                                'hardware_revision', 'firmware_revision', 'software_revision',
                                'system_id', 'first_name']:
-                        device_info[key.replace('_', ' ').title()] = value.decode('utf-8')
+                        device_info[key.replace('_', ' ').title()] = value.decode('utf-8', errors='ignore')
                     elif key in ['battery_level', 'heart_rate_measurement', 'age']:
                         device_info[key.replace('_', ' ').title()] = int(value[0])
                     elif key == 'gender':
@@ -146,8 +148,29 @@ async def scan_ble_devices(timeout, filter_name=None, filter_address=None, filte
         print(f"An error occurred during scanning: {e}")
         return []
 
+def get_geolocation():
+    try:
+        response = requests.get('https://ipinfo.io/json')
+        if response.status_code == 200:
+            data = response.json()
+            location = data.get('loc', '')  # Format is "latitude,longitude"
+            if location:
+                latitude, longitude = location.split(',')
+                geolocation = {
+                    'latitude': latitude,
+                    'longitude': longitude,
+                    'city': data.get('city', ''),
+                    'region': data.get('region', ''),
+                    'country': data.get('country', '')
+                }
+                return geolocation
+    except Exception:
+        pass
+    return {}
+
 async def continuous_scan(args):
     previous_devices = {}
+    all_devices_info = []
     try:
         while True:
             # Clear the terminal for better UX
@@ -191,6 +214,21 @@ async def continuous_scan(args):
 
                     print("")
 
+                    # Collect data for JSON output
+                    if args.json:
+                        device_data = {
+                            'timestamp': timestamp,
+                            'name': name,
+                            'address': address,
+                            'rssi': rssi,
+                            'local_name': local_name,
+                            'advertised_service_uuids': adv_data,
+                            'manufacturer_data': {str(k): v.hex() for k, v in manufacturer_data.items()},
+                            'tx_power': tx_power,
+                            'additional_info': device_info
+                        }
+                        all_devices_info.append(device_data)
+
                 for address in previous_devices:
                     if address not in current_devices:
                         name = previous_devices[address]
@@ -199,9 +237,37 @@ async def continuous_scan(args):
                 print(f"No devices found at {timestamp}.")
             previous_devices = current_devices
             print(f"Next scan in {args.interval} seconds...\n")
+
+            # If JSON output is requested, write to file
+            if args.json:
+                output_data = {
+                    'statistics': {
+                        'scan_time': timestamp,
+                        'geolocation': get_geolocation(),
+                        'total_devices_found': len(all_devices_info)
+                    },
+                    'devices': all_devices_info
+                }
+                with open(args.json, 'w') as json_file:
+                    json.dump(output_data, json_file, indent=4)
+                # Clear devices info after writing to avoid duplication
+                all_devices_info = []
+
             await asyncio.sleep(args.interval)
     except KeyboardInterrupt:
         print("Scanning stopped by user.")
+        # Write remaining data to JSON if any
+        if args.json and all_devices_info:
+            output_data = {
+                'statistics': {
+                    'scan_time': timestamp,
+                    'geolocation': get_geolocation(),
+                    'total_devices_found': len(all_devices_info)
+                },
+                'devices': all_devices_info
+            }
+            with open(args.json, 'w') as json_file:
+                json.dump(output_data, json_file, indent=4)
     except Exception as e:
         print(f"An error occurred: {e}")
 
@@ -214,6 +280,7 @@ async def main():
     parser.add_argument('-a', '--address', type=str, help='Filter devices by address')
     parser.add_argument('-u', '--uuid', type=str, help='Filter devices by advertised service UUID')
     parser.add_argument('-l', '--log', type=str, help='Log output to a file')
+    parser.add_argument('-j', '--json', type=str, help='Output results to a JSON file')
     args = parser.parse_args()
 
     # Redirect output to log file if specified
@@ -227,6 +294,7 @@ async def main():
         os.system('cls' if os.name == 'nt' else 'clear')
         timestamp = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
         devices = await scan_ble_devices(args.timeout, args.name, args.address, args.uuid)
+        all_devices_info = []
         if devices:
             for device in devices:
                 name = device.name or "Unknown"
@@ -252,6 +320,34 @@ async def main():
                     print(f"  {key}: {value}")
 
                 print("")
+
+                # Collect data for JSON output
+                if args.json:
+                    device_data = {
+                        'timestamp': timestamp,
+                        'name': name,
+                        'address': address,
+                        'rssi': rssi,
+                        'local_name': local_name,
+                        'advertised_service_uuids': adv_data,
+                        'manufacturer_data': {str(k): v.hex() for k, v in manufacturer_data.items()},
+                        'tx_power': tx_power,
+                        'additional_info': device_info
+                    }
+                    all_devices_info.append(device_data)
+
+            # If JSON output is requested, write to file
+            if args.json:
+                output_data = {
+                    'statistics': {
+                        'scan_time': timestamp,
+                        'geolocation': get_geolocation(),
+                        'total_devices_found': len(all_devices_info)
+                    },
+                    'devices': all_devices_info
+                }
+                with open(args.json, 'w') as json_file:
+                    json.dump(output_data, json_file, indent=4)
         else:
             print(f"No devices found at {timestamp}.")
 
