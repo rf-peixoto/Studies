@@ -24,9 +24,24 @@ async def continuous_scan(interval, timeout):
                 for device in devices:
                     name = device.name or "Unknown"
                     address = device.address
+                    rssi = device.rssi
+                    # Get advertisement data
+                    adv_data = device.metadata.get('uuids', [])
+                    manufacturer_data = device.metadata.get('manufacturer_data', {})
+                    tx_power = device.metadata.get('tx_power')
+                    local_name = device.metadata.get('local_name', 'Unknown')
+
                     current_devices[address] = name
                     if address not in previous_devices:
-                        print(f"[{timestamp}] New Device Found - Name: {name}, Address: {address}")
+                        print(f"[{timestamp}] New Device Found:")
+                        print(f"  Name: {name}")
+                        print(f"  Address: {address}")
+                        print(f"  RSSI: {rssi} dBm")
+                        print(f"  Local Name: {local_name}")
+                        print(f"  Service UUIDs: {adv_data}")
+                        print(f"  Manufacturer Data: {manufacturer_data}")
+                        print(f"  TX Power: {tx_power}")
+                        print("")
                 for address in previous_devices:
                     if address not in current_devices:
                         name = previous_devices[address]
@@ -58,7 +73,22 @@ async def main():
             for device in devices:
                 name = device.name or "Unknown"
                 address = device.address
-                print(f"[{timestamp}] Name: {name}, Address: {address}")
+                rssi = device.rssi
+                # Get advertisement data
+                adv_data = device.metadata.get('uuids', [])
+                manufacturer_data = device.metadata.get('manufacturer_data', {})
+                tx_power = device.metadata.get('tx_power')
+                local_name = device.metadata.get('local_name', 'Unknown')
+
+                print(f"[{timestamp}] Device Found:")
+                print(f"  Name: {name}")
+                print(f"  Address: {address}")
+                print(f"  RSSI: {rssi} dBm")
+                print(f"  Local Name: {local_name}")
+                print(f"  Service UUIDs: {adv_data}")
+                print(f"  Manufacturer Data: {manufacturer_data}")
+                print(f"  TX Power: {tx_power}")
+                print("")
         else:
             print(f"No devices found at {timestamp}.")
 
