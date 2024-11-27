@@ -368,6 +368,9 @@ inurl:en-us/community/liveupdates/live_updat
 intitle:"index of" "parameters.yml.test" OR "parameters.yml.dist"
 site:app.powerbi.com ("Financeiro" OR "DRE") # "Senha" "password"
 
+# Open Dir dork found on BreachForums:
+intitle:"index of" "*.php|clientes|admin|cadastros|storage|public|contato|contratos|clientes|empresa|imagens|med|farmácia|drogaria|loja|crédito|consignado|aposentado|public|database|.venv|.env|.dump|dumper|pagamentos|.py|api|.api|.sql|.bak|.db|.log|.xml|.dump|usuarios|cpf|rg|valor|banco| banco de dados|invoice|clientes|comprar|prod=|cart|store|laravel|selfie" site:".br" 
+
 inurl:apidocs | inurl:api-docs | inurl:swagger | inurl:api-explorer site:"com"
 
 Classified docs:
