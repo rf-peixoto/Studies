@@ -1,3 +1,7 @@
 entity:domain <keyword> AND NOT parent_domain:"WEBSITE.com"
 entity:domain ("keyword1" OR "keyword2" OR "keyword3") AND NOT parent_domain:"domain.com"
 entity:url <keyword> AND NOT parent_domain:"WEBSITE.com"
+entity:url main_icon_dhash:<favicon hash>
+entity:url tag:multiple_redirectes <keyword>
+entity:url tag:phishing <keyword>
+entity:domain main_icon_dhash:<favicon hash>
