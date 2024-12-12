@@ -79,6 +79,9 @@ path:.env AWS_KEY /(AKIA[A-Z0-9]{12,})/
 /app/etc/local.xml
 /home/000~ROOT~000
 
+# Cloud stuff:
+site:amazonaws.com | site:digitaloceanspaces.com | site:storage.googleapis.com ext:pdf
+
 “.git” intitle:”Index of”
 filetype:git -github.com inurl:”/.git”
 
