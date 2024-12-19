@@ -8,6 +8,9 @@ http://127.0.0.1:8000/jpgmulreq/1/image.jpg?key=&lq=1
 intitle:"index of" "web.config"
 inurl:"web.config" ext:config
 
+# Find apps:
+"KEYWORD" "download" (inurl:"apk" | inurl:"app")  (inurl:"android" | inurl:"ios" | inurl:"iphone")
+
 site:*.s3.amazonaws.com
 intitle:"VNC Resolver - Browse"
 site:"target[.]com" ext:log | ext:txt | ext:conf | ext:cnf | ext:ini | ext:env | ext:sh | ext:bak | ext:backup | ext:swp | ext:old | ext:~ | ext:git | ext:svn | ext:htpasswd | ext:htaccess
