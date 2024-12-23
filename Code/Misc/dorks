@@ -88,6 +88,72 @@ site:amazonaws.com | site:digitaloceanspaces.com | site:storage.googleapis.com e
 “.git” intitle:”Index of”
 filetype:git -github.com inurl:”/.git”
 
+# From: https://breachforums.st/Thread-Top-40-Google-Dorks-for-Databases-Webcams-Vulnerabilities-and-More
+
+General Dorks
+`intitle:"Index of"`
+`intitle:"Index of" site:example.com`
+`filetype:log inurl:"access.log"`
+`intext:"Welcome to phpMyAdmin"`
+`intitle:"Login — WordPress"`
+`intext:"Powered by WordPress"`
+
+Database-Related Dorks
+`inurl:/phpmyadmin/index.php`
+`inurl:/db/websql/`
+`inurl:/phpPgAdmin/index.php`
+`intext:"phpPgAdmin — Login"`
+
+Search for Vulnerabilities
+`intext:"Error Message" intext:"MySQL server" intext:"on * using password:"`
+`intext:"Warning: mysql_connect()" intext:"on line" filetype:php`
+
+Exposed Documents and Files
+`filetype:pdf intitle:"Confidential"`
+`filetype:doc intitle:"Confidential"`
+`filetype:xls intitle:"Confidential"`
+`filetype:ppt intitle:"Confidential"`
+
+Directory Listings
+`intitle:"Index of" inurl:/parent-directory`
+`intitle:"Index of" inurl:/admin*`
+`intitle:"Index of" inurl:/backup`
+`intitle:"Index of" inurl:/config`
+`intitle:"Index of" inurl:/logs`
+
+Exposed Webcams and Cameras
+`inurl:"view/index.shtml"`
+`intitle:"Live View /-AXIS"`
+`intitle:"Network Camera NetworkCamera"`
+
+Authentication-Related Dorks
+`intitle:"Login" inurl:/admin`
+`intitle:"Login" inurl:/login`
+`inurl:"/admin/login.php"`
+
+Exposed Control Panels
+`intitle:"Control Panel" inurl:/admin`
+`intitle:"Control Panel" inurl:/cpanel`
+
+Exposed IoT Devices
+`intitle:"Smart TV" inurl:/cgi-bin/login`
+`intitle:"Router Login" inurl:/login`
+
+Finding PHP Info Pages
+`intitle:"PHP Version" intext:"PHP Version"`
+
+Exposing Sensitive Files on Government Sites
+`site:gov (inurl:doc | inurl:pdf | inurl:xls | inurl:ppt | inurl:rtf | inurl:ps)`
+
+Exposed Network Devices
+`intitle:"Brother" intext:"View Configuration"`
+`intitle:"Network Print Server" filetype:html`
+`intitle:"HP LaserJet" inurl:SSI/index.htm`
+
+File Upload Vulnerabilities
+`inurl:/uploadfile/ filetype:php`
+`intext:"File Upload" inurl:/php/`
+
 inurl:".php?cat="+intext:"Paypal"+site:UK
 inurl:".php?cat="+intext:"/Buy Now/"+site:.net
 inurl:".php?cid="+intext:"online+betting"
