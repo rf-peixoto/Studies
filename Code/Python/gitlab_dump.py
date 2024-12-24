@@ -1,21 +1,16 @@
 import os
 import re
+import argparse
 import requests
-
-# Base GitLab URL, e.g., "https://gitlab.example.com"
-GITLAB_URL = "https://gitlab.example.com"
-# Personal Access Token (must have sufficient privileges, e.g. api scope)
-PERSONAL_ACCESS_TOKEN = "YOUR_ACCESS_TOKEN"
-# Destination folder for downloaded archives
-DOWNLOAD_FOLDER = "gitlab_archives"
+import concurrent.futures
 
 def sanitize_name(name):
     """
-    Replaces characters not suitable for file names with underscores.
+    Replace characters not suitable for file names with underscores.
     """
     return re.sub(r"[^a-zA-Z0-9_\-]", "_", name)
 
-def get_all_groups(base_url, token):
+def get_all_groups(base_url, session):
     """
     Retrieve all groups the user can access. The results are paginated.
     """
@@ -23,7 +18,7 @@ def get_all_groups(base_url, token):
     page = 1
     while True:
         url = f"{base_url}/api/v4/groups?per_page=100&page={page}"
-        response = requests.get(url, headers={"Private-Token": token})
+        response = session.get(url)
         if response.status_code != 200:
             raise Exception(f"Error retrieving groups (HTTP {response.status_code}).")
         batch = response.json()
@@ -33,7 +28,7 @@ def get_all_groups(base_url, token):
         page += 1
     return groups
 
-def get_projects_for_group(base_url, token, group_id):
+def get_projects_for_group(base_url, session, group_id):
     """
     Retrieve all projects within a given group. The results are paginated.
     """
@@ -41,7 +36,7 @@ def get_projects_for_group(base_url, token, group_id):
     page = 1
     while True:
         url = f"{base_url}/api/v4/groups/{group_id}/projects?per_page=100&page={page}"
-        response = requests.get(url, headers={"Private-Token": token})
+        response = session.get(url)
         if response.status_code != 200:
             raise Exception(
                 f"Error retrieving projects for group {group_id} (HTTP {response.status_code})."
@@ -53,7 +48,7 @@ def get_projects_for_group(base_url, token, group_id):
         page += 1
     return projects
 
-def download_project_archive(base_url, token, project):
+def download_project_archive(base_url, session, group_name, project, output_dir):
     """
     Downloads the ZIP archive of the default branch for the specified project.
     Returns True if successful, False otherwise.
@@ -61,114 +56,147 @@ def download_project_archive(base_url, token, project):
     project_id = project["id"]
     project_name = project["name"]
     sanitized_project_name = sanitize_name(project_name)
-    
     default_branch = project.get("default_branch", None)
     if not default_branch:
-        print(f"Skipping project '{project_name}' (no default branch).")
-        return True  # Not a failure; just no archive to download
-    
-    # Ensure download folder exists
-    os.makedirs(DOWNLOAD_FOLDER, exist_ok=True)
-    
+        # Project has no default branch; treat as a "success" (nothing to download).
+        print(f"Skipping project '{project_name}' in group '{group_name}' (no default branch).")
+        return True
+
+    # Create a subfolder for this group
+    sanitized_group_name = sanitize_name(group_name)
+    group_folder = os.path.join(output_dir, sanitized_group_name)
+    os.makedirs(group_folder, exist_ok=True)
+
     archive_url = f"{base_url}/api/v4/projects/{project_id}/repository/archive?sha={default_branch}"
-    response = requests.get(archive_url, headers={"Private-Token": token}, stream=True)
-    
+    response = session.get(archive_url, stream=True)
     if response.status_code != 200:
         print(
-            f"Failed to download archive for '{project_name}' "
-            f"(HTTP {response.status_code})."
+            f"Failed to download archive for project '{project_name}' "
+            f"in group '{group_name}' (HTTP {response.status_code})."
         )
         return False
-    
+
+    # Save the archive file inside the group folder
     filename = f"{sanitized_project_name}.zip"
-    download_path = os.path.join(DOWNLOAD_FOLDER, filename)
+    download_path = os.path.join(group_folder, filename)
     try:
         with open(download_path, "wb") as file:
             for chunk in response.iter_content(chunk_size=8192):
                 file.write(chunk)
-        print(f"Downloaded archive for '{project_name}'.")
+        print(f"Downloaded archive for project '{project_name}' in group '{group_name}'.")
         return True
     except Exception as e:
-        print(f"Error writing archive for '{project_name}': {e}")
+        print(f"Error writing archive for '{project_name}' in group '{group_name}': {e}")
         return False
 
+def download_in_parallel(base_url, session, targets, output_dir, max_workers):
+    """
+    Attempts parallel downloads of all (group_name, project) in 'targets'.
+    Returns a tuple (success_list, failure_list).
+    """
+    success_list = []
+    failure_list = []
+
+    # Parallel download with ThreadPoolExecutor
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+        future_to_target = {
+            executor.submit(download_project_archive, base_url, session, grp, prj, output_dir): (grp, prj)
+            for (grp, prj) in targets
+        }
+        for future in concurrent.futures.as_completed(future_to_target):
+            grp_name, prj_data = future_to_target[future]
+            prj_name = prj_data["name"]
+            try:
+                result = future.result()
+                if result:
+                    success_list.append((grp_name, prj_name))
+                else:
+                    failure_list.append((grp_name, prj_data))
+            except Exception as exc:
+                # Unexpected error while downloading
+                print(f"Exception while downloading '{prj_name}' in group '{grp_name}': {exc}")
+                failure_list.append((grp_name, prj_data))
+    return success_list, failure_list
+
 def main():
-    """
-    1. Retrieve all groups.
-    2. For each group, list its projects.
-    3. Attempt to download each project's default branch archive.
-    4. Retry failed downloads until all succeed or no progress is possible.
-    """
+    parser = argparse.ArgumentParser(description="Download GitLab project archives in parallel.")
+    parser.add_argument("--gitlab-url", default='https://gitlab.com', help="Base URL for GitLab, e.g. 'https://gitlab.example.com'")
+    parser.add_argument("--token", required=True, help="Personal Access Token with 'api' scope (or equivalent).")
+    parser.add_argument("--output-dir", default="downloads", help="Directory to store downloaded archives.")
+    parser.add_argument("--max-workers", type=int, default=4, help="Number of parallel download threads.")
+    args = parser.parse_args()
+
+    # Prepare session with keep-alive
+    session = requests.Session()
+    session.headers.update({
+        "Private-Token": args.token,
+        "Connection": "keep-alive"
+    })
+
+    # Fetch all groups
     try:
-        groups = get_all_groups(GITLAB_URL, PERSONAL_ACCESS_TOKEN)
+        groups = get_all_groups(args.gitlab_url, session)
         if not groups:
             print("No groups found or no access.")
             return
     except Exception as e:
         print(f"Failed to retrieve groups: {e}")
         return
-    
-    # Build a list of (group_name, project) to download
-    download_targets = []
+
+    # Collect all (group_name, project) pairs
+    all_targets = []
     for group in groups:
         group_name = group["name"]
         group_id = group["id"]
         try:
-            projects = get_projects_for_group(GITLAB_URL, PERSONAL_ACCESS_TOKEN, group_id)
+            projects = get_projects_for_group(args.gitlab_url, session, group_id)
             for project in projects:
-                download_targets.append((group_name, project))
+                all_targets.append((group_name, project))
         except Exception as e:
-            print(f"Error retrieving projects for group '{group_name}': {e}")
-    
-    # Now attempt to download each target's archive
-    failures = []
-    successes = []
-    
-    for group_name, project in download_targets:
-        project_name = project["name"]
-        if download_project_archive(GITLAB_URL, PERSONAL_ACCESS_TOKEN, project):
-            successes.append((group_name, project_name))
-        else:
-            failures.append((group_name, project))
-    
-    # Retry loop for failures until none remain or no progress is made
+            print(f"Failed to retrieve projects for group '{group_name}': {e}")
+
+    # Initial attempt
+    successes, failures = download_in_parallel(args.gitlab_url, session, all_targets, args.output_dir, args.max_workers)
+
     attempt = 1
     while failures:
         print(f"\n--- Retry Attempt {attempt} for {len(failures)} failures ---")
-        new_failures = []
-        progress_made = False
+        new_successes, new_failures = download_in_parallel(
+            args.gitlab_url,
+            session,
+            failures,
+            args.output_dir,
+            args.max_workers
+        )
 
-        for group_name, project in failures:
-            project_name = project["name"]
-            if download_project_archive(GITLAB_URL, PERSONAL_ACCESS_TOKEN, project):
-                successes.append((group_name, project_name))
-                progress_made = True
-            else:
-                new_failures.append((group_name, project))
-        
         if not new_failures:
-            # All succeeded
+            # All succeeded this round
+            successes.extend(new_successes)
             failures = []
             break
-        if not progress_made:
-            # No progress was made in this attempt, so stop to avoid an infinite loop
-            print("No progress made on retry. Stopping.")
+
+        if len(new_failures) == len(failures):
+            # No progress was made, stop to avoid infinite loops
+            print("No progress made on retry. Stopping further attempts.")
+            successes.extend(new_successes)
             failures = new_failures
             break
-        
+
+        # Update for next iteration
+        successes.extend(new_successes)
         failures = new_failures
         attempt += 1
-    
-    # Output final lists
+
+    # Summaries
     print("\n--- Download Summary ---")
     print(f"Successful downloads: {len(successes)}")
-    for group_name, project_name in successes:
-        print(f"  {group_name} :: {project_name}")
-    
+    for grp_name, prj_name in successes:
+        print(f"  {grp_name} :: {prj_name}")
+
     if failures:
         print(f"Failed downloads: {len(failures)}")
-        for group_name, project in failures:
-            print(f"  {group_name} :: {project['name']}")
+        for grp_name, prj_data in failures:
+            print(f"  {grp_name} :: {prj_data['name']}")
     else:
         print("All downloads succeeded.")
 
