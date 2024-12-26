@@ -4,6 +4,7 @@ import argparse
 import requests
 import concurrent.futures
 import time
+import hashlib
 
 # ANSI color codes
 RED = "\033[91m"
@@ -61,7 +62,6 @@ def get_all_groups_and_subgroups(base_url, session):
     Retrieve all groups (top-level) plus nested subgroups using a breadth-first approach.
     """
     all_groups = get_top_level_groups(base_url, session)
-    # BFS or iterative approach to traverse subgroups
     i = 0
     while i < len(all_groups):
         group = all_groups[i]
@@ -74,9 +74,7 @@ def get_all_groups_and_subgroups(base_url, session):
             i += 1
             continue
 
-        # For each subgroup, add to all_groups if not already present
         for sub in subs:
-            # We identify uniqueness by subgroup ID
             sub_id = sub["id"]
             # Avoid duplicates by checking if sub_id is already in all_groups
             if not any(g["id"] == sub_id for g in all_groups):
@@ -112,15 +110,17 @@ def get_projects_for_group(base_url, session, group_id, group_name):
 def download_project_archive(base_url, session, group_name, project, output_dir):
     """
     Downloads the ZIP archive of the default branch for the specified project.
-    Implements:
-    - Overwrite avoidance
-    - Local retry logic for network errors
+    Key points:
+      - Never skips existing files.
+      - Incorporates a short hash of the archive URL to ensure uniqueness if names would collide.
+      - Uses local retry logic for network issues.
     Returns True if successful, False otherwise.
     """
     project_id = project["id"]
     project_name = project["name"]
     sanitized_project_name = sanitize_name(project_name)
     default_branch = project.get("default_branch", None)
+
     if not default_branch:
         # Project has no default branch; treat as a "success" since there's nothing to download.
         print(f"{YELLOW}Skipping project '{project_name}' in group '{group_name}' (no default branch).{RESET}")
@@ -133,15 +133,14 @@ def download_project_archive(base_url, session, group_name, project, output_dir)
 
     # Construct the archive URL
     archive_url = f"{base_url}/api/v4/projects/{project_id}/repository/archive?sha={default_branch}"
-    filename = f"{sanitized_project_name}.zip"
+
+    # Create a short hash from the archive_url to ensure unique file names
+    hasher = hashlib.md5(archive_url.encode("utf-8"))
+    short_hash = hasher.hexdigest()[:8]
+    filename = f"{sanitized_project_name}_{short_hash}.zip"
     download_path = os.path.join(group_folder, filename)
 
-    # Check if file already exists => skip
-    if os.path.exists(download_path):
-        print(f"{YELLOW}Archive already exists for '{project_name}' in group '{group_name}'. Skipping download...{RESET}")
-        return True
-
-    # Basic retry loop for network issues
+    # Local retry logic
     max_attempts = 3
     response = None
     for attempt in range(1, max_attempts + 1):
@@ -153,7 +152,7 @@ def download_project_archive(base_url, session, group_name, project, output_dir)
                 print(f"{RED}HTTP {response.status_code} for '{project_name}' (Attempt {attempt}/{max_attempts}).{RESET}")
         except requests.exceptions.RequestException as e:
             print(f"{RED}Network error for '{project_name}' (Attempt {attempt}/{max_attempts}): {e}{RESET}")
-        # Optional short sleep before retry
+        # Optional short pause before retry
         if attempt < max_attempts:
             time.sleep(3)
 
@@ -166,7 +165,7 @@ def download_project_archive(base_url, session, group_name, project, output_dir)
         with open(download_path, "wb") as file:
             for chunk in response.iter_content(chunk_size=8192):
                 file.write(chunk)
-        print(f"{GREEN}Downloaded archive for project '{project_name}' in group '{group_name}'.{RESET}")
+        print(f"{GREEN}Downloaded archive for project '{project_name}' in group '{group_name}' to '{filename}'.{RESET}")
         return True
     except Exception as e:
         print(f"{RED}Error writing archive for '{project_name}' in group '{group_name}': {e}{RESET}")
@@ -213,14 +212,10 @@ def download_in_parallel(base_url, session, targets, output_dir, max_workers):
 
 def main():
     parser = argparse.ArgumentParser(description="Download GitLab project archives in parallel, including subgroups.")
-    parser.add_argument("--gitlab-url", default="https://gitlab.com", 
-                        help="Base URL for GitLab, e.g. 'https://gitlab.example.com'. Default: 'https://gitlab.com'")
-    parser.add_argument("--token", required=False, 
-                        help="Personal Access Token with 'api' scope (or equivalent).")
-    parser.add_argument("--output-dir", default="gitlab_archives", 
-                        help="Directory to store downloaded archives (default: 'gitlab_archives').")
-    parser.add_argument("--max-workers", type=int, default=4, 
-                        help="Number of parallel download threads (default: 4).")
+    parser.add_argument("--gitlab-url", default="https://gitlab.com", help="Base URL for GitLab, e.g. 'https://gitlab.example.com'. Default: 'https://gitlab.com'")
+    parser.add_argument("--token", required=False, help="Personal Access Token with 'api' scope (or equivalent).")
+    parser.add_argument("--output-dir", default="gitlab_archives", help="Directory to store downloaded archives (default: 'gitlab_archives').")
+    parser.add_argument("--max-workers", type=int, default=4, help="Number of parallel download threads (default: 4).")
     args = parser.parse_args()
 
     # Basic validations for better UX
