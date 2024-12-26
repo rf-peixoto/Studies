@@ -242,7 +242,7 @@ def main():
     parser = argparse.ArgumentParser(description="Download GitLab project archives with nested subgroups.")
     parser.add_argument("--gitlab-url", default="https://gitlab.com", help="Base URL for GitLab, e.g. 'https://gitlab.example.com'. Default: 'https://gitlab.com'")
     parser.add_argument("--token", required=False, help="Personal Access Token with 'api' scope (or equivalent).")
-    parser.add_argument("--output-dir", default="gitlab_archives", help="Directory to store downloaded archives (default: 'gitlab_archives').")
+    parser.add_argument("--output-dir", default="downloads", help="Directory to store downloaded archives (default: 'gitlab_archives').")
     parser.add_argument("--max-workers", type=int, default=4, help="Number of parallel download threads (default: 4).")
     args = parser.parse_args()
 
