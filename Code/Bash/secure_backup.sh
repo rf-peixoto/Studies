@@ -33,8 +33,8 @@ encrypt_directory() {
     local dir_name="$1"
 
     echo -e "${YELLOW}Compressing directory: ${dir_name}${RESET}"
-    # Compress in parallel with pigz
-    tar -c "${dir_name}" 2>/dev/null | pigz -9 > "${dir_name}.tar.gz"
+    # Compress using gzip
+    tar -c "${dir_name}" 2>/dev/null | gzip -9 > "${dir_name}.tar.gz"
     if [ $? -ne 0 ]; then
         echo -e "${RED}Error: Failed to archive ${dir_name}.${RESET}"
         return 1
