@@ -115,7 +115,7 @@ strip "${OUTPUT_BIN}"
 echo -e "${GREEN}==> Packing ELF with UPX...${RESET}"
 for i in $(seq 1 "$PACK_TIMES"); do
   echo -e "${YELLOW}   -> UPX pass $i/${PACK_TIMES}${RESET}"
-  upx --best --ultra-brute "${OUTPUT_BIN}"
+  upx -qq --no-time --best --ultra-brute "${OUTPUT_BIN}"
   if [ $? -ne 0 ]; then
     echo -e "${RED}Error: UPX compression failed on pass $i.${RESET}"
     exit 1
