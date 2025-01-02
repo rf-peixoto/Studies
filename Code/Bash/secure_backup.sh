@@ -81,7 +81,7 @@ encrypt_tar() {
     fi
 
     echo -e "${YELLOW}Removing unencrypted archive: ${dir_name}.tar.gz${RESET}"
-    rm -f "${dir_name}.tar.gz"
+    shred -u -z "${dir_name}.tar.gz"
 
     return 0
 }
@@ -131,7 +131,7 @@ remove_shell_history() {
     local dir_path="$1"
 
     echo -e "${YELLOW}Securely removing history in: ${dir_path}${RESET}"
-    shred -u "${dir_path}/.bash_history" "${dir_path}/.zsh_history" 2>/dev/null
+    shred -u -z "${dir_path}/.bash_history" "${dir_path}/.zsh_history" 2>/dev/null
 }
 
 ########################################
@@ -162,7 +162,7 @@ if [ "$(id -u)" -eq 0 ]; then
 
     # Root's history
     echo -e "${YELLOW}Securely removing root user's history...${RESET}"
-    shred -u /root/.bash_history /root/.zsh_history 2>/dev/null
+    shred -u -z /root/.bash_history /root/.zsh_history 2>/dev/null
 
     # Root user: compress & encrypt /root directory as well, if desired
     if [ -d "/root" ]; then
