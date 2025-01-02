@@ -40,7 +40,7 @@ def build_query_params(device_type, query):
         "freenet":        "false",
         "paynet":         "false",
         "lastupdt":       "",      # (Optional) Filter by date
-        "resultsPerPage": 50,      # Each page returns up to 50 records
+        "resultsPerPage": 10,      # Each page returns up to 50 records
         "searchAfter":    None,
         "variance":       "0.010", # Adjust if needed
     }
