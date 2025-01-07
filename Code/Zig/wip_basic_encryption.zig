@@ -6,25 +6,26 @@ const mem = std.mem;
 pub fn main() !void {
     const allocator = std.heap.page_allocator;
 
-    // Grab all arguments at once
-    const args = std.process.args;
+    // Obtain all command-line arguments as a slice
+    const args_slice = try std.process.argsAlloc(allocator);
+    defer std.process.argsFree(allocator, args_slice);
 
     // We expect at least 3 arguments:
-    //   1) the program name (always present by default)
-    //   2) operation: "encrypt" or "decrypt"
-    //   3) path to file or folder
-    if (args.len < 3) {
+    //   1) program name (index 0)
+    //   2) operation: "encrypt" or "decrypt" (index 1)
+    //   3) path to file or folder (index 2)
+    if (args_slice.len < 3) {
         return usage();
     }
 
     // Operation: "encrypt" or "decrypt"
-    const operation = args[1];
+    const operation = args_slice[1];
     if (!mem.eql(u8, operation, "encrypt") and !mem.eql(u8, operation, "decrypt")) {
         return usage();
     }
 
     // Target path
-    const target_path = args[2];
+    const target_path = args_slice[2];
 
     // Defaults for optional arguments
     var algorithm: []const u8 = "aes-256-gcm";
@@ -32,10 +33,10 @@ pub fn main() !void {
     var iterations: u32 = 100000;
     var salt_size: usize = 16; // default salt size in bytes
 
-    // Process remaining arguments
+    // Process remaining arguments (index 3 and beyond)
     var i: usize = 3;
-    while (i < args.len) {
-        const token = args[i];
+    while (i < args_slice.len) {
+        const token = args_slice[i];
         i += 1;
 
         if (mem.startsWith(u8, token, "--password=")) {
@@ -51,13 +52,13 @@ pub fn main() !void {
         }
     }
 
-    // Check algorithm (only AES-256-GCM implemented here)
+    // Check algorithm (only AES-256-GCM implemented in this example)
     if (!mem.eql(u8, algorithm, "aes-256-gcm")) {
         std.log.err("Unsupported or unimplemented algorithm: {s}\n", .{algorithm});
         return;
     }
 
-    // Check if target is file or folder
+    // Check if target is a file or folder
     const stat_info = try fs.cwd().statAlloc(allocator, target_path);
     defer allocator.free(stat_info);
 
@@ -179,7 +180,7 @@ fn encryptFile(
     defer allocator.free(nonce);
 
     // Format of the output file:
-    //   [ salt (salt_size bytes) | nonce (12 bytes) | ciphertext... | tag (16 bytes) ]
+    //   [salt (salt_size bytes) | nonce (12 bytes) | ciphertext... | tag (16 bytes)]
     var output_buffer = allocator.createSlice(u8, 0);
     defer allocator.free(output_buffer);
 
