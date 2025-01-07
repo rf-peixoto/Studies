@@ -6,27 +6,38 @@ const mem = std.mem;
 pub fn main() !void {
     const allocator = std.heap.page_allocator;
 
-    // Use a basic built-in argument parser for demonstration.
-    var args_it = std.process.args.iterator();
-    _ = try args_it.next(); // Skip the executable name.
+    // Grab all arguments at once
+    const args = std.process.args;
 
-    const operation = try args_it.nextOptional() orelse return usage();
+    // We expect at least 3 arguments:
+    //   1) the program name (always present by default)
+    //   2) operation: "encrypt" or "decrypt"
+    //   3) path to file or folder
+    if (args.len < 3) {
+        return usage();
+    }
+
+    // Operation: "encrypt" or "decrypt"
+    const operation = args[1];
     if (!mem.eql(u8, operation, "encrypt") and !mem.eql(u8, operation, "decrypt")) {
         return usage();
     }
 
-    const target_path = try args_it.nextOptional() orelse return usage();
+    // Target path
+    const target_path = args[2];
 
-    // Optional arguments with default values
+    // Defaults for optional arguments
     var algorithm: []const u8 = "aes-256-gcm";
     var password: []const u8 = "default_password";
-    var iterations: u32 = 100_000;
-    var salt_size: usize = 16; // Default salt size, in bytes.
+    var iterations: u32 = 100000;
+    var salt_size: usize = 16; // default salt size in bytes
 
-    while (true) {
-        const opt_arg = try args_it.nextOptional();
-        if (opt_arg == null) break;
-        const token = opt_arg.?;
+    // Process remaining arguments
+    var i: usize = 3;
+    while (i < args.len) {
+        const token = args[i];
+        i += 1;
+
         if (mem.startsWith(u8, token, "--password=")) {
             password = token[11..];
         } else if (mem.startsWith(u8, token, "--iterations=")) {
@@ -40,11 +51,13 @@ pub fn main() !void {
         }
     }
 
+    // Check algorithm (only AES-256-GCM implemented here)
     if (!mem.eql(u8, algorithm, "aes-256-gcm")) {
         std.log.err("Unsupported or unimplemented algorithm: {s}\n", .{algorithm});
         return;
     }
 
+    // Check if target is file or folder
     const stat_info = try fs.cwd().statAlloc(allocator, target_path);
     defer allocator.free(stat_info);
 
@@ -65,6 +78,7 @@ fn usage() !void {
         \\  --iterations=<number>      (default: 100000)
         \\  --salt-size=<number>       (default: 16 bytes)
         \\  --algorithm=aes-256-gcm    (default: "aes-256-gcm")
+        \\
         \\Example:
         \\  encrypt_decrypt encrypt ./somefile --password=secret --iterations=200000 --salt-size=32
         \\  encrypt_decrypt decrypt ./somefile.enc --password=secret
@@ -73,7 +87,7 @@ fn usage() !void {
     return error.Usage;
 }
 
-// Recursively process a directory
+/// Recursively process a directory
 fn processDirectory(
     operation: []const u8,
     dir_path: []const u8,
@@ -81,17 +95,19 @@ fn processDirectory(
     iterations: u32,
     salt_size: usize,
 ) !void {
+    // For demonstration, use a small fixed buffer to join path strings
     var stack_allocator = std.heap.FixedBufferAllocator.init(std.mem.zeroes([1024]u8));
     const alloc = stack_allocator.allocator();
 
-    const it = try fs.cwd().openIterableDir(dir_path, .{});
-    defer it.close();
+    const dir_iter = try fs.cwd().openIterableDir(dir_path, .{});
+    defer dir_iter.close();
 
     while (true) {
-        const next_entry = try it.nextEntry();
+        const next_entry = try dir_iter.nextEntry();
         if (next_entry == null) break;
         const entry = next_entry.?;
 
+        // Skip "." and ".." entries
         if (mem.eql(u8, entry.name, ".")) continue;
         if (mem.eql(u8, entry.name, "..")) continue;
 
@@ -109,7 +125,7 @@ fn processDirectory(
     }
 }
 
-// Encrypt or decrypt a file
+/// Encrypt or decrypt a file
 fn processFile(
     operation: []const u8,
     file_path: []const u8,
@@ -121,20 +137,21 @@ fn processFile(
     const dec_suffix = ".dec";
 
     if (mem.eql(u8, operation, "encrypt")) {
-        const output_path = try std.fs.path.joinExt(std.heap.page_allocator, file_path, enc_suffix);
+        // Append .enc
+        const output_path = try fs.path.joinExt(std.heap.page_allocator, file_path, enc_suffix);
         defer std.heap.page_allocator.free(output_path);
 
         try encryptFile(file_path, output_path, password, iterations, salt_size);
     } else {
-        // For decryption, create a ".dec" file as output.
-        const output_path = try std.fs.path.joinExt(std.heap.page_allocator, file_path, dec_suffix);
+        // Append .dec
+        const output_path = try fs.path.joinExt(std.heap.page_allocator, file_path, dec_suffix);
         defer std.heap.page_allocator.free(output_path);
 
         try decryptFile(file_path, output_path, password, iterations, salt_size);
     }
 }
 
-// Encrypt a file using AES-256-GCM
+/// Encrypt a file using AES-256-GCM
 fn encryptFile(
     input_path: []const u8,
     output_path: []const u8,
@@ -144,45 +161,45 @@ fn encryptFile(
 ) !void {
     const allocator = std.heap.page_allocator;
 
-    // Read entire file. For large files, implement streaming instead.
+    // Read the entire file (for large files, a streaming approach is recommended)
     const input_data = try fs.cwd().readFileAlloc(allocator, input_path, 65536);
     defer allocator.free(input_data);
 
-    // Generate random salt.
-    const salt = try std.crypto.random.bytesAlloc(allocator, salt_size);
+    // Generate random salt
+    const salt = try crypto.random.bytesAlloc(allocator, salt_size);
     defer allocator.free(salt);
 
-    // Derive key using PBKDF2 with HMAC-SHA256.
-    const derived_key_size = 32; // 256-bit key
+    // Derive key using PBKDF2 with HMAC-SHA256
+    const derived_key_size = 32; // 256-bit
     var derived_key: [derived_key_size]u8 = undefined;
     try deriveKeyFromPassword(password, salt, iterations, &derived_key);
 
-    // Generate random nonce for AES-GCM (12 bytes recommended).
-    const nonce = try std.crypto.random.bytesAlloc(allocator, 12);
+    // Generate random nonce for AES-GCM (12 bytes recommended)
+    const nonce = try crypto.random.bytesAlloc(allocator, 12);
     defer allocator.free(nonce);
 
-    // Create an output buffer. Format:
-    // [salt (salt_size bytes) | nonce (12 bytes) | ciphertext (...) | tag (16 bytes)]
-    var output_buffer = std.heap.page_allocator.createSlice(u8, 0);
+    // Format of the output file:
+    //   [ salt (salt_size bytes) | nonce (12 bytes) | ciphertext... | tag (16 bytes) ]
+    var output_buffer = allocator.createSlice(u8, 0);
     defer allocator.free(output_buffer);
 
     try output_buffer.appendSlice(salt);
     try output_buffer.appendSlice(nonce);
 
-    // Perform AES-GCM encryption.
     const cipher = crypto.cipher.aes.Cipher.init(crypto.cipher.aes.KeySize.bits256, &derived_key);
     var gcm = crypto.modes.gcm.Gcm.init(&cipher, nonce);
     try gcm.encrypt(input_data, &output_buffer);
     const tag_bytes = gcm.finalTag();
+
     try output_buffer.appendSlice(tag_bytes);
 
-    // Write the encrypted data to the output file.
+    // Write to output file
     const out_file = try fs.cwd().createFile(output_path, .{});
     defer out_file.close();
     try out_file.writeAll(output_buffer);
 }
 
-// Decrypt a file using AES-256-GCM
+/// Decrypt a file using AES-256-GCM
 fn decryptFile(
     input_path: []const u8,
     output_path: []const u8,
@@ -192,15 +209,11 @@ fn decryptFile(
 ) !void {
     const allocator = std.heap.page_allocator;
 
-    // Read entire file
+    // Read the entire file
     const in_data = try fs.cwd().readFileAlloc(allocator, input_path, 65536);
     defer allocator.free(in_data);
 
-    // For a valid AES-GCM file with salt, nonce, and tag:
-    // - salt_size: known or passed as an argument (used here).
-    // - nonce: 12 bytes
-    // - tag: 16 bytes
-    // The rest is ciphertext.
+    // Verify file has enough data: salt + nonce + tag at minimum
     if (in_data.len < salt_size + 12 + 16) {
         std.log.err("Input file is too small to contain required cryptographic data.\n", .{});
         return;
@@ -211,32 +224,33 @@ fn decryptFile(
     const ciphertext = in_data[salt_size + 12 .. in_data.len - 16];
     const tag = in_data[in_data.len - 16 ..];
 
-    // Derive the key from the provided password
+    // Derive the key
     const derived_key_size = 32;
     var derived_key: [derived_key_size]u8 = undefined;
     try deriveKeyFromPassword(password, salt, iterations, &derived_key);
 
-    // Decrypt
     const cipher = crypto.cipher.aes.Cipher.init(crypto.cipher.aes.KeySize.bits256, &derived_key);
     var gcm = crypto.modes.gcm.Gcm.init(&cipher, nonce);
 
-    var output_buffer = std.heap.page_allocator.createSlice(u8, 0);
-    defer std.heap.page_allocator.free(output_buffer);
+    var output_buffer = allocator.createSlice(u8, 0);
+    defer allocator.free(output_buffer);
 
     try gcm.decrypt(ciphertext, &output_buffer);
+
+    // Validate authentication tag
     const computed_tag = gcm.finalTag();
     if (!mem.eql(u8, computed_tag, tag)) {
         std.log.err("Decryption failed: authentication tag mismatch.\n", .{});
         return;
     }
 
-    // Write the decrypted data to output file
+    // Write the decrypted data
     const out_file = try fs.cwd().createFile(output_path, .{});
     defer out_file.close();
     try out_file.writeAll(output_buffer);
 }
 
-// PBKDF2-HMAC-SHA256 key derivation
+/// PBKDF2-HMAC-SHA256 key derivation
 fn deriveKeyFromPassword(
     password: []const u8,
     salt: []const u8,
@@ -244,10 +258,8 @@ fn deriveKeyFromPassword(
     out_key: *[32]u8,
 ) !void {
     const KeySize = 32;
-    // PBKDF2 with HmacSHA256
-    const prf = crypto.pbkdf2.HmacSHA256{
-        .secret_key = password,
-    };
+    const prf = crypto.pbkdf2.HmacSHA256{ .secret_key = password };
+
     try crypto.pbkdf2.pbkdf2(
         &prf,
         salt,
