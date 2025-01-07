@@ -30,7 +30,7 @@ pub fn main() !void {
     // Defaults for optional arguments
     var algorithm: []const u8 = "aes-256-gcm";
     var password: []const u8 = "default_password";
-    var iterations: u32 = 100000;
+    var iterations: u32 = 100_000;
     var salt_size: usize = 16; // default salt size in bytes
 
     // Process remaining arguments (index 3 and beyond)
@@ -42,9 +42,11 @@ pub fn main() !void {
         if (mem.startsWith(u8, token, "--password=")) {
             password = token[11..];
         } else if (mem.startsWith(u8, token, "--iterations=")) {
-            iterations = std.fmt.parseUnsignedInt(u32, token[13..]) catch return usage();
+            // Parse an unsigned integer from a substring (base 10)
+            iterations = try std.fmt.parseInt(u32, token[13..], 10);
         } else if (mem.startsWith(u8, token, "--salt-size=")) {
-            salt_size = std.fmt.parseUnsignedInt(usize, token[12..]) catch return usage();
+            // Parse an unsigned integer from a substring (base 10)
+            salt_size = try std.fmt.parseInt(usize, token[12..], 10);
         } else if (mem.startsWith(u8, token, "--algorithm=")) {
             algorithm = token[12..];
         } else {
@@ -52,7 +54,7 @@ pub fn main() !void {
         }
     }
 
-    // Check algorithm (only AES-256-GCM implemented in this example)
+    // Check algorithm (only AES-256-GCM is implemented in this example)
     if (!mem.eql(u8, algorithm, "aes-256-gcm")) {
         std.log.err("Unsupported or unimplemented algorithm: {s}\n", .{algorithm});
         return;
