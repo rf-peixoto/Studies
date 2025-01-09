@@ -199,6 +199,8 @@ inurl:".php?catid=" intext:"Toys"
 
 # Find open dirs in shodan:
 title:"Index of" country:"US" http.status:200 http.html:"align"
+# Dork alternative:
+intitle:"Index of" inurl:/" align site:.us
 
 inurl:”.php?cat=”+intext:”Paypal”+site:UK
 inurl:”.php?cat=”+intext:”/Buy Now/”+site:.net
