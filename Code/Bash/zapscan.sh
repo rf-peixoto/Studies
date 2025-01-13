@@ -6,7 +6,7 @@ ZAP_PORT="8080"
 ZAP_URL="http://$ZAP_HOST:$ZAP_PORT"
 ZAP_API_KEY="YOUR_API_KEY"
 DEFAULT_REPORT_FORMAT="html"
-SCAN_DELAY=2  # Delay in seconds between progress checks
+SCAN_DELAY=2  # Delay in seconds between status checks
 VERBOSE=true  # Enable verbose output
 
 # Colors for output
@@ -70,7 +70,7 @@ fi
 # Check if ZAP is running
 if ! curl -s "$ZAP_URL" &>/dev/null; then
     echo -e "${YELLOW}ZAP is not running. Starting ZAP in daemon mode...${RESET}"
-    zap.sh -daemon -port "$ZAP_PORT" -config api.key="$ZAP_API_KEY"
+    zap.sh -daemon -nostdout -port "$ZAP_PORT" -config api.key="$ZAP_API_KEY"
     sleep 10  # Allow ZAP some time to start
 fi
 
@@ -105,7 +105,12 @@ while :; do
       --data-urlencode "apikey=$ZAP_API_KEY" \
       | jq -r '.status')
       
-    echo -ne "Scan progress: ${PROGRESS}%\r"
+    ALERTS=$(curl -s "$ZAP_URL/JSON/core/view/alertsSummary/" \
+      --data-urlencode "baseurl=$SCAN_URL" \
+      --data-urlencode "apikey=$ZAP_API_KEY" \
+      | jq -r '.high | . + " High, " + (.medium | tostring) + " Medium, " + (.low | tostring) + " Low Alerts"')
+    
+    echo -ne "Scan progress: ${PROGRESS}% - Alerts: ${ALERTS}\r"
 
     if [[ "$PROGRESS" -eq 100 ]]; then
         echo -e "\n${GREEN}Scan completed for $SCAN_URL.${RESET}"
