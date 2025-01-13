@@ -1,9 +1,10 @@
 #!/bin/bash
 
-# Check if ZAP is running, otherwise start it
+# Configuration
 ZAP_HOST="127.0.0.1"
 ZAP_PORT="8080"
 ZAP_URL="http://$ZAP_HOST:$ZAP_PORT"
+ZAP_API_KEY="YOUR_API_KEY"
 SCAN_URL=$1
 REPORT_FILE="zap_report.html"
 
@@ -15,7 +16,7 @@ fi
 # Check if ZAP is running
 if ! curl -s "$ZAP_URL" > /dev/null; then
   echo "ZAP is not running. Starting ZAP in daemon mode..."
-  zap.sh -daemon -port "$ZAP_PORT" -host "$ZAP_HOST"
+  zap.sh -daemon -port "$ZAP_PORT" -host "$ZAP_HOST" -config api.key="$ZAP_API_KEY"
   sleep 10 # Allow ZAP some time to start
 fi
 
@@ -25,6 +26,7 @@ SCAN_ID=$(curl -s "$ZAP_URL/JSON/ascan/action/scan/" \
   --data-urlencode "url=$SCAN_URL" \
   --data-urlencode "recurse=true" \
   --data-urlencode "inScopeOnly=false" \
+  --data-urlencode "apikey=$ZAP_API_KEY" \
   | jq -r '.scan')
 
 if [[ "$SCAN_ID" == "null" || -z "$SCAN_ID" ]]; then
@@ -34,7 +36,9 @@ fi
 
 # Monitor the scan progress
 while :; do
-  PROGRESS=$(curl -s "$ZAP_URL/JSON/ascan/view/status/" | jq -r '.status')
+  PROGRESS=$(curl -s "$ZAP_URL/JSON/ascan/view/status/" \
+    --data-urlencode "apikey=$ZAP_API_KEY" \
+    | jq -r '.status')
   echo "Scan progress: $PROGRESS%"
   
   if [[ "$PROGRESS" -eq 100 ]]; then
@@ -47,7 +51,9 @@ done
 
 # Export the report
 echo "Exporting the report to $REPORT_FILE"
-curl -s "$ZAP_URL/OTHER/core/other/htmlreport/" -o "$REPORT_FILE"
+curl -s "$ZAP_URL/OTHER/core/other/htmlreport/" \
+  --data-urlencode "apikey=$ZAP_API_KEY" \
+  -o "$REPORT_FILE"
 
 if [[ $? -eq 0 ]]; then
   echo "Report saved as $REPORT_FILE"
