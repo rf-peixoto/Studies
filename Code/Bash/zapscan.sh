@@ -71,19 +71,42 @@ fi
 if ! curl -s "$ZAP_URL" &>/dev/null; then
     echo -e "${YELLOW}ZAP is not running. Starting ZAP in daemon mode...${RESET}"
     zap.sh -daemon -nostdout -port "$ZAP_PORT" -config api.key="$ZAP_API_KEY"
-    sleep 10  # Allow ZAP time to start
+    sleep 10  # Allow ZAP some time to start
 fi
 
-SCAN_ID=""
+echo -e "${GREEN}Target URL: $SCAN_URL${RESET}"
 
 # Start the scan
 if [[ "$SCAN_MODE" == "passive" ]]; then
-    echo -e "${GREEN}Starting passive scan on URL: $SCAN_URL${RESET}"
-    curl -s "$ZAP_URL/JSON/spider/action/scan/" \
+    echo -e "${GREEN}Starting spider (passive mode) on URL: $SCAN_URL${RESET}"
+    SPIDER_ID=$(curl -s "$ZAP_URL/JSON/spider/action/scan/" \
       --data-urlencode "url=$SCAN_URL" \
       --data-urlencode "recurse=$RECURSE" \
-      --data-urlencode "apikey=$ZAP_API_KEY"
-    echo -e "${YELLOW}Passive scan initiated. No active scan ID is generated. Monitor alerts as needed.${RESET}"
+      --data-urlencode "apikey=$ZAP_API_KEY" \
+      | jq -r '.scan')
+
+    if [[ "$SPIDER_ID" == "null" || -z "$SPIDER_ID" ]]; then
+        echo -e "${RED}Failed to start spider scan. Exiting.${RESET}"
+        exit 1
+    fi
+
+    echo -e "${GREEN}Spider started (ID: $SPIDER_ID). Monitoring progress...${RESET}"
+    while :; do
+        SPIDER_PROGRESS=$(curl -s "$ZAP_URL/JSON/spider/view/status/" \
+          --data-urlencode "scanId=$SPIDER_ID" \
+          --data-urlencode "apikey=$ZAP_API_KEY" \
+          | jq -r '.status')
+
+        echo -ne "Spider progress: ${SPIDER_PROGRESS}%\r"
+
+        if [[ "$SPIDER_PROGRESS" -eq 100 ]]; then
+            echo -e "\n${GREEN}Spider scan completed.${RESET}"
+            break
+        fi
+        sleep "$SCAN_DELAY"
+    done
+
+    echo -e "${YELLOW}Passive scanning is performed automatically by ZAP on discovered URLs.${RESET}"
 else
     echo -e "${GREEN}Starting aggressive scan on URL: $SCAN_URL${RESET}"
     SCAN_ID=$(curl -s "$ZAP_URL/JSON/ascan/action/scan/" \
@@ -97,27 +120,23 @@ else
         echo -e "${RED}Failed to start aggressive scan. Exiting.${RESET}"
         exit 1
     fi
-    echo -e "${GREEN}Scan started successfully for $SCAN_URL (Scan ID: $SCAN_ID).${RESET}"
-fi
 
-# Monitor the scan progress only if aggressive
-if [[ "$SCAN_MODE" == "aggressive" && -n "$SCAN_ID" ]]; then
-    echo -e "${GREEN}Monitoring scan progress...${RESET}"
+    echo -e "${GREEN}Active scan started (ID: $SCAN_ID). Monitoring progress...${RESET}"
     while :; do
         PROGRESS=$(curl -s "$ZAP_URL/JSON/ascan/view/status/" \
           --data-urlencode "scanId=$SCAN_ID" \
           --data-urlencode "apikey=$ZAP_API_KEY" \
           | jq -r '.status')
-        
+
         ALERTS=$(curl -s "$ZAP_URL/JSON/core/view/alertsSummary/" \
           --data-urlencode "baseurl=$SCAN_URL" \
           --data-urlencode "apikey=$ZAP_API_KEY" \
           | jq -r '.high | . + " High, " + (.medium | tostring) + " Medium, " + (.low | tostring) + " Low Alerts"')
-        
+
         echo -ne "Scan progress: ${PROGRESS}% - Alerts: ${ALERTS}\r"
 
         if [[ "$PROGRESS" -eq 100 ]]; then
-            echo -e "\n${GREEN}Scan completed for $SCAN_URL.${RESET}"
+            echo -e "\n${GREEN}Aggressive scan completed.${RESET}"
             break
         fi
 
@@ -127,7 +146,7 @@ fi
 
 # Export the report
 REPORT_FILE="zap_report.$REPORT_FORMAT"
-echo -e "${GREEN}Exporting the report as $REPORT_FILE${RESET}"
+echo -e "${GREEN}Exporting the report to $REPORT_FILE${RESET}"
 
 if [[ "$REPORT_FORMAT" == "html" ]]; then
     curl -s "$ZAP_URL/OTHER/core/other/htmlreport/" \
@@ -141,7 +160,7 @@ else
 fi
 
 if [[ $? -eq 0 ]]; then
-    echo -e "${GREEN}Report saved successfully: $REPORT_FILE${RESET}"
+    echo -e "${GREEN}Report saved: $REPORT_FILE${RESET}"
 else
     echo -e "${RED}Failed to save the report.${RESET}"
 fi
