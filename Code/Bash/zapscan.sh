@@ -6,8 +6,8 @@ ZAP_PORT="8080"
 ZAP_URL="http://$ZAP_HOST:$ZAP_PORT"
 ZAP_API_KEY="YOUR_API_KEY"
 DEFAULT_REPORT_FORMAT="html"
-SCAN_DELAY=2  # Time (in seconds) between status checks
-VERBOSE=true  # Verbose output toggle
+SCAN_DELAY=2  # Delay in seconds between progress checks
+VERBOSE=true  # Enable verbose output
 
 # Colors for output
 GREEN="\e[32m"
@@ -19,9 +19,9 @@ RESET="\e[0m"
 function usage() {
     echo -e "${YELLOW}Usage: $0 -u <url> [-m <scan_mode>] [-r <report_format>] [-d <scan_delay>] [--no-recurse] [--in-scope]${RESET}"
     echo "  -u, --url          Target URL to scan"
-    echo "  -m, --mode         Scan mode: 'passive' (default) or 'aggressive'"
+    echo "  -m, --mode         Scan mode: 'passive' or 'aggressive' (default: aggressive)"
     echo "  -r, --report       Report format: 'html' (default) or 'json'"
-    echo "  -d, --delay        Time (in seconds) between scan status checks (default: 2)"
+    echo "  -d, --delay        Time (in seconds) between progress updates (default: 2)"
     echo "  --no-recurse       Disable recursive scanning"
     echo "  --in-scope         Only scan items in the current scope"
     echo "  -v, --verbose      Enable verbose output"
@@ -29,9 +29,10 @@ function usage() {
 }
 
 # Default settings
-SCAN_MODE="passive"
+SCAN_MODE="aggressive"
 RECURSE=true
 IN_SCOPE=false
+REPORT_FORMAT="$DEFAULT_REPORT_FORMAT"
 
 # Parse arguments
 while [[ "$#" -gt 0 ]]; do
@@ -62,7 +63,8 @@ if ! [[ "$SCAN_MODE" =~ ^(passive|aggressive)$ ]]; then
 fi
 
 if ! [[ "$REPORT_FORMAT" =~ ^(html|json)$ ]]; then
-    REPORT_FORMAT="$DEFAULT_REPORT_FORMAT"
+    echo -e "${RED}Error: Invalid report format. Use 'html' or 'json'.${RESET}"
+    exit 1
 fi
 
 # Check if ZAP is running
@@ -72,14 +74,14 @@ if ! curl -s "$ZAP_URL" &>/dev/null; then
     sleep 10  # Allow ZAP some time to start
 fi
 
-# Start the scan based on the mode
+# Start the scan
 if [[ "$SCAN_MODE" == "passive" ]]; then
     echo -e "${GREEN}Starting passive scan on URL: $SCAN_URL${RESET}"
-    # Passive scanning does not actively probe, so you can monitor alerts directly
     curl -s "$ZAP_URL/JSON/spider/action/scan/" \
       --data-urlencode "url=$SCAN_URL" \
       --data-urlencode "recurse=$RECURSE" \
       --data-urlencode "apikey=$ZAP_API_KEY"
+    echo -e "${YELLOW}Passive scan initiated. Monitor results via alerts.${RESET}"
 else
     echo -e "${GREEN}Starting aggressive scan on URL: $SCAN_URL${RESET}"
     SCAN_ID=$(curl -s "$ZAP_URL/JSON/ascan/action/scan/" \
@@ -93,6 +95,7 @@ else
         echo -e "${RED}Failed to start aggressive scan. Exiting.${RESET}"
         exit 1
     fi
+    echo -e "${GREEN}Scan started successfully for $SCAN_URL.${RESET}"
 fi
 
 # Monitor the scan progress
@@ -102,12 +105,10 @@ while :; do
       --data-urlencode "apikey=$ZAP_API_KEY" \
       | jq -r '.status')
       
-    if [[ "$VERBOSE" == "true" ]]; then
-        echo -ne "Scan progress: ${PROGRESS}%\r"
-    fi
+    echo -ne "Scan progress: ${PROGRESS}%\r"
 
     if [[ "$PROGRESS" -eq 100 ]]; then
-        echo -e "\n${GREEN}Scan completed.${RESET}"
+        echo -e "\n${GREEN}Scan completed for $SCAN_URL.${RESET}"
         break
     fi
 
@@ -129,7 +130,7 @@ else
 fi
 
 if [[ $? -eq 0 ]]; then
-    echo -e "${GREEN}Report saved as $REPORT_FILE${RESET}"
+    echo -e "${GREEN}Report saved successfully: $REPORT_FILE${RESET}"
 else
-    echo -e "${RED}Failed to save report.${RESET}"
+    echo -e "${RED}Failed to save the report.${RESET}"
 fi
