@@ -71,8 +71,10 @@ fi
 if ! curl -s "$ZAP_URL" &>/dev/null; then
     echo -e "${YELLOW}ZAP is not running. Starting ZAP in daemon mode...${RESET}"
     zap.sh -daemon -nostdout -port "$ZAP_PORT" -config api.key="$ZAP_API_KEY"
-    sleep 10  # Allow ZAP some time to start
+    sleep 10  # Allow ZAP time to start
 fi
+
+SCAN_ID=""
 
 # Start the scan
 if [[ "$SCAN_MODE" == "passive" ]]; then
@@ -81,7 +83,7 @@ if [[ "$SCAN_MODE" == "passive" ]]; then
       --data-urlencode "url=$SCAN_URL" \
       --data-urlencode "recurse=$RECURSE" \
       --data-urlencode "apikey=$ZAP_API_KEY"
-    echo -e "${YELLOW}Passive scan initiated. Monitor results via alerts.${RESET}"
+    echo -e "${YELLOW}Passive scan initiated. No active scan ID is generated. Monitor alerts as needed.${RESET}"
 else
     echo -e "${GREEN}Starting aggressive scan on URL: $SCAN_URL${RESET}"
     SCAN_ID=$(curl -s "$ZAP_URL/JSON/ascan/action/scan/" \
@@ -95,34 +97,38 @@ else
         echo -e "${RED}Failed to start aggressive scan. Exiting.${RESET}"
         exit 1
     fi
-    echo -e "${GREEN}Scan started successfully for $SCAN_URL.${RESET}"
+    echo -e "${GREEN}Scan started successfully for $SCAN_URL (Scan ID: $SCAN_ID).${RESET}"
 fi
 
-# Monitor the scan progress
-echo -e "${GREEN}Monitoring scan progress...${RESET}"
-while :; do
-    PROGRESS=$(curl -s "$ZAP_URL/JSON/ascan/view/status/" \
-      --data-urlencode "apikey=$ZAP_API_KEY" \
-      | jq -r '.status')
-      
-    ALERTS=$(curl -s "$ZAP_URL/JSON/core/view/alertsSummary/" \
-      --data-urlencode "baseurl=$SCAN_URL" \
-      --data-urlencode "apikey=$ZAP_API_KEY" \
-      | jq -r '.high | . + " High, " + (.medium | tostring) + " Medium, " + (.low | tostring) + " Low Alerts"')
-    
-    echo -ne "Scan progress: ${PROGRESS}% - Alerts: ${ALERTS}\r"
+# Monitor the scan progress only if aggressive
+if [[ "$SCAN_MODE" == "aggressive" && -n "$SCAN_ID" ]]; then
+    echo -e "${GREEN}Monitoring scan progress...${RESET}"
+    while :; do
+        PROGRESS=$(curl -s "$ZAP_URL/JSON/ascan/view/status/" \
+          --data-urlencode "scanId=$SCAN_ID" \
+          --data-urlencode "apikey=$ZAP_API_KEY" \
+          | jq -r '.status')
+        
+        ALERTS=$(curl -s "$ZAP_URL/JSON/core/view/alertsSummary/" \
+          --data-urlencode "baseurl=$SCAN_URL" \
+          --data-urlencode "apikey=$ZAP_API_KEY" \
+          | jq -r '.high | . + " High, " + (.medium | tostring) + " Medium, " + (.low | tostring) + " Low Alerts"')
+        
+        echo -ne "Scan progress: ${PROGRESS}% - Alerts: ${ALERTS}\r"
 
-    if [[ "$PROGRESS" -eq 100 ]]; then
-        echo -e "\n${GREEN}Scan completed for $SCAN_URL.${RESET}"
-        break
-    fi
+        if [[ "$PROGRESS" -eq 100 ]]; then
+            echo -e "\n${GREEN}Scan completed for $SCAN_URL.${RESET}"
+            break
+        fi
 
-    sleep "$SCAN_DELAY"
-done
+        sleep "$SCAN_DELAY"
+    done
+fi
 
 # Export the report
 REPORT_FILE="zap_report.$REPORT_FORMAT"
 echo -e "${GREEN}Exporting the report as $REPORT_FILE${RESET}"
+
 if [[ "$REPORT_FORMAT" == "html" ]]; then
     curl -s "$ZAP_URL/OTHER/core/other/htmlreport/" \
       --data-urlencode "apikey=$ZAP_API_KEY" \
