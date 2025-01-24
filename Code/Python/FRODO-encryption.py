@@ -1,3 +1,6 @@
+#pip install oqs==0.10.2
+#pip install cryptography==41.0.3
+
 import oqs
 import os
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
