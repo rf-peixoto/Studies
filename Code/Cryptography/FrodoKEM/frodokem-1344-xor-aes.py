@@ -1,8 +1,8 @@
 import os
+import sys
 from oqs import KeyEncapsulation
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives import padding
 
 class FrodoKEMHandler:
     def __init__(self):
@@ -12,18 +12,26 @@ class FrodoKEMHandler:
     def generate_key_pair(self):
         """Generate a key pair (public key and private key)."""
         public_key = self.kem.generate_keypair()
-        return public_key, self.kem.export_secret_key()
+        private_key = self.kem.export_secret_key()
+        return public_key, private_key
 
     def encrypt_file(self, file_path):
         """Encrypt a file using a newly generated key."""
         # Generate key pair
         public_key, private_key = self.generate_key_pair()
         
+        # Display generated keys
+        print("\n=== Generated Keys ===")
+        print(f"Public Key: {public_key.hex()}")
+        print(f"Private Key: {private_key.hex()}")
+        
         # Generate a shared secret and ciphertext
         ciphertext, shared_secret_enc = self.kem.encap_secret(public_key)
         
-        # Show the shared secret to the user
-        print(f"Generated Shared Secret: {shared_secret_enc.hex()}")
+        # Display shared secret and ciphertext
+        print("\n=== Encryption Details ===")
+        print(f"Shared Secret: {shared_secret_enc.hex()}")
+        print(f"Ciphertext: {ciphertext.hex()}")
         
         # Read the file content
         with open(file_path, 'rb') as file:
@@ -42,7 +50,7 @@ class FrodoKEMHandler:
             # Write ciphertext, AES nonce, AES tag, and encrypted content
             encrypted_file.write(ciphertext + aes_nonce + aes_tag + xor_encrypted_content)
         
-        print(f"File encrypted and saved as: {encrypted_file_path}")
+        print(f"\nFile encrypted and saved as: {encrypted_file_path}")
         return encrypted_file_path, private_key
 
     def decrypt_file(self, encrypted_file_path, private_key):
@@ -64,6 +72,10 @@ class FrodoKEMHandler:
         # Decapsulate the shared secret using the private key
         shared_secret_dec = self.kem.decap_secret(ciphertext, private_key)
         
+        # Display decapsulated shared secret
+        print("\n=== Decryption Details ===")
+        print(f"Decapsulated Shared Secret: {shared_secret_dec.hex()}")
+        
         # Decrypt the XOR layer
         decrypted_xor_content = self.xor_encrypt(xor_encrypted_data, shared_secret_dec)
         
@@ -76,7 +88,7 @@ class FrodoKEMHandler:
         with open(decrypted_file_path, 'wb') as decrypted_file:
             decrypted_file.write(decrypted_content)
         
-        print(f"File decrypted and saved as: {decrypted_file_path}")
+        print(f"\nFile decrypted and saved as: {decrypted_file_path}")
         return decrypted_file_path
 
     @staticmethod
@@ -115,15 +127,24 @@ class FrodoKEMHandler:
             key_bytes = key_bytes * (len(data) // len(key_bytes)) + key_bytes[:len(data) % len(key_bytes)]
         return bytes([a ^ b for a, b in zip(data, key_bytes)])
 
-# Example usage
-import sys
-
+# Main function
 if __name__ == "__main__":
+    if len(sys.argv) != 2:
+        print("Usage: python frodokem-1344-xor-aes.py <file_to_encrypt>")
+        sys.exit(1)
+    
+    file_to_encrypt = sys.argv[1]
+    
+    if not os.path.exists(file_to_encrypt):
+        print(f"Error: File '{file_to_encrypt}' not found.")
+        sys.exit(1)
+    
     handler = FrodoKEMHandler()
     
-    # Encrypt a file
-    file_to_encrypt = sys.argv[1]
+    # Encrypt the file
+    print(f"\nEncrypting file: {file_to_encrypt}")
     encrypted_file, private_key = handler.encrypt_file(file_to_encrypt)
     
     # Decrypt the file
+    print(f"\nDecrypting file: {encrypted_file}")
     handler.decrypt_file(encrypted_file, private_key)
