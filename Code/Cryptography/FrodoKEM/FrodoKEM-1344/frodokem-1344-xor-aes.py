@@ -6,7 +6,7 @@ from cryptography.hazmat.backends import default_backend
 
 class FrodoKEMHandler:
     def __init__(self):
-        self.kem_alg = 'FrodoKEM-1344'
+        self.kem_alg = 'FrodoKEM-1344-AES'
         self.kem = KeyEncapsulation(self.kem_alg)
 
     def generate_key_pair(self):
