@@ -85,54 +85,49 @@ class FrodoFileEncryptor:
         return public_key, secret_key
 
     def decrypt_file(self, secret_key: bytes, input_file_path: str, output_file_path: str):
-        """
-        Decrypts a file encrypted by 'generate_key_and_encrypt'.
+    """
+    Decrypts a file encrypted by 'generate_key_and_encrypt', using FrodoKEM-640-AES.
 
-        Args:
-            secret_key (bytes): Secret key from the FrodoKEM key generation step
-            input_file_path (str): Path to the encrypted file
-            output_file_path (str): Path to write the decrypted plaintext
+    Args:
+        secret_key (bytes): Secret key from the FrodoKEM key generation step.
+        input_file_path (str): Path to the encrypted file.
+        output_file_path (str): Path to write the decrypted plaintext.
+    """
 
-        Note: This uses 'KeyEncapsulation' and 'decap_secret()' from the older API.
-        """
+    # 1. Read the encrypted data
+    with open(input_file_path, "rb") as file_in:
+        frodo_cipher_len = int.from_bytes(file_in.read(4), byteorder="big")
+        frodo_ciphertext = file_in.read(frodo_cipher_len)
+        iv = file_in.read(16)
+        ciphertext = file_in.read()
 
-        # 1. Read the encrypted data
-        with open(input_file_path, "rb") as file_in:
-            # Read length of the Frodo ciphertext
-            frodo_cipher_len = int.from_bytes(file_in.read(4), byteorder="big")
-            frodo_ciphertext = file_in.read(frodo_cipher_len)
-            iv = file_in.read(16)
-            ciphertext = file_in.read()
+    # 2. Create KeyEncapsulation with the secret key passed to the constructor
+    with oqs.KeyEncapsulation("FrodoKEM-640-AES", secret_key=secret_key) as frodo_dec:
+        # Decapsulate the shared secret
+        shared_secret_dec = frodo_dec.decap_secret(frodo_ciphertext)
 
-        # 2. Use KeyEncapsulation for decapsulation
-        with oqs.KeyEncapsulation("FrodoKEM-640-AES") as frodo_dec:
-            # Import the secret key
-            frodo_dec.import_secret_key(secret_key)
+    # 3. Derive the AES-256 key from the shared secret
+    derived_key = HKDF(
+        algorithm=hashes.SHA256(),
+        length=32,
+        salt=None,
+        info=b"FrodoKEM file encryption (older API)",
+        backend=default_backend()
+    ).derive(shared_secret_dec)
 
-            # Recover the shared secret
-            shared_secret_dec = frodo_dec.decap_secret(frodo_ciphertext)
+    # 4. Decrypt using AES-CBC
+    cipher = Cipher(algorithms.AES(derived_key), modes.CBC(iv), backend=default_backend())
+    decryptor = cipher.decryptor()
+    padded_plaintext = decryptor.update(ciphertext) + decryptor.finalize()
 
-        # 3. Derive the same AES-256 key
-        derived_key = HKDF(
-            algorithm=hashes.SHA256(),
-            length=32,
-            salt=None,
-            info=b"FrodoKEM file encryption (older API)",
-            backend=default_backend()
-        ).derive(shared_secret_dec)
+    # 5. Remove PKCS#7 padding
+    unpadder = padding.PKCS7(128).unpadder()
+    plaintext = unpadder.update(padded_plaintext) + unpadder.finalize()
 
-        # 4. Decrypt using AES in CBC mode
-        cipher = Cipher(algorithms.AES(derived_key), modes.CBC(iv), backend=default_backend())
-        decryptor = cipher.decryptor()
-        padded_plaintext = decryptor.update(ciphertext) + decryptor.finalize()
+    # 6. Write the decrypted data to output_file_path
+    with open(output_file_path, "wb") as file_out:
+        file_out.write(plaintext)
 
-        # 5. Remove PKCS#7 padding
-        unpadder = padding.PKCS7(128).unpadder()
-        plaintext = unpadder.update(padded_plaintext) + unpadder.finalize()
-
-        # 6. Write the decrypted data to output_file_path
-        with open(output_file_path, "wb") as file_out:
-            file_out.write(plaintext)
 
 def main():
     """
