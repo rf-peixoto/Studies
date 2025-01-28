@@ -65,7 +65,7 @@ class FrodoKEMHandler:
             encrypted_data = encrypted_content[self.ciphertext_length + self.aes_nonce_length + self.aes_tag_length:]
             
             # Decapsulate the shared secret using the private key
-            shared_secret_dec = self.kem.decap_secret(ciphertext, private_key)
+            shared_secret_dec = self.kem.decap_secret(ciphertext)  # Only ciphertext is passed
             
             # Derive the unique key using the filename as salt
             salt = os.path.basename(encrypted_file_path).replace('.dpsk', '').encode()  # Remove .dpsk to get original filename
