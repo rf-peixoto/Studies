@@ -1,5 +1,6 @@
 import platform, socket
 from pathlib import Path
+from datetime import datetime
 
 class OSRecon:
     def __init__(self):
@@ -22,4 +23,5 @@ print("Username: {0}".format(r.username))
 print("Home Path: {0}".format(r.home))
 print("Network Node: {0}".format(r.node))
 print("Local Address: {0}".format(r.node_ip))
-
+print("\n")
+print(f"{datetime.now().strftime('%d/%m/%Y %H:%M:%S')}|{r.username}|{r.os} {r.arch}|{r.home}|{r.node}|{r.node_ip}")
