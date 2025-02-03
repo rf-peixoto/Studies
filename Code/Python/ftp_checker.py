@@ -1,6 +1,7 @@
 import ftplib
 import argparse
 import sys
+import socket
 from colorama import Fore, Style, init
 
 # Initialize colorama for colored output
@@ -15,17 +16,32 @@ def test_ftp_anonymous(domain):
         print(f"{Fore.GREEN}[SUCCESS]{Style.RESET_ALL} Anonymous login allowed on {domain}")
         print(f"{Fore.BLUE}[BANNER]{Style.RESET_ALL} {banner}")
         
-        # Test 'SITE' command
-        response = ftp.sendcmd("SITE HELP")
-        if "500" in response or "502" in response:
-            print(f"{Fore.YELLOW}[WARNING]{Style.RESET_ALL} SITE command not supported on {domain}")
+        # Test 'SITE' command variations
+        site_commands = ["SITE HELP", "SITE CHMOD 777 test", "SITE EXEC ls", "SITE WHO"]
+        site_results = []
+        
+        for cmd in site_commands:
+            try:
+                response = ftp.sendcmd(cmd)
+                if "500" not in response and "502" not in response:
+                    site_results.append(f"{cmd}: {response}")
+            except ftplib.error_perm:
+                continue
+        
+        if site_results:
+            print(f"{Fore.RED}[ALERT]{Style.RESET_ALL} SITE commands available: {' | '.join(site_results)}")
         else:
-            commands = response.replace('\n', ' ').replace('\r', '')
-            print(f"{Fore.RED}[ALERT]{Style.RESET_ALL} SITE command available: {commands}")
+            print(f"{Fore.YELLOW}[WARNING]{Style.RESET_ALL} No executable SITE commands found on {domain}")
         
         ftp.quit()
     except ftplib.error_perm as e:
         print(f"{Fore.RED}[FAIL]{Style.RESET_ALL} Anonymous login denied on {domain}: {e}")
+    except socket.timeout:
+        print(f"{Fore.RED}[ERROR]{Style.RESET_ALL} Connection to {domain} timed out")
+    except ConnectionRefusedError:
+        print(f"{Fore.RED}[ERROR]{Style.RESET_ALL} Connection to {domain} was refused")
+    except ftplib.error_temp as e:
+        print(f"{Fore.RED}[ERROR]{Style.RESET_ALL} Temporary error on {domain}: {e}")
     except Exception as e:
         print(f"{Fore.RED}[ERROR]{Style.RESET_ALL} Could not connect to {domain}: {e}")
 
