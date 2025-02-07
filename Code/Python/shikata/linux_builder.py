@@ -44,11 +44,10 @@ def generate_runner_c(encoded_payload, arch, raw_payload):
     The runner includes a self-decryption routine that brute-forces a weak XOR key
     (0x42) until the decrypted marker ("DECO") appears.
     """
-    # Note the following structure:
-    #   1. Forward declarations for encoded_payload and payload_size.
-    #   2. The self-decrypting region in section ".decrypted":
-    #        __decrypt_start, __decrypt_marker, runner_entry(), and __decrypt_end.
-    #   3. Then the definitions of encoded_payload and payload_size (in the normal section).
+    # The structure is as follows:
+    #   1. Forward declarations for encoded_payload, payload_size, and __decrypt_end.
+    #   2. The self-decrypting region (markers and runner_entry) in section ".decrypted".
+    #   3. The definitions of encoded_payload and payload_size (outside the decrypted region).
     #   4. main() calls runner_entry().
     c_code = f'''\
 #include <stdio.h>
@@ -62,6 +61,7 @@ def generate_runner_c(encoded_payload, arch, raw_payload):
 // Forward declarations for variables used in the self-decrypting region.
 extern unsigned char encoded_payload[];
 extern size_t payload_size;
+extern char __decrypt_end[];
 
 // The self-decrypting region is placed in a dedicated section ".decrypted".
 __attribute__((section(".decrypted")))
@@ -118,7 +118,7 @@ void runner_entry() {{
 __attribute__((section(".decrypted")))
 char __decrypt_end[] = "DECO_END";
 
-// Embedded encoded payload (remains in the normal section).
+// Embedded encoded payload.
 unsigned char encoded_payload[] = {{
 {", ".join("0x{:02x}".format(b) for b in encoded_payload)}
 }};
