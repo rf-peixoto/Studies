@@ -4,7 +4,6 @@ import os
 import subprocess
 import sys
 import tempfile
-import struct
 import shutil
 import random
 
@@ -36,15 +35,21 @@ def detect_arch(elf_file):
 def generate_runner_c(encoded_payload, arch, raw_payload):
     """
     Generate a C source code string for the runner.
-    The runner embeds the encoded payload as a byte array and places the
-    self-decrypting region (delimited by markers) into a dedicated section
-    (.decrypted) so that the markers and runner entry function are contiguous.
     
-    The runner includes a self-decrypt routine that brute-forces a weak XOR key
+    The runner embeds the encoded payload as a byte array (defined outside the
+    self-decrypting region) and places the self-decrypting region (delimited by
+    markers) into a dedicated section (.decrypted) so that the markers and
+    runner_entry() are contiguous.
+    
+    The runner includes a self-decryption routine that brute-forces a weak XOR key
     (0x42) until the decrypted marker ("DECO") appears.
     """
-    # The generated C code now forward-declares encoded_payload and payload_size
-    # so that they can be used in runner_entry even though they are defined later.
+    # Note the following structure:
+    #   1. Forward declarations for encoded_payload and payload_size.
+    #   2. The self-decrypting region in section ".decrypted":
+    #        __decrypt_start, __decrypt_marker, runner_entry(), and __decrypt_end.
+    #   3. Then the definitions of encoded_payload and payload_size (in the normal section).
+    #   4. main() calls runner_entry().
     c_code = f'''\
 #include <stdio.h>
 #include <stdlib.h>
@@ -54,12 +59,11 @@ def generate_runner_c(encoded_payload, arch, raw_payload):
 
 #define WEAK_KEY 0x42
 
-// Forward declarations.
-extern char __decrypt_end[];
+// Forward declarations for variables used in the self-decrypting region.
 extern unsigned char encoded_payload[];
 extern size_t payload_size;
 
-// Place the following items in the ".decrypted" section to enforce contiguity.
+// The self-decrypting region is placed in a dedicated section ".decrypted".
 __attribute__((section(".decrypted")))
 char __decrypt_start[] = "DECO_START";
 
@@ -114,7 +118,7 @@ void runner_entry() {{
 __attribute__((section(".decrypted")))
 char __decrypt_end[] = "DECO_END";
 
-// Embedded encoded payload.
+// Embedded encoded payload (remains in the normal section).
 unsigned char encoded_payload[] = {{
 {", ".join("0x{:02x}".format(b) for b in encoded_payload)}
 }};
@@ -152,7 +156,7 @@ def postprocess_runner(runner_filename):
     Post-process the compiled ELF runner.
     Opens the runner binary, locates the region between the markers
     "DECO_START" and "DECO_END", and XORs that region with a weak key (0x42).
-    The final ELF does not contain the decryption key; the runner will brute-force it at runtime.
+    The final ELF will not contain the decryption key; the runner will brute-force it at runtime.
     """
     with open(runner_filename, "rb") as f:
         data = bytearray(f.read())
