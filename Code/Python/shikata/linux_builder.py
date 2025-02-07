@@ -47,7 +47,7 @@ def extract_text_section(input_file):
     os.remove(temp_extracted)
     return data
 
-def generate_runner_c(encoded_payload, arch, raw_payload):
+def generate_runner_c(encoded_payload, arch):
     """
     Generate a C source code string for the runner.
     
@@ -57,11 +57,13 @@ def generate_runner_c(encoded_payload, arch, raw_payload):
       - __decrypt_marker (set to "DECO")
       - __decrypt_end   (set to "DECO_END")
     
-    At runtime, runner_entry() calls self_decrypt_region() to brute‑force the weak XOR key (0x42)
-    over the region between __decrypt_start and __decrypt_end. Once decrypted, the runner allocates
-    executable memory, copies the embedded payload there, and transfers control.
+    At runtime, runner_entry() calls self_decrypt_region() to brute‑force
+    the weak XOR key (0x42) on the region between __decrypt_start and __decrypt_end.
+    Once decrypted, the runner allocates executable memory, copies the embedded
+    payload there, and transfers control.
     
-    **Note:** This implementation assumes the markers are placed consecutively (typically in the .rodata section).
+    **Note:** This implementation assumes the markers appear (roughly) contiguously in
+    the final ELF’s .rodata section. For production use a linker script may be needed.
     """
     c_code = f'''\
 #include <stdio.h>
@@ -148,7 +150,7 @@ int main(int argc, char *argv[]) {{
 def compile_runner(c_source, arch, output_filename):
     """
     Compile the generated C source into an ELF file using gcc.
-    For x32, adds the -m32 flag.
+    For x32, the -m32 flag is added.
     Disables stack protection and enables an executable stack.
     """
     tmp_dir = tempfile.mkdtemp(prefix="runner_build_")
@@ -169,9 +171,9 @@ def postprocess_runner(runner_filename):
     """
     Post-process the compiled ELF runner.
     
-    Opens the runner binary, locates the region between the marker strings "DECO_START" and "DECO_END",
-    and XOR-encrypts that region with the weak key (0x42). The final ELF will not include the key;
-    at runtime the runner will brute-force it.
+    This function opens the runner binary, locates the region between the marker
+    strings "DECO_START" and "DECO_END", and XOR-encrypts that region with the weak key (0x42).
+    The final ELF will not include the decryption key; at runtime the runner will brute-force it.
     """
     with open(runner_filename, "rb") as f:
         data = bytearray(f.read())
@@ -188,40 +190,44 @@ def postprocess_runner(runner_filename):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Builder: Encodes an ELF file using Shikata Ga Nai and builds a self-decrypting Linux runner ELF.",
+        description="Builder: Encodes an ELF or raw shellcode using Shikata Ga Nai and builds a self-decrypting Linux runner ELF.",
         epilog=(
             "Usage Examples:\n"
             "  1. Build a runner for a full ELF executable (extracting .text):\n"
             "         python3 linux_builder.py -f input.elf -o final_runner.elf\n\n"
-            "  2. Build a runner for raw shellcode (use --raw flag):\n"
-            "         python3 linux_builder.py -f shellcode.bin --raw -o final_runner.elf\n"
+            "  2. Build a runner for raw shellcode provided as a hex string:\n"
+            "         python3 linux_builder.py -s \"4831ff4831c0b03c0f05\" -o final_runner.elf --arch x64\n"
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter
     )
-    parser.add_argument("-f", "--file", required=True, help="Input ELF file (full executable or raw shellcode)")
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument("-f", "--file", help="Input ELF file (full executable) to encode")
+    group.add_argument("-s", "--string", help="Raw shellcode as a hex string (e.g., \"4831ff4831c0b03c0f05\")")
     parser.add_argument("-o", "--output", required=True, help="Output ELF file (final runner)")
-    parser.add_argument("--raw", action="store_true", help="Indicate that the input file is raw shellcode rather than a full ELF")
+    parser.add_argument("--arch", choices=["x32", "x64"], default="x64",
+                        help="Target architecture (required for raw shellcode input; auto-detected for full ELF)")
     args = parser.parse_args()
 
-    # Determine payload_data:
-    if args.raw:
-        with open(args.file, "rb") as f:
-            payload_data = f.read()
-    else:
-        # Extract the .text section from the full ELF file.
-        print("[*] Extracting .text section from full ELF...")
-        temp_extracted = os.path.join(tempfile.gettempdir(), "extracted.bin")
+    if args.string:
+        # Use the provided hex string as raw shellcode.
         try:
-            subprocess.check_call(["objcopy", "-O", "binary", "-j", ".text", args.file, temp_extracted])
-        except subprocess.CalledProcessError as e:
-            sys.exit(f"Failed to extract .text section: {e}")
-        with open(temp_extracted, "rb") as f:
-            payload_data = f.read()
-        os.remove(temp_extracted)
+            payload_data = bytes.fromhex(args.string)
+        except ValueError as e:
+            sys.exit(f"Error parsing hex string: {e}")
+        arch = args.arch  # Use user-supplied architecture.
+        is_raw = True
+    else:
+        # Read input file as a full ELF executable.
+        if not os.path.isfile(args.file):
+            sys.exit("Input file not found.")
+        # Extract the .text section.
+        print("[*] Extracting .text section from full ELF...")
+        payload_data = extract_text_section(args.file)
+        arch = detect_arch(args.file)
+        is_raw = False
 
-    # Detect architecture (if not raw, use the original file for detection).
-    arch = detect_arch(args.file) if not args.raw else "x32"
     print(f"[+] Detected architecture: {arch}")
+    print(f"[+] Payload data size: {len(payload_data)} bytes")
 
     # Instantiate the encoder.
     encoder = ShikataGaNaiEncoder(arch=arch)
@@ -230,7 +236,7 @@ def main():
     print(f"[+] Encoded payload size: {len(encoded_payload)} bytes")
 
     # Generate the runner C code with the embedded encoded payload.
-    runner_c_code = generate_runner_c(encoded_payload, arch, args.raw)
+    runner_c_code = generate_runner_c(encoded_payload, arch)
     # Compile the runner to a temporary file.
     runner_filename = args.output + ".tmp"
     compile_runner(runner_c_code, arch, runner_filename)
