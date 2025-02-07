@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-
 # Original version: https://github.com/rapid7/metasploit-framework/blob/master/modules/encoders/x86/shikata_ga_nai.rb
+
 import argparse
 import os
 import random
@@ -10,7 +10,7 @@ import sys
 class ShikataGaNaiEncoder:
     """
     An enhanced polymorphic XOR additive feedback encoder.
-    
+
     Features:
       1. Additional instruction variants in each stub block.
       2. Dynamic register selection (for key, counter, and pointer).
@@ -21,9 +21,9 @@ class ShikataGaNaiEncoder:
       7. Dummy/junk instructions insertion.
       8. Secondary cryptographic layer (optional, via --crypto).
       9. Multi-architecture support (x32 [default] or x64, via --arch).
-    
-    The XOR additive feedback encoding is performed per block. The decoder stub
-    (generated later) uses dynamic registers and randomized instruction variants.
+
+    The XOR additive feedback encoding is performed per block.
+    The decoder stub (generated later) uses dynamic registers and randomized instruction variants.
     """
     def __init__(self, key: int = None, arch="x32", block_size: int = None,
                  multistage: bool = False, selfmod: bool = False,
@@ -36,7 +36,7 @@ class ShikataGaNaiEncoder:
             self.block_size = 4 if self.arch == "x32" else 8
         else:
             self.block_size = block_size
-        # For x32, permit only 1, 2, or 4; for x64 allow 1,2,4,8.
+        # For x32, permit only 1, 2, or 4; for x64 allow 1, 2, 4, 8.
         if self.arch == "x32" and self.block_size not in [1, 2, 4]:
             sys.exit("For x32, allowed block sizes: 1, 2, or 4 bytes.")
         if self.arch == "x64" and self.block_size not in [1, 2, 4, 8]:
@@ -402,21 +402,32 @@ class ShikataGaNaiEncoder:
 
 # ─────────────────────────────────────────────────────────────────────────────
 def main():
+    epilog_text = (
+        "Usage Examples:\n"
+        "  1. Encode a file with full polymorphism and a decoder stub (x32, default 4-byte blocks):\n"
+        "         python shikata_ga_nai.py -f input.bin -o encoded.bin --stub\n\n"
+        "  2. Encode a string using multi-stage decoding and anti-debugging, targeting x64 with 8-byte blocks:\n"
+        "         python shikata_ga_nai.py -s \"payload data\" --stub --multistage --antidebug --arch x64 --block-size 8\n\n"
+        "  3. Enable self-modifying code and an additional cryptographic layer:\n"
+        "         python shikata_ga_nai.py -f input.bin --stub --selfmod --crypto\n"
+    )
     parser = argparse.ArgumentParser(
-        description="Enhanced Polymorphic Shikata Ga Nai Encoder (Advanced)"
+        description="Enhanced Polymorphic Shikata Ga Nai Encoder (Modified)",
+        epilog=epilog_text,
+        formatter_class=argparse.RawDescriptionHelpFormatter
     )
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("-f", "--file", help="Input file to encode")
     group.add_argument("-s", "--string", help="Input string to encode")
     parser.add_argument("-o", "--output", help="Output file (if omitted, writes to stdout)")
-    parser.add_argument("--stub", action="store_true", help="Prepend the polymorphic decoder stub")
-    parser.add_argument("--multistage", action="store_true", help="Enable multi-stage decoding")
-    parser.add_argument("--selfmod", action="store_true", help="Enable self-modifying code in stub")
-    parser.add_argument("--antidebug", action="store_true", help="Enable anti-debugging techniques in stub")
-    parser.add_argument("--crypto", action="store_true", help="Enable an additional cryptographic layer")
-    parser.add_argument("--arch", choices=["x32", "x64"], default="x32", help="Target architecture (x32 or x64)")
-    parser.add_argument("--block-size", type=int, help="Block size in bytes (default: 4 for x32, 8 for x64)")
-    parser.add_argument("--key", help="Initial key as hexadecimal (e.g. 0x12345678)")
+    parser.add_argument("--stub", action="store_true", help="Prepend the polymorphic decoder stub to the encoded payload")
+    parser.add_argument("--multistage", action="store_true", help="Enable multi-stage decoding. In this mode the primary stub decodes a secondary stub which then decodes the main payload.")
+    parser.add_argument("--selfmod", action="store_true", help="Enable self-modifying code in the decoder stub for added polymorphism")
+    parser.add_argument("--antidebug", action="store_true", help="Insert anti-debugging techniques into the decoder stub")
+    parser.add_argument("--crypto", action="store_true", help="Enable an additional cryptographic layer over the encoded payload")
+    parser.add_argument("--arch", choices=["x32", "x64"], default="x32", help="Target architecture: x32 (default) or x64")
+    parser.add_argument("--block-size", type=int, help="Block size in bytes. Default is 4 for x32 and 8 for x64. For x32 allowed sizes: 1, 2, or 4; for x64: 1, 2, 4, or 8.")
+    parser.add_argument("--key", help="Specify the initial key as a hexadecimal value (e.g. 0x12345678)")
     args = parser.parse_args()
 
     # Read input data.
@@ -471,3 +482,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
