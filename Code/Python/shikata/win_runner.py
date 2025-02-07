@@ -23,6 +23,6 @@ def run_shellcode(shellcode: bytes):
 
 if __name__ == "__main__":
     # Read the encoded shellcode from a file (e.g., produced by the encoder with --stub)
-    with open("encoded.bin", "rb") as f:
+    with open(sys.argv[1], "rb") as f:
         sc = f.read()
     run_shellcode(sc)
