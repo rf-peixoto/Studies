@@ -43,7 +43,8 @@ def generate_runner_c(encoded_payload, arch, raw_payload):
     The runner includes a self-decrypt routine that brute-forces a weak XOR key
     (0x42) until the decrypted marker ("DECO") appears.
     """
-    # Note: We forward-declare __decrypt_end so it can be used in self_decrypt_region.
+    # The generated C code now forward-declares encoded_payload and payload_size
+    # so that they can be used in runner_entry even though they are defined later.
     c_code = f'''\
 #include <stdio.h>
 #include <stdlib.h>
@@ -53,8 +54,10 @@ def generate_runner_c(encoded_payload, arch, raw_payload):
 
 #define WEAK_KEY 0x42
 
-// Forward declaration for __decrypt_end.
+// Forward declarations.
 extern char __decrypt_end[];
+extern unsigned char encoded_payload[];
+extern size_t payload_size;
 
 // Place the following items in the ".decrypted" section to enforce contiguity.
 __attribute__((section(".decrypted")))
@@ -80,7 +83,7 @@ void self_decrypt_region() {{
             for (size_t i = 0; i < region_size; i++) {{
                 start[i] ^= key;
             }}
-            // Uncomment for debugging:
+            // Uncomment the next line for debugging:
             // printf("Self-decryption key found: 0x%02x\\n", key);
             return;
         }}
