@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 # Original version: https://github.com/rapid7/metasploit-framework/blob/master/modules/encoders/x86/shikata_ga_nai.rb
-
 import argparse
 import os
 import random
@@ -289,23 +288,16 @@ class ShikataGaNaiEncoder:
                      + b"\x90" * 5)
             return block
 
-    def generate_decoder_stub(self, block_count):
+    def generate_basic_decoder_stub(self, block_count):
         """
-        Generate the final decoder stub.
-        Depending on flags:
-          - If --multistage is enabled, generate a two-stage stub.
-          - If --crypto is enabled, prepend an extra decryption loop.
-          Otherwise, simply concatenate:
-              get-PC block + (optional antidebug) + init block + adjustment block + loop block.
+        Generate a basic decoder stub without checking for multistage or crypto.
+        This method is used as the base for both single-stage and multi-stage decoding.
         """
-        if self.multistage:
-            return self.generate_multistage_stub(block_count)
         if self.arch == "x32":
             stub = self.get_pc_block()
             if self.antidebug:
                 stub += self.antidebug_block()
             init = self.init_block(block_count)
-            # Adjustment offset is estimated as the length of init + adjustment + loop.
             adj = self.adjustment_block(len(init) +
                                         len(self.add_imm_x32(self.regs["ptr"], self.block_size)) +
                                         len(self.loop_block()))
@@ -322,6 +314,20 @@ class ShikataGaNaiEncoder:
             stub += init + adj + self.loop_block()
             return stub
 
+    def generate_decoder_stub(self, block_count):
+        """
+        Generate the final decoder stub.
+        Depending on flags:
+          - If --multistage is enabled, generate a two-stage stub.
+          - If --crypto is enabled, prepend an extra decryption loop.
+          Otherwise, simply return the basic decoder stub.
+        """
+        if self.multistage:
+            return self.generate_multistage_stub(block_count)
+        if self.crypto:
+            return self.generate_full_stub(block_count)
+        return self.generate_basic_decoder_stub(block_count)
+
     def generate_multistage_stub(self, main_block_count):
         """
         Multi-stage decoding: generate a primary stub that decodes an encoded secondary stub,
@@ -332,7 +338,8 @@ class ShikataGaNaiEncoder:
                          else random.randint(0, 0xffffffffffffffff))
         old_key = self.encoding_key
         self.encoding_key = secondary_key
-        secondary_stub = self.generate_decoder_stub(main_block_count)
+        # Use the basic stub to avoid recursion.
+        secondary_stub = self.generate_basic_decoder_stub(main_block_count)
         encoded_secondary_stub = self.encode(secondary_stub)
         secondary_block_count = len(encoded_secondary_stub) // self.block_size
         self.encoding_key = old_key
@@ -405,14 +412,14 @@ def main():
     epilog_text = (
         "Usage Examples:\n"
         "  1. Encode a file with full polymorphism and a decoder stub (x32, default 4-byte blocks):\n"
-        "         python shikata_ga_nai.py -f input.bin -o encoded.bin --stub\n\n"
+        "         python3 shikata_ga_nai.py -f input.bin -o encoded.bin --stub\n\n"
         "  2. Encode a string using multi-stage decoding and anti-debugging, targeting x64 with 8-byte blocks:\n"
-        "         python shikata_ga_nai.py -s \"payload data\" --stub --multistage --antidebug --arch x64 --block-size 8\n\n"
+        "         python3 shikata_ga_nai.py -s \"payload data\" --stub --multistage --antidebug --arch x64 --block-size 8\n\n"
         "  3. Enable self-modifying code and an additional cryptographic layer:\n"
-        "         python shikata_ga_nai.py -f input.bin --stub --selfmod --crypto\n"
+        "         python3 shikata_ga_nai.py -f input.bin --stub --selfmod --crypto\n"
     )
     parser = argparse.ArgumentParser(
-        description="Enhanced Polymorphic Shikata Ga Nai Encoder (Modified)",
+        description="Enhanced Polymorphic Shikata Ga Nai Encoder (Advanced)",
         epilog=epilog_text,
         formatter_class=argparse.RawDescriptionHelpFormatter
     )
@@ -482,4 +489,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
