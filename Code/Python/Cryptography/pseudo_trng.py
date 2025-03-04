@@ -29,15 +29,11 @@ def gammaincc_custom(a, x, eps=1e-14, max_iter=1000):
     """
     Compute the complementary incomplete gamma function, gammaincc(a, x),
     using a series expansion (if x < a+1) or continued fraction (if x >= a+1).
-    
-    Returns:
-      float: Approximate value of gammaincc(a, x)
     """
     if x < 0 or a <= 0:
         raise ValueError("Invalid arguments in gammaincc_custom")
     gln = math.lgamma(a)
     if x < a + 1:
-        # Series representation for the lower incomplete gamma function P(a,x)
         ap = a
         sum_val = 1.0 / a
         delta = sum_val
@@ -47,11 +43,9 @@ def gammaincc_custom(a, x, eps=1e-14, max_iter=1000):
             delta *= x / ap
             sum_val += delta
             n += 1
-        # P(a,x) computed by the series
         p = sum_val * math.exp(-x + a*math.log(x) - gln)
         return 1 - p  # gammaincc = 1 - P(a,x)
     else:
-        # Continued fraction representation for Q(a,x) = gammaincc(a,x)
         b = x + 1 - a
         c = 1e30
         d = 1.0 / b
@@ -78,7 +72,8 @@ def capture_microphone(duration=3, sample_rate=44100):
         recording = sd.rec(int(duration * sample_rate), samplerate=sample_rate, channels=1, dtype='int16')
         sd.wait()
         data = recording.tobytes()
-        print(f"{YELLOW}Microphone data collected: {len(data)} bytes{RESET}")
+        data_hash = hashlib.sha256(data).hexdigest()
+        print(f"{YELLOW}Microphone data collected: {len(data)} bytes, hash: {data_hash}{RESET}")
         return data
     except Exception as e:
         print(f"{RED}Microphone capture failed: {e}{RESET}")
@@ -94,17 +89,20 @@ def get_temperature_data():
     else:
         temp_data = "no_temp_sensor"
     data = temp_data.encode('utf-8')
-    print(f"{YELLOW}Temperature data collected: {len(data)} bytes{RESET}")
+    data_hash = hashlib.sha256(data).hexdigest()
+    print(f"{YELLOW}Temperature data collected: {len(data)} bytes, hash: {data_hash}{RESET}")
     return data
 
 def get_time_data():
     data = str(time.time_ns()).encode('utf-8')
-    print(f"{YELLOW}Time data collected: {len(data)} bytes{RESET}")
+    data_hash = hashlib.sha256(data).hexdigest()
+    print(f"{YELLOW}Time data collected: {len(data)} bytes, hash: {data_hash}{RESET}")
     return data
 
 def get_os_random_bytes(n):
     data = os.urandom(n)
-    print(f"{YELLOW}OS randomness data collected: {len(data)} bytes{RESET}")
+    data_hash = hashlib.sha256(data).hexdigest()
+    print(f"{YELLOW}OS randomness data collected: {len(data)} bytes, hash: {data_hash}{RESET}")
     return data
 
 def capture_webcam(frames=1, delay=0.1):
@@ -119,11 +117,13 @@ def capture_webcam(frames=1, delay=0.1):
             print(f"{RED}Webcam capture failed at frame {i}{RESET}")
             break
         frame_bytes = frame.tobytes()
+        frame_hash = hashlib.sha256(frame_bytes).hexdigest()
+        print(f"{YELLOW}Webcam frame {i+1} collected: {len(frame_bytes)} bytes, hash: {frame_hash}{RESET}")
         data += frame_bytes
-        print(f"{YELLOW}Webcam frame {i+1} collected: {len(frame_bytes)} bytes{RESET}")
         time.sleep(delay)
     cap.release()
-    print(f"{YELLOW}Total webcam data collected: {len(data)} bytes{RESET}")
+    total_hash = hashlib.sha256(data).hexdigest()
+    print(f"{YELLOW}Total webcam data collected: {len(data)} bytes, hash: {total_hash}{RESET}")
     return data
 
 def generate_entropy_key(size_bytes, mic_duration=3, sample_rate=44100, webcam_frames=1, webcam_delay=0.1):
@@ -217,7 +217,6 @@ def block_frequency_test(bit_str, block_size=20):
         pi = ones / block_size
         sum_chi += (pi - 0.5) ** 2
     chi2 = 4 * block_size * sum_chi
-    # Use the custom gammaincc function to compute the p-value.
     p_value = gammaincc_custom(N / 2, chi2 / 2)
     return p_value, (p_value >= 0.01)
 
