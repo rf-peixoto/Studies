@@ -165,6 +165,8 @@ def generate_entropy_key(size_bytes, mic_duration=3, sample_rate=44100, webcam_f
 def bytes_to_bitstring(data):
     return ''.join(f"{byte:08b}" for byte in data)
 
+# --- SP 800-22 Tests ---
+
 def frequency_monobit_test(bit_str):
     n = len(bit_str)
     s_n = sum(1 if bit == '1' else -1 for bit in bit_str)
@@ -220,10 +222,64 @@ def block_frequency_test(bit_str, block_size=20):
     p_value = gammaincc_custom(N / 2, chi2 / 2)
     return p_value, (p_value >= 0.01)
 
-def run_nist_tests(key_bytes):
+# --- SP 800-90B–Inspired Tests ---
+
+def repetition_count_test(bit_str):
+    """
+    Compute the longest run of identical bits.
+    For demonstration, we set a fixed threshold (e.g. 5).
+    In a full SP 800-90B analysis, this threshold would be based on statistical estimation.
+    """
+    max_run = 0
+    current_run = 1
+    for i in range(1, len(bit_str)):
+        if bit_str[i] == bit_str[i-1]:
+            current_run += 1
+        else:
+            if current_run > max_run:
+                max_run = current_run
+            current_run = 1
+    max_run = max(max_run, current_run)
+    threshold = 5  # Example threshold for demonstration
+    passed = max_run <= threshold
+    p_value = 1.0 if passed else 0.0  # Dummy p-value for demonstration
+    return p_value, passed, max_run, threshold
+
+def markov_test(bit_str):
+    """
+    Perform a simple Markov test by analyzing transitions between bits.
+    Expected transitions (for an unbiased source) are roughly equal.
+    A chi-square statistic is computed on the 2x2 contingency table.
+    """
+    count_00 = count_01 = count_10 = count_11 = 0
+    for i in range(1, len(bit_str)):
+        if bit_str[i-1] == '0' and bit_str[i] == '0':
+            count_00 += 1
+        elif bit_str[i-1] == '0' and bit_str[i] == '1':
+            count_01 += 1
+        elif bit_str[i-1] == '1' and bit_str[i] == '0':
+            count_10 += 1
+        elif bit_str[i-1] == '1' and bit_str[i] == '1':
+            count_11 += 1
+    total_0 = count_00 + count_01
+    total_1 = count_10 + count_11
+    chi_sq = 0.0
+    if total_0 > 0:
+        expected0 = total_0 / 2
+        chi_sq += ((count_00 - expected0) ** 2 + (count_01 - expected0) ** 2) / expected0
+    if total_1 > 0:
+        expected1 = total_1 / 2
+        chi_sq += ((count_10 - expected1) ** 2 + (count_11 - expected1) ** 2) / expected1
+    # For two independent groups, df = 2.
+    # A rough approximation for p-value for chi-square with 2 df:
+    p_value = math.exp(-chi_sq/2) * (1 + chi_sq/2)
+    passed = (p_value >= 0.01)
+    return p_value, passed, (count_00, count_01, count_10, count_11)
+
+def run_all_tests(key_bytes):
     bit_str = bytes_to_bitstring(key_bytes)
     results = {}
-    
+    # SP 800-22 Tests:
     p_val, res = frequency_monobit_test(bit_str)
     results["Frequency (Monobit) Test"] = (p_val, res)
     
@@ -236,11 +292,18 @@ def run_nist_tests(key_bytes):
     p_val, res = block_frequency_test(bit_str, block_size=20)
     results["Block Frequency Test (m=20)"] = (p_val, res)
     
+    # SP 800-90B–Inspired Tests:
+    p_val, res, max_run, thresh = repetition_count_test(bit_str)
+    results[f"Repetition Count Test (max run vs threshold={thresh})"] = (p_val, res, max_run)
+    
+    p_val, res, trans_counts = markov_test(bit_str)
+    results["Markov Test"] = (p_val, res, trans_counts)
+    
     return results
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Generate a seed/secret key from physical entropy sources and test its randomness using NIST SP 800-22 tests."
+        description="Generate a seed/secret key from physical entropy sources and test its randomness using tests from NIST SP 800-22 and SP 800-90B."
     )
     parser.add_argument("--size", type=int, default=32,
                         help="Output key size in bytes (default: 32 bytes).")
@@ -261,12 +324,22 @@ def main():
     for source, data in entropy_parts.items():
         print(f"  {source}: {len(data)} bytes")
     
-    print(f"\n{BLUE}Running NIST SP 800-22 tests on the generated key:{RESET}")
-    test_results = run_nist_tests(key)
-    for test_name, (p_value, passed) in test_results.items():
-        status = f"{GREEN}PASS{RESET}" if passed else f"{RED}FAIL{RESET}"
-        print(f"{test_name}: p-value = {p_value:.6f} --> {status}")
-
+    print(f"\n{BLUE}Running randomness tests on the generated key:{RESET}")
+    test_results = run_all_tests(key)
+    for test_name, result in test_results.items():
+        if "Repetition Count" in test_name:
+            p_value, passed, max_run = result
+            status = f"{GREEN}PASS{RESET}" if passed else f"{RED}FAIL{RESET}"
+            print(f"{test_name}: p-value = {p_value:.6f} --> {status} (max run = {max_run})")
+        elif "Markov Test" in test_name:
+            p_value, passed, trans = result
+            status = f"{GREEN}PASS{RESET}" if passed else f"{RED}FAIL{RESET}"
+            print(f"{test_name}: p-value = {p_value:.6f} --> {status} (transitions: 00={trans[0]}, 01={trans[1]}, 10={trans[2]}, 11={trans[3]})")
+        else:
+            p_value, passed = result
+            status = f"{GREEN}PASS{RESET}" if passed else f"{RED}FAIL{RESET}"
+            print(f"{test_name}: p-value = {p_value:.6f} --> {status}")
+    
     print(f"\n{YELLOW}Note: For rigorous statistical analysis, a much longer bit sequence is recommended.{RESET}")
     
 if __name__ == "__main__":
