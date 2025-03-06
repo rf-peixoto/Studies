@@ -10,7 +10,7 @@
 #define KEY_BITS 80
 #define IV_BITS 80
 #define BLOCK_SIZE 4096
-#define WARMUP_ROUNDS 2304       /* (1152 * 2) Double warm-up rounds */
+#define WARMUP_ROUNDS (1152 * 2) /* Double warm-up rounds */
 
 /* Securely clear sensitive memory (attempts to avoid optimization removal) */
 void secure_clear(void *v, size_t n) {
