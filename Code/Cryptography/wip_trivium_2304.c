@@ -1,4 +1,4 @@
-// gcc -O2 -o trivium wip_trivium_2304.c
+/* gcc -O2 -o trivium wip_trivium_2304.c */
 
 #include <stdio.h>
 #include <stdlib.h>
