@@ -1,4 +1,4 @@
-gcc -pthread -o filespider filespider.c
+/* gcc -pthread -o filespider filespider.c */
 
 #include <stdio.h>
 #include <stdlib.h>
