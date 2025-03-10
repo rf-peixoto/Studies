@@ -17,10 +17,11 @@ def generate_ip_map(csv_file, output_file="ip_geolocation_map.html"):
     
     # Add IP locations as markers
     for _, row in df.iterrows():
+        marker_color = "red" if str(row["Malicious"]).strip().lower() == "yes" else "blue"
         folium.Marker(
             location=[row["Latitude"], row["Longitude"]],
             popup=f'IP: {row["IP"]}<br>Provider: {row["Provider"]}<br>City: {row["City"]}',
-            icon=folium.Icon(color="red" if row["Malicious"] == "Yes" else "blue")
+            icon=folium.Icon(color=marker_color)
         ).add_to(ip_map)
     
     # Save the map to an HTML file
