@@ -1,5 +1,6 @@
 /* gcc -pthread -o filespider filespider.c */
 
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -9,8 +10,21 @@
 #include <unistd.h>
 #include <limits.h>
 #include <errno.h>
+#include <fcntl.h>
+#include <sys/syscall.h>
+#include <sys/types.h>
 
-#define NUM_THREADS 8
+#define NUM_THREADS 16
+#define GETDENTS_BUF_SIZE (16 * 1024)
+#define OUTBUF_SIZE (64 * 1024)
+
+struct linux_dirent64 {
+    ino64_t        d_ino;
+    off64_t        d_off;
+    unsigned short d_reclen;
+    unsigned char  d_type;
+    char           d_name[];
+};
 
 typedef struct task {
     char *path;
@@ -21,14 +35,13 @@ task_t *task_queue_head = NULL;
 task_t *task_queue_tail = NULL;
 pthread_mutex_t queue_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t queue_cond = PTHREAD_COND_INITIALIZER;
-
 int pending_tasks = 0;
 int stop_workers = 0;
 
 FILE *outfile = NULL;
 pthread_mutex_t file_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-/* Enqueue a new directory path for processing */
+/* Enqueue a directory for further scanning */
 void enqueue_task(const char *path) {
     task_t *new_task = malloc(sizeof(task_t));
     if (!new_task) {
@@ -37,7 +50,7 @@ void enqueue_task(const char *path) {
     }
     new_task->path = strdup(path);
     new_task->next = NULL;
-
+    
     pthread_mutex_lock(&queue_mutex);
     if (task_queue_tail == NULL) {
         task_queue_head = task_queue_tail = new_task;
@@ -73,16 +86,38 @@ task_t *dequeue_task() {
     return task;
 }
 
-/* Write a file's absolute path to the output file */
-void write_path(const char *path) {
+/* Flush a thread’s local output buffer to the shared file */
+void flush_output_buffer(char *buf, size_t *used) {
+    if (*used == 0)
+        return;
     pthread_mutex_lock(&file_mutex);
-    fprintf(outfile, "%s\n", path);
+    fwrite(buf, 1, *used, outfile);
     pthread_mutex_unlock(&file_mutex);
+    *used = 0;
 }
 
-/* Worker thread function: process a directory, write file paths, and enqueue subdirectories */
+/* Append a file path and a newline to the thread’s local output buffer */
+void append_to_buffer(char *buf, size_t *used, const char *path) {
+    size_t path_len = strlen(path);
+    size_t total_needed = path_len + 1; // include newline
+    if (*used + total_needed >= OUTBUF_SIZE) {
+        flush_output_buffer(buf, used);
+    }
+    memcpy(buf + *used, path, path_len);
+    *used += path_len;
+    buf[(*used)++] = '\n';
+}
+
+/* Worker thread function using getdents64 and local buffering */
 void *worker(void *arg) {
     (void)arg;  // Unused parameter
+    char *outbuf = malloc(OUTBUF_SIZE);
+    if (!outbuf) {
+        perror("malloc");
+        pthread_exit(NULL);
+    }
+    size_t outbuf_used = 0;
+
     while (1) {
         task_t *task = dequeue_task();
         if (task == NULL) {
@@ -92,21 +127,44 @@ void *worker(void *arg) {
                 continue;
         }
         char *current_path = task->path;
+        
+        int fd = open(current_path, O_RDONLY | O_DIRECTORY);
+        if (fd == -1) {
+            free(current_path);
+            free(task);
+            pthread_mutex_lock(&queue_mutex);
+            pending_tasks--;
+            if (pending_tasks == 0 && task_queue_head == NULL) {
+                stop_workers = 1;
+                pthread_cond_broadcast(&queue_cond);
+            }
+            pthread_mutex_unlock(&queue_mutex);
+            continue;
+        }
 
-        DIR *dir = opendir(current_path);
-        if (dir) {
-            struct dirent *entry;
-            while ((entry = readdir(dir)) != NULL) {
-                if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
+        char buf[GETDENTS_BUF_SIZE];
+        int nread;
+        while ((nread = syscall(SYS_getdents64, fd, buf, GETDENTS_BUF_SIZE)) > 0) {
+            int bpos = 0;
+            while (bpos < nread) {
+                struct linux_dirent64 *d = (struct linux_dirent64 *)(buf + bpos);
+                char *d_name = d->d_name;
+                /* Skip "." and ".." */
+                if (strcmp(d_name, ".") == 0 || strcmp(d_name, "..") == 0) {
+                    bpos += d->d_reclen;
                     continue;
-
+                }
                 char full_path[PATH_MAX];
-                snprintf(full_path, PATH_MAX, "%s/%s", current_path, entry->d_name);
-
+                int ret = snprintf(full_path, PATH_MAX, "%s/%s", current_path, d_name);
+                if (ret < 0 || ret >= PATH_MAX) {
+                    bpos += d->d_reclen;
+                    continue;
+                }
+                
                 int is_dir = 0;
-                if (entry->d_type == DT_DIR) {
+                if (d->d_type == DT_DIR) {
                     is_dir = 1;
-                } else if (entry->d_type == DT_UNKNOWN) {
+                } else if (d->d_type == DT_UNKNOWN) {
                     struct stat statbuf;
                     if (stat(full_path, &statbuf) == 0 && S_ISDIR(statbuf.st_mode))
                         is_dir = 1;
@@ -114,14 +172,18 @@ void *worker(void *arg) {
                 if (is_dir) {
                     enqueue_task(full_path);
                 } else {
-                    write_path(full_path);
+                    append_to_buffer(outbuf, &outbuf_used, full_path);
                 }
+                bpos += d->d_reclen;
             }
-            closedir(dir);
         }
+        if (nread == -1) {
+            perror("getdents64");
+        }
+        close(fd);
         free(current_path);
         free(task);
-
+        
         pthread_mutex_lock(&queue_mutex);
         pending_tasks--;
         if (pending_tasks == 0 && task_queue_head == NULL) {
@@ -130,6 +192,8 @@ void *worker(void *arg) {
         }
         pthread_mutex_unlock(&queue_mutex);
     }
+    flush_output_buffer(outbuf, &outbuf_used);
+    free(outbuf);
     return NULL;
 }
 
@@ -146,9 +210,9 @@ int main() {
     enqueue_task("/tmp");
 
     /* Enqueue /root if accessible */
-    DIR *root_dir = opendir("/root");
-    if (root_dir) {
-        closedir(root_dir);
+    int fd_root = open("/root", O_RDONLY | O_DIRECTORY);
+    if (fd_root != -1) {
+        close(fd_root);
         enqueue_task("/root");
     }
 
