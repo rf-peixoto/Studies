@@ -73,14 +73,14 @@ task_t *dequeue_task() {
     return task;
 }
 
-/* Write a file or directory absolute path to the output file */
+/* Write a file's absolute path to the output file */
 void write_path(const char *path) {
     pthread_mutex_lock(&file_mutex);
     fprintf(outfile, "%s\n", path);
     pthread_mutex_unlock(&file_mutex);
 }
 
-/* Worker thread function: process a directory, write paths, and enqueue subdirectories */
+/* Worker thread function: process a directory, write file paths, and enqueue subdirectories */
 void *worker(void *arg) {
     (void)arg;  // Unused parameter
     while (1) {
@@ -92,8 +92,6 @@ void *worker(void *arg) {
                 continue;
         }
         char *current_path = task->path;
-        /* Write the directory itself */
-        write_path(current_path);
 
         DIR *dir = opendir(current_path);
         if (dir) {
@@ -104,7 +102,6 @@ void *worker(void *arg) {
 
                 char full_path[PATH_MAX];
                 snprintf(full_path, PATH_MAX, "%s/%s", current_path, entry->d_name);
-                write_path(full_path);
 
                 int is_dir = 0;
                 if (entry->d_type == DT_DIR) {
@@ -116,11 +113,12 @@ void *worker(void *arg) {
                 }
                 if (is_dir) {
                     enqueue_task(full_path);
+                } else {
+                    write_path(full_path);
                 }
             }
             closedir(dir);
         }
-        /* Free memory for the processed task */
         free(current_path);
         free(task);
 
