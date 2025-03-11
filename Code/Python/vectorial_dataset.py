@@ -3,62 +3,104 @@ import os
 import numpy as np
 import faiss
 import cv2
-from PIL import Image
 import librosa
+from PIL import Image
+import torch
+import torchvision.transforms as transforms
+import torchvision.models as models
 
-# Placeholder function: replace with an actual image embedding model.
-def embed_image(image_path):
-    image = Image.open(image_path).resize((224, 224))
-    # Dummy vector representation; replace with model inference.
-    vector = np.random.rand(512).astype('float32')
-    return vector
+# Image embedding using a pre-trained ResNet50 model with a linear projection to 512 dimensions.
+class ImageEmbedder:
+    def __init__(self, device='cpu'):
+        self.device = device
+        self.model = models.resnet50(pretrained=True)
+        # Remove the final classification layer.
+        self.model.fc = torch.nn.Identity()
+        self.model.eval()
+        self.model.to(device)
+        # Define a linear projection layer to reduce dimensionality from 2048 to 512.
+        self.projection = torch.nn.Linear(2048, 512)
+        self.projection.eval()
+        self.projection.to(device)
+        for param in self.projection.parameters():
+            param.requires_grad = False
+        
+        self.transform = transforms.Compose([
+            transforms.Resize((224, 224)),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                 std=[0.229, 0.224, 0.225])
+        ])
+    
+    def embed_pil(self, image):
+        if image.mode != 'RGB':
+            image = image.convert('RGB')
+        img_tensor = self.transform(image).unsqueeze(0).to(self.device)
+        with torch.no_grad():
+            features = self.model(img_tensor)
+            embedding = self.projection(features)
+        return embedding.cpu().numpy().flatten().astype('float32')
+    
+    def embed(self, image_path):
+        image = Image.open(image_path)
+        return self.embed_pil(image)
 
-# Placeholder function: replace with an actual audio embedding model.
-def embed_audio(audio_path):
-    y, sr = librosa.load(audio_path, sr=None)
-    # Compute dummy features (e.g., average MFCC) for demonstration.
-    import librosa.feature
-    mfcc = librosa.feature.mfcc(y=y, sr=sr)
-    vector = np.mean(mfcc, axis=1).astype('float32')
-    # Adjust dimension to 512 (padding or truncating as needed).
-    if vector.shape[0] < 512:
-        vector = np.pad(vector, (0, 512 - vector.shape[0]), mode='constant')
-    else:
-        vector = vector[:512]
-    return vector
+# Audio embedding that computes MFCC features and projects them to 512 dimensions using a fixed random projection.
+class AudioEmbedder:
+    def __init__(self, sr=22050):
+        self.sr = sr
+        # Fixed random projection parameters.
+        self.W = np.random.randn(512, 40).astype('float32')
+        self.b = np.random.randn(512).astype('float32')
+    
+    def embed(self, audio_path):
+        y, sr = librosa.load(audio_path, sr=self.sr)
+        # Compute 40 MFCC features.
+        mfcc = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=40)
+        mfcc_avg = np.mean(mfcc, axis=1)  # Resulting shape: (40,)
+        # Project the averaged MFCC vector to 512 dimensions.
+        embedding = np.dot(self.W, mfcc_avg) + self.b
+        return embedding.astype('float32')
 
-# Placeholder function: replace with an actual video embedding pipeline.
-def embed_video(video_path):
-    cap = cv2.VideoCapture(video_path)
-    vectors = []
-    frame_count = 0
-    while True:
-        ret, frame = cap.read()
-        if not ret:
-            break
-        # Process one out of every 30 frames.
-        if frame_count % 30 == 0:
-            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            pil_image = Image.fromarray(frame_rgb).resize((224, 224))
-            # Dummy vector representation; replace with model inference.
-            vec = np.random.rand(512).astype('float32')
-            vectors.append(vec)
-        frame_count += 1
-    cap.release()
-    if not vectors:
-        raise ValueError("No frames extracted from the video.")
-    avg_vector = np.mean(np.stack(vectors), axis=0)
-    return avg_vector
+# Video embedding that samples frames and averages image embeddings.
+class VideoEmbedder:
+    def __init__(self, image_embedder, frame_sampling_rate=30):
+        self.image_embedder = image_embedder
+        self.frame_sampling_rate = frame_sampling_rate
+    
+    def embed(self, video_path):
+        cap = cv2.VideoCapture(video_path)
+        embeddings = []
+        frame_count = 0
+        while True:
+            ret, frame = cap.read()
+            if not ret:
+                break
+            if frame_count % self.frame_sampling_rate == 0:
+                frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                pil_image = Image.fromarray(frame_rgb)
+                embedding = self.image_embedder.embed_pil(pil_image)
+                embeddings.append(embedding)
+            frame_count += 1
+        cap.release()
+        if not embeddings:
+            raise ValueError("No frames extracted from video.")
+        avg_embedding = np.mean(np.stack(embeddings), axis=0)
+        return avg_embedding.astype('float32')
 
-# Determines file type and calls the appropriate embedding function.
-def vectorize_file(file_path):
+# Determines the file type and calls the appropriate embedding function.
+def vectorize_file(file_path, device='cpu'):
     ext = os.path.splitext(file_path)[1].lower()
     if ext in ['.jpg', '.jpeg', '.png', '.bmp']:
-        return embed_image(file_path)
+        image_embedder = ImageEmbedder(device=device)
+        return image_embedder.embed(file_path)
     elif ext in ['.mp3', '.wav', '.flac', '.ogg']:
-        return embed_audio(file_path)
+        audio_embedder = AudioEmbedder()
+        return audio_embedder.embed(file_path)
     elif ext in ['.mp4', '.avi', '.mov', '.mkv']:
-        return embed_video(file_path)
+        image_embedder = ImageEmbedder(device=device)
+        video_embedder = VideoEmbedder(image_embedder)
+        return video_embedder.embed(file_path)
     else:
         raise ValueError("Unsupported file type: " + ext)
 
@@ -90,6 +132,7 @@ def main():
     parser.add_argument('--input', type=str, help='Path to input multimedia file.')
     parser.add_argument('--db', type=str, required=True, help='Path to the vectorial database file.')
     parser.add_argument('--search', action='store_true', help='Perform search instead of indexing the input file.')
+    parser.add_argument('--device', type=str, default='cpu', help='Device for image embedding (cpu or cuda).')
     args = parser.parse_args()
     
     # Create or load the FAISS index.
@@ -99,8 +142,8 @@ def main():
         print("No input file provided.")
         return
     
-    # Convert the multimedia file into a vector.
-    vector = vectorize_file(args.input)
+    # Convert the multimedia file into a 512-dimensional vector.
+    vector = vectorize_file(args.input, device=args.device)
     
     if args.search:
         distances, indices = search_index(index, vector)
