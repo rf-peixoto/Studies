@@ -205,9 +205,10 @@ int main() {
     }
 
     /* Enqueue initial directories */
-    enqueue_task("/var");
+    enqueue_task("/var/logs");
+    enqueue_task("/var/www");
     enqueue_task("/home");
-    enqueue_task("/tmp");
+    /* enqueue_task("/tmp"); */
 
     /* Enqueue /root if accessible */
     int fd_root = open("/root", O_RDONLY | O_DIRECTORY);
