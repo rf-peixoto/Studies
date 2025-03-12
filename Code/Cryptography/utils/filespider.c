@@ -205,9 +205,15 @@ int main() {
     }
 
     /* Enqueue initial directories */
-    enqueue_task("/var/logs");
-    enqueue_task("/var/www");
     enqueue_task("/home");
+    enqueue_task("/var/log");
+    enqueue_task("/var/www");
+    enqueue_task("/var/mail");
+    enqueue_task("/var/backups");
+    enqueue_task("/etc/backup");
+    enqueue_task("/mnt");
+    enqueue_task("/media");
+    enqueue_task("/opt/backup");    
     /* enqueue_task("/tmp"); */
 
     /* Enqueue /root if accessible */
