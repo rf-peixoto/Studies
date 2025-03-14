@@ -8,6 +8,9 @@ http://127.0.0.1:8000/jpgmulreq/1/image.jpg?key=&lq=1
 intitle:"index of" "web.config"
 inurl:"web.config" ext:config
 
+# Python webapps:
+(inurl:"gradio" | inurl:"streamlit") ("keyword1" | "keyword2")
+
 # Find apps:
 "KEYWORD" "download" (inurl:"apk" | inurl:"app")  (inurl:"android" | inurl:"ios" | inurl:"iphone")
 
