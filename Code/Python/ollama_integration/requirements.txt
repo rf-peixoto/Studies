@@ -1,0 +1,4 @@
+PyPDF2==3.0.1
+colorama==0.4.6
+sentence-transformers==2.2.2
+numpy==1.23.5
