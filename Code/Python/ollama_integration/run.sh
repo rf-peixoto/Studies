@@ -14,6 +14,10 @@ source venv/bin/activate
 echo "Upgrading pip..."
 pip install --upgrade pip
 
+# Upgrade setuptools and wheel to avoid build issues
+echo "Upgrading setuptools and wheel..."
+pip install --upgrade setuptools wheel
+
 # Install the required dependencies
 echo "Installing dependencies from requirements.txt..."
 pip install -r requirements.txt
