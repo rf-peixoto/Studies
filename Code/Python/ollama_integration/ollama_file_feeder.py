@@ -154,7 +154,6 @@ def advanced_search_context(chunks_data, query, embed_model, top_k=TOP_K_CHUNKS)
     for idx in top_indices:
         sim = similarities[idx]
         chunk = chunks_data[idx]
-        # Optionally, set a threshold for similarity if desired.
         selected_chunks.append(f"From {chunk['doc']} (similarity: {sim:.2f}):\n{chunk['text']}")
     
     if not selected_chunks:
@@ -173,7 +172,7 @@ def trim_context(text, max_words=CONTEXT_MAX_WORDS):
         return " ".join(words[:max_words]) + " ..."
     return text
 
-def ask_model(context, question, model="my-model"):
+def ask_model(context, question, model="deepseek-r1:7b"):
     """
     Constructs a prompt using the provided context and the user's question.
     Calls the Ollama CLI and returns only the final answer.
