@@ -1,0 +1,30 @@
+/* Domains */
+import "vt"
+
+rule domain_template
+{
+  meta:
+    author = "rf-peixoto"
+    description = "Monitor new domains with specific keywords"
+    target_entity = "domain"
+  condition:
+    vt.net.domain.new_domain and
+    vt.net.domain.raw icontains "keyword1" or
+    vt.net.domain.raw icontains "keyword2"
+}
+
+
+/* URLs */
+import "vt"
+
+rule url_template
+{
+  meta:
+    author = "rf-peixoto"
+    description = "Monitor new URLs with specific keywords"
+    target_entity = "url"
+  condition:
+    vt.net.url.new_url and
+    vt.net.url.path icontains "keyword1" or
+    vt.net.url.path icontains "keyword2"
+}
