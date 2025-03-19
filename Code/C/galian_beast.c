@@ -217,7 +217,7 @@ int main(int argc, char *argv[]) {
                 break;
             } else {
                 perror("setrlimit failed");
-                target /= 2;
+                target -= 100;
             }
         }
     } else {
