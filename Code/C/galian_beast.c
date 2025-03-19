@@ -24,7 +24,7 @@
 " \  \           | `._   `\\  |  //'   _,' |           /  /\n" \
 "  `-.\         /'  _ `---'' , . ``---' _  `\         /,-'\n" \
 "     ``       /     \    ,='/ \`=.    /     \       ''\n" \
-"\033[0mSSL g a l i a n    b e a s t\n\n"
+"\033[0mSSL         * g a l i a n    b e a s t *\n\n"
 
 std::atomic<long> total_connections(0);
 std::atomic<long> successful_handshakes(0);
