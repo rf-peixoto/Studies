@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Fighting Fantasy – Warlock of Firetop Mountain</title>
+  <style>
+    body {
+      background-color: #2e2e2e;
+      color: white;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+    h2 {
+      margin-top: 0;
+    }
+    .container {
+      padding: 10px;
+    }
+    .top-frame, .bottom-frame {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px;
+      border-bottom: 1px solid #444;
+    }
+    .top-frame button, .top-frame input, .top-frame label,
+    .middle-frame button, .middle-frame select, .middle-frame input,
+    .bottom-frame button {
+      margin: 5px;
+      padding: 5px 8px;
+      background-color: #3e3e3e;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    .middle-frame {
+      display: flex;
+      flex-wrap: wrap;
+      padding: 10px;
+    }
+    .col {
+      flex: 1;
+      min-width: 300px;
+      padding: 10px;
+      box-sizing: border-box;
+    }
+    fieldset {
+      border: 1px solid #555;
+      margin-bottom: 10px;
+      padding: 10px;
+    }
+    fieldset legend {
+      padding: 0 5px;
+      font-weight: bold;
+    }
+    select, input[type="text"], input[type="number"] {
+      padding: 3px;
+      background-color: #3e3e3e;
+      color: white;
+      border: 1px solid #555;
+    }
+    .bottom-frame {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      padding: 10px;
+    }
+    canvas {
+      border: 1px solid #555;
+      margin-right: 10px;
+    }
+    .move-buttons {
+      display: flex;
+      flex-direction: column;
+    }
+    .move-buttons button {
+      margin: 2px 0;
+    }
+    /* Scrollable lists */
+    .list-box {
+      width: 100%;
+      height: 100px;
+      overflow-y: auto;
+      background-color: #3e3e3e;
+      border: 1px solid #555;
+      padding: 5px;
+      box-sizing: border-box;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <!-- TOP FRAME: Attributes, Gold & Dice -->
+    <div class="top-frame">
+      <div id="attr-panel">
+        <button id="rollStatsBtn">Roll Stats</button>
+        <span id="attrDisplay">Skill: - | Stamina: -/- | Luck: - | Gold: -</span>
+      </div>
+      <div id="gold-panel">
+        <label for="goldInput">Gold Amount:</label>
+        <input type="number" id="goldInput" style="width:50px;" />
+        <button id="addGoldBtn">Add Gold</button>
+        <button id="removeGoldBtn">Remove Gold</button>
+      </div>
+      <div id="dice-panel">
+        <button id="roll1D6Btn">1D6</button>
+        <button id="roll2D6Btn">2D6</button>
+        <span id="diceResult">Result: -</span>
+      </div>
+    </div>
+
+    <!-- MIDDLE FRAME: Two columns -->
+    <div class="middle-frame">
+      <!-- LEFT COLUMN: Inventories & Equipment -->
+      <div class="col">
+        <!-- Consumables Inventory -->
+        <fieldset>
+          <legend>Consumables Inventory</legend>
+          <div id="consumablesList" class="list-box"></div>
+          <div>
+            <label for="consumableSelect">Select Consumable:</label>
+            <select id="consumableSelect"></select>
+            <button id="addConsumableBtn">Add Consumable</button>
+            <button id="useConsumableBtn">Use Consumable</button>
+            <button id="removeConsumableBtn">Remove Consumable</button>
+          </div>
+        </fieldset>
+        <!-- Treasure Inventory -->
+        <fieldset>
+          <legend>Treasure Inventory</legend>
+          <div id="treasureList" class="list-box"></div>
+          <div>
+            <label for="treasureSelect">Select Treasure:</label>
+            <select id="treasureSelect"></select>
+            <button id="addTreasureBtn">Add Treasure</button>
+            <button id="removeTreasureBtn">Remove Treasure</button>
+          </div>
+        </fieldset>
+        <!-- Equipment Panel -->
+        <fieldset>
+          <legend>Equipment</legend>
+          <div id="equipmentList" class="list-box"></div>
+          <div>
+            <label for="equipmentSelect">Select Equipment:</label>
+            <select id="equipmentSelect"></select>
+            <button id="equipItemBtn">Equip Item</button>
+          </div>
+        </fieldset>
+      </div>
+
+      <!-- RIGHT COLUMN: Enemy Setup & Battle -->
+      <div class="col">
+        <!-- Enemy Setup -->
+        <fieldset>
+          <legend>Enemy Setup</legend>
+          <div>
+            <label>Custom Enemy:</label>
+            <input type="text" id="enemyName" placeholder="Name" style="width:80px;" />
+            <input type="number" id="enemySkill" placeholder="Skill" style="width:50px;" />
+            <input type="number" id="enemyStamina" placeholder="Stamina" style="width:50px;" />
+            <button id="addCustomEnemyBtn">Add Custom</button>
+          </div>
+          <div>
+            <label for="enemySelect">Choose Enemy:</label>
+            <select id="enemySelect"></select>
+            <button id="addSelectedEnemyBtn">Add Selected</button>
+          </div>
+        </fieldset>
+        <!-- Battle Enemies List -->
+        <fieldset>
+          <legend>Battle Enemies</legend>
+          <div id="enemyList" class="list-box"></div>
+        </fieldset>
+        <!-- Combat Controls -->
+        <fieldset>
+          <legend>Combat Controls</legend>
+          <button id="attackBtn">Attack</button>
+          <label><input type="checkbox" id="useLuckChk"> Use Luck</label>
+          <button id="fleeBtn">Flee</button>
+        </fieldset>
+      </div>
+    </div>
+
+    <!-- BOTTOM FRAME: Map and Movement -->
+    <div class="bottom-frame">
+      <canvas id="mapCanvas" width="300" height="150"></canvas>
+      <div class="move-buttons">
+        <button id="moveUpBtn">Up</button>
+        <button id="moveDownBtn">Down</button>
+        <button id="moveLeftBtn">Left</button>
+        <button id="moveRightBtn">Right</button>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // ---------- Global Variables ----------
+    // Player Attributes
+    let initialSkill = 0, initialStamina = 0, initialLuck = 0;
+    let skill = 0, stamina = 0, maxStamina = 0, luck = 0, gold = 0;
+    // Consumables and Treasure (as objects mapping item -> count)
+    const consumableTypes = {
+      "Healing Potion": "Restores 4 stamina (capped at initial value)",
+      "Elixir of Luck": "Increases luck by 2",
+      "Strength Tonic": "Increases skill by 1",
+      "Magic Elixir": "Restores 3 stamina (capped) and increases luck by 1",
+      "Provisions": "Recovers 4 stamina per meal (capped)",
+      "Key": "A key to unlock treasure chests"
+    };
+    let consumables = {};
+    const treasureTypes = {
+      "Jewel": "A valuable jewel",
+      "Gemstone": "A precious gemstone",
+      "Gold Sentinel": "A sentinel made of gold",
+      "Diamond Sentinel": "A sentinel made of diamond"
+    };
+    let treasures = {};
+
+    // Equipment definitions
+    const equipmentTypes = {
+      "Magic Sword": { description: "Increases Skill by 2 (affects initial Skill)", skill: 2, stamina: 0, luck: 0, affects_initial: true },
+      "Shield": { description: "Increases Stamina by 3", skill: 0, stamina: 3, luck: 0, affects_initial: false },
+      "Chainmail": { description: "Increases Stamina by 4", skill: 0, stamina: 4, luck: 0, affects_initial: false },
+      "Helmet": { description: "Increases Stamina by 2", skill: 0, stamina: 2, luck: 0, affects_initial: false },
+      "Magic Amulet": { description: "Increases Luck by 2", skill: 0, stamina: 0, luck: 2, affects_initial: false },
+      "Boots": { description: "Increases Skill by 1", skill: 1, stamina: 0, luck: 0, affects_initial: false },
+      "Ring of Strength": { description: "Increases Skill by 1 and Stamina by 1", skill: 1, stamina: 1, luck: 0, affects_initial: false },
+      "Magic Cloak": { description: "Increases Luck by 1 and Stamina by 2", skill: 0, stamina: 2, luck: 1, affects_initial: false },
+      "Dagger": { description: "Increases Skill by 1", skill: 1, stamina: 0, luck: 0, affects_initial: false },
+      "Potion of Skill": { description: "Restores Skill to its initial value", potion: true },
+      "Potion of Strength": { description: "Restores Stamina to its initial value", potion: true },
+      "Potion of Fortune": { description: "Restores Luck to its initial value and increases initial Luck by 1", potion: true }
+    };
+    let equipped = {};
+
+    // Enemies definitions (all from the first book)
+    const enemyTypes = {
+      "Orc": { skill: 10, stamina: 12 },
+      "Goblin": { skill: 9, stamina: 8 },
+      "Skeleton": { skill: 8, stamina: 6 },
+      "Giant Spider": { skill: 11, stamina: 10 },
+      "Ogre": { skill: 12, stamina: 14 },
+      "Warlock": { skill: 15, stamina: 20 },
+      "Bird Man": { skill: 12, stamina: 8 },
+      "Messenger of Death": { skill: 7, stamina: 6 },
+      "Earth Demon": { skill: 12, stamina: 15 },
+      "Barbarian": { skill: 7, stamina: 6 },
+      "Vampire": { skill: 8, stamina: 8 },
+      "Werewolf": { skill: 8, stamina: 8 },
+      "Wight": { skill: 9, stamina: 6 }
+    };
+    // Gold drops removed; gold is manually controlled.
+    let enemies = [];
+
+    // Map variables
+    let position = [0, 0];
+    let history = [[0,0]];
+
+    // ---------- Helper Functions ----------
+    function randDie() {
+      return Math.floor(Math.random() * 6) + 1;
+    }
+
+    // Update Attributes display
+    function updateAttributes() {
+      document.getElementById("attrDisplay").innerText =
+        `Skill: ${skill} | Stamina: ${stamina}/${maxStamina} | Luck: ${luck} | Gold: ${gold}`;
+    }
+
+    // Roll player attributes
+    function rollAttributes() {
+      initialSkill = randDie() + 6;
+      initialStamina = randDie() + randDie() + 12;
+      initialLuck = randDie() + 6;
+      skill = initialSkill;
+      stamina = initialStamina;
+      maxStamina = initialStamina;
+      luck = initialLuck;
+      gold = 0;
+      equipped = {};
+      refreshEquipped();
+      updateAttributes();
+    }
+
+    // Gold controls
+    function addGold() {
+      const amt = parseInt(document.getElementById("goldInput").value);
+      if (!isNaN(amt)) {
+        gold += amt;
+        updateAttributes();
+      } else {
+        alert("Enter a valid number for gold.");
+      }
+    }
+    function removeGold() {
+      const amt = parseInt(document.getElementById("goldInput").value);
+      if (!isNaN(amt)) {
+        gold = Math.max(0, gold - amt);
+        updateAttributes();
+      } else {
+        alert("Enter a valid number for gold.");
+      }
+    }
+
+    // Dice roll
+    function rollDice(n) {
+      let rolls = [];
+      for (let i = 0; i < n; i++) {
+        rolls.push(randDie());
+      }
+      const total = rolls.reduce((a,b)=>a+b,0);
+      document.getElementById("diceResult").innerText = `Result: [${rolls.join(", ")}] (Total: ${total})`;
+    }
+
+    // ---------- Consumables Inventory ----------
+    function refreshConsumables() {
+      const listDiv = document.getElementById("consumablesList");
+      listDiv.innerHTML = "";
+      for (const [item, count] of Object.entries(consumables)) {
+        const div = document.createElement("div");
+        div.innerText = `${item} x${count}`;
+        listDiv.appendChild(div);
+      }
+    }
+    function addConsumable() {
+      const item = document.getElementById("consumableSelect").value;
+      if (item) {
+        consumables[item] = (consumables[item] || 0) + 1;
+        refreshConsumables();
+      }
+    }
+    function useConsumable() {
+      const listDiv = document.getElementById("consumablesList");
+      if (listDiv.children.length === 0) {
+        alert("No consumable to use.");
+        return;
+      }
+      // For simplicity, use the first item in the list
+      const entry = listDiv.children[0].innerText;
+      const item = entry.split(" x")[0];
+      if (applyConsumableEffect(item)) {
+        consumables[item]--;
+        if (consumables[item] <= 0) delete consumables[item];
+        refreshConsumables();
+      }
+    }
+    function removeConsumable() {
+      const listDiv = document.getElementById("consumablesList");
+      if (listDiv.children.length === 0) return;
+      const entry = listDiv.children[0].innerText;
+      const item = entry.split(" x")[0];
+      delete consumables[item];
+      refreshConsumables();
+    }
+    function applyConsumableEffect(item) {
+      if (item === "Healing Potion") {
+        const heal = 4;
+        const oldStam = stamina;
+        stamina = Math.min(stamina + heal, initialStamina);
+        alert(`Healing Potion used. Stamina: ${oldStam} -> ${stamina}`);
+      } else if (item === "Elixir of Luck") {
+        const oldLuck = luck;
+        luck += 2;
+        alert(`Elixir of Luck used. Luck: ${oldLuck} -> ${luck}`);
+      } else if (item === "Strength Tonic") {
+        const oldSkill = skill;
+        // Cannot exceed initial skill
+        skill = Math.min(skill + 1, initialSkill);
+        alert(`Strength Tonic used. Skill: ${oldSkill} -> ${skill}`);
+      } else if (item === "Magic Elixir") {
+        const heal = 3;
+        const oldStam = stamina;
+        stamina = Math.min(stamina + heal, initialStamina);
+        const oldLuck = luck;
+        luck += 1;
+        alert(`Magic Elixir used. Stamina: ${oldStam} -> ${stamina}, Luck: ${oldLuck} -> ${luck}`);
+      } else if (item === "Provisions") {
+        const heal = 4;
+        const oldStam = stamina;
+        stamina = Math.min(stamina + heal, initialStamina);
+        alert(`Provisions used. Stamina: ${oldStam} -> ${stamina}`);
+      } else if (item === "Key") {
+        alert("Key kept for unlocking purposes.");
+      } else {
+        alert("This consumable has no special effect.");
+      }
+      updateAttributes();
+      return true;
+    }
+
+    // ---------- Treasure Inventory ----------
+    function refreshTreasures() {
+      const listDiv = document.getElementById("treasureList");
+      listDiv.innerHTML = "";
+      for (const [item, count] of Object.entries(treasures)) {
+        const div = document.createElement("div");
+        div.innerText = `${item} x${count}`;
+        listDiv.appendChild(div);
+      }
+    }
+    function addTreasure() {
+      const item = document.getElementById("treasureSelect").value;
+      if (item) {
+        treasures[item] = (treasures[item] || 0) + 1;
+        refreshTreasures();
+      }
+    }
+    function removeTreasure() {
+      const listDiv = document.getElementById("treasureList");
+      if (listDiv.children.length === 0) return;
+      const entry = listDiv.children[0].innerText;
+      const item = entry.split(" x")[0];
+      delete treasures[item];
+      refreshTreasures();
+    }
+
+    // ---------- Equipment ----------
+    function refreshEquipped() {
+      const listDiv = document.getElementById("equipmentList");
+      listDiv.innerHTML = "";
+      for (const [name, data] of Object.entries(equipped)) {
+        const div = document.createElement("div");
+        div.innerText = `${name}: ${data.description}`;
+        listDiv.appendChild(div);
+      }
+    }
+    function equipItem() {
+      const equipName = document.getElementById("equipmentSelect").value;
+      if (!equipName) {
+        alert("Select an equipment item to equip.");
+        return;
+      }
+      const data = equipmentTypes[equipName];
+      // For magic weapons (affects_initial), only one allowed
+      if (data.affects_initial) {
+        for (const eqp of Object.values(equipped)) {
+          if (eqp.affects_initial) {
+            alert("A magic weapon is already equipped. Unequip it first.");
+            return;
+          }
+        }
+      }
+      if (equipped.hasOwnProperty(equipName)) {
+        alert(`${equipName} is already equipped.`);
+        return;
+      }
+      equipped[equipName] = data;
+      refreshEquipped();
+      // Apply effects:
+      if (data.potion) {
+        if (equipName === "Potion of Skill") {
+          skill = initialSkill;
+          alert("Potion of Skill used: Skill restored to initial value.");
+        } else if (equipName === "Potion of Strength") {
+          stamina = initialStamina;
+          maxStamina = initialStamina;
+          alert("Potion of Strength used: Stamina restored to initial value.");
+        } else if (equipName === "Potion of Fortune") {
+          initialLuck += 1;
+          luck = initialLuck;
+          alert("Potion of Fortune used: Luck restored to initial value and increased by 1.");
+        }
+      } else {
+        // Normal equipment
+        if (data.affects_initial) {
+          initialSkill += data.skill;
+          skill += data.skill;
+        } else {
+          skill = Math.min(skill + data.skill, initialSkill);
+        }
+        maxStamina += data.stamina;
+        stamina = Math.min(stamina + data.stamina, maxStamina);
+        luck = Math.min(luck + data.luck, initialLuck);
+      }
+      updateAttributes();
+      alert(`${equipName} equipped. Stats updated.`);
+    }
+
+    // ---------- Enemy Setup and Battle ----------
+    function refreshEnemySelect() {
+      const enemySelect = document.getElementById("enemySelect");
+      enemySelect.innerHTML = "";
+      for (const name in enemyTypes) {
+        const opt = document.createElement("option");
+        opt.value = name;
+        opt.innerText = name;
+        enemySelect.appendChild(opt);
+      }
+    }
+    function addEnemyCustom() {
+      const name = document.getElementById("enemyName").value.trim();
+      const skillVal = parseInt(document.getElementById("enemySkill").value);
+      const stamVal = parseInt(document.getElementById("enemyStamina").value);
+      if (!name || isNaN(skillVal) || isNaN(stamVal)) {
+        alert("Please enter valid enemy name, skill, and stamina.");
+        return;
+      }
+      enemies.push({ name: name, skill: skillVal, stamina: stamVal });
+      updateBattleList();
+    }
+    function addEnemyFromList() {
+      const name = document.getElementById("enemySelect").value;
+      if (!name) {
+        alert("Select an enemy from the list.");
+        return;
+      }
+      const data = enemyTypes[name];
+      enemies.push({ name: name, skill: data.skill, stamina: data.stamina });
+      updateBattleList();
+    }
+    function updateBattleList() {
+      const listDiv = document.getElementById("enemyList");
+      listDiv.innerHTML = "";
+      enemies.forEach((e, idx) => {
+        const div = document.createElement("div");
+        div.innerText = `${idx+1}. ${e.name}: ${e.stamina} HP`;
+        listDiv.appendChild(div);
+      });
+    }
+    function testLuck() {
+      if (luck <= 0) return false;
+      const roll = randDie() + randDie();
+      const result = roll <= luck;
+      luck = Math.max(luck - 1, 0);
+      updateAttributes();
+      return result;
+    }
+    function attack() {
+      if (enemies.length === 0) {
+        alert("No enemy present.");
+        return;
+      }
+      let log = "";
+      // For each enemy, simulate a battle round
+      enemies = enemies.filter(enemy => {
+        const playerRoll = randDie() + randDie();
+        const enemyRoll = randDie() + randDie();
+        const playerTotal = skill + playerRoll;
+        const enemyTotal = enemy.skill + enemyRoll;
+        log += `Against ${enemy.name}:\n  You rolled ${playerRoll} (Total: ${playerTotal}), enemy rolled ${enemyRoll} (Total: ${enemyTotal}).\n`;
+        if (playerTotal > enemyTotal) {
+          let dmg = 2;
+          if (document.getElementById("useLuckChk").checked && luck > 0) {
+            if (testLuck()) { dmg = 4; log += "  Luck successful: enemy takes 4 damage.\n"; }
+            else { dmg = 1; log += "  Luck failed: enemy takes 1 damage.\n"; }
+          } else {
+            log += `  No luck used: enemy takes ${dmg} damage.\n`;
+          }
+          enemy.stamina -= dmg;
+          if (enemy.stamina <= 0) {
+            log += `  ${enemy.name} is defeated!\n`;
+            return false;
+          } else {
+            log += `  ${enemy.name} now has ${enemy.stamina} HP remaining.\n`;
+            return true;
+          }
+        } else {
+          let dmg = 2;
+          if (document.getElementById("useLuckChk").checked && luck > 0) {
+            if (testLuck()) { dmg = 1; log += "  Luck successful: you take 1 damage.\n"; }
+            else { dmg = 3; log += "  Luck failed: you take 3 damage.\n"; }
+          } else {
+            log += `  No luck used: you take ${dmg} damage.\n`;
+          }
+          stamina -= dmg;
+          log += `  Your stamina is now ${stamina}.\n`;
+          if (stamina <= 0) {
+            alert(log + "\nYou have been defeated.");
+            location.reload();
+            return false;
+          }
+          return true;
+        }
+      });
+      updateAttributes();
+      updateBattleList();
+      alert(log);
+    }
+    function flee() {
+      if (enemies.length === 0) {
+        alert("No enemy to flee from.");
+        return;
+      }
+      let dmg = 2;
+      let log = "You attempt to flee.\n";
+      if (document.getElementById("useLuckChk").checked && luck > 0) {
+        if (testLuck()) { dmg = 1; log += "  Luck successful: you take 1 damage while fleeing.\n"; }
+        else { dmg = 3; log += "  Luck failed: you take 3 damage while fleeing.\n"; }
+      } else {
+        log += "  No luck used: you take 2 damage while fleeing.\n";
+      }
+      stamina -= dmg;
+      log += `  Your stamina is now ${stamina}.\n`;
+      enemies = [];
+      updateBattleList();
+      updateAttributes();
+      alert(log);
+    }
+
+    // ---------- Movement / Map ----------
+    function move(direction) {
+      const moves = { "Up": [0,-1], "Down": [0,1], "Left": [-1,0], "Right": [1,0] };
+      const [dx, dy] = moves[direction];
+      position[0] += dx;
+      position[1] += dy;
+      // Add new position if not already in history
+      if (!history.some(p => p[0] === position[0] && p[1] === position[1])) {
+        history.push([position[0], position[1]]);
+      }
+      updateMap();
+    }
+    function updateMap() {
+      const canvas = document.getElementById("mapCanvas");
+      const ctx = canvas.getContext("2d");
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const scale = 20;
+      const offset = [150 - position[0]*scale, 75 - position[1]*scale];
+      history.forEach(p => {
+        ctx.fillStyle = "#555";
+        ctx.fillRect(offset[0] + p[0]*scale, offset[1] + p[1]*scale, scale, scale);
+      });
+      // Draw player's current position in blue
+      ctx.fillStyle = "blue";
+      ctx.fillRect(offset[0] + position[0]*scale, offset[1] + position[1]*scale, scale, scale);
+    }
+
+    // ---------- Initialization ----------
+    // Populate consumable and treasure select boxes and enemy select box
+    function initSelects() {
+      const consumableSelect = document.getElementById("consumableSelect");
+      consumableSelect.innerHTML = "";
+      for (const item in consumableTypes) {
+        const opt = document.createElement("option");
+        opt.value = item;
+        opt.innerText = item;
+        consumableSelect.appendChild(opt);
+      }
+      const treasureSelect = document.getElementById("treasureSelect");
+      treasureSelect.innerHTML = "";
+      for (const item in treasureTypes) {
+        const opt = document.createElement("option");
+        opt.value = item;
+        opt.innerText = item;
+        treasureSelect.appendChild(opt);
+      }
+      const enemySelect = document.getElementById("enemySelect");
+      enemySelect.innerHTML = "";
+      for (const name in enemyTypes) {
+        const opt = document.createElement("option");
+        opt.value = name;
+        opt.innerText = name;
+        enemySelect.appendChild(opt);
+      }
+      const equipmentSelect = document.getElementById("equipmentSelect");
+      equipmentSelect.innerHTML = "";
+      for (const item in equipmentTypes) {
+        const opt = document.createElement("option");
+        opt.value = item;
+        opt.innerText = item;
+        equipmentSelect.appendChild(opt);
+      }
+    }
+
+    // Set up event listeners
+    window.onload = function() {
+      initSelects();
+      document.getElementById("rollStatsBtn").onclick = rollAttributes;
+      document.getElementById("addGoldBtn").onclick = addGold;
+      document.getElementById("removeGoldBtn").onclick = removeGold;
+      document.getElementById("roll1D6Btn").onclick = () => rollDice(1);
+      document.getElementById("roll2D6Btn").onclick = () => rollDice(2);
+      document.getElementById("addConsumableBtn").onclick = addConsumable;
+      document.getElementById("useConsumableBtn").onclick = useConsumable;
+      document.getElementById("removeConsumableBtn").onclick = removeConsumable;
+      document.getElementById("addTreasureBtn").onclick = addTreasure;
+      document.getElementById("removeTreasureBtn").onclick = removeTreasure;
+      document.getElementById("equipItemBtn").onclick = equipItem;
+      document.getElementById("addCustomEnemyBtn").onclick = addEnemyCustom;
+      document.getElementById("addSelectedEnemyBtn").onclick = addEnemyFromList;
+      document.getElementById("attackBtn").onclick = attack;
+      document.getElementById("fleeBtn").onclick = flee;
+      document.getElementById("moveUpBtn").onclick = () => move("Up");
+      document.getElementById("moveDownBtn").onclick = () => move("Down");
+      document.getElementById("moveLeftBtn").onclick = () => move("Left");
+      document.getElementById("moveRightBtn").onclick = () => move("Right");
+      updateMap();
+      updateAttributes();
+    };
+  </script>
+</body>
+</html>
