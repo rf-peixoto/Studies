@@ -219,7 +219,7 @@ class FightingFantasyApp(tk.Tk):
         self.canvas.pack(side="left", padx=5)
         move_frame = ttk.Frame(bottom_frame)
         move_frame.pack(side="left", padx=5)
-        for d in ["Up", "Down", "Left", "Right"]:
+        for d in ["North", "South", "East", "West"]:
             ttk.Button(move_frame, text=d, command=lambda dir=d: self.move(dir)).pack(side="top", pady=2)
         self.update_map()
 
@@ -397,7 +397,7 @@ class FightingFantasyApp(tk.Tk):
 
     # ---------- Movement / Map ----------
     def move(self, direction):
-        moves = {"Up": (0, -1), "Down": (0, 1), "Left": (-1, 0), "Right": (1, 0)}
+        moves = {"North": (0, -1), "South": (0, 1), "East": (1, 0), "West": (-1, 0)}
         dx, dy = moves[direction]
         self.position[0] += dx
         self.position[1] += dy
