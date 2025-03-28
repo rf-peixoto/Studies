@@ -3,51 +3,69 @@
 <head>
   <meta charset="UTF-8">
   <title>Fighting Fantasy – Warlock of Firetop Mountain</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
+    /* Base Reset & Dark Theme */
+    * {
+      box-sizing: border-box;
+    }
     body {
-      background-color: #2e2e2e;
-      color: white;
-      font-family: Arial, sans-serif;
       margin: 0;
       padding: 0;
+      background-color: #2e2e2e;
+      color: #eee;
+      font-family: Arial, sans-serif;
+      line-height: 1.4;
     }
-    h2 {
-      margin-top: 0;
+    h1, h2 {
+      margin: 0;
+      padding: 10px;
     }
+    /* Container */
     .container {
       padding: 10px;
+      max-width: 1200px;
+      margin: 0 auto;
     }
-    .top-frame, .bottom-frame {
+    /* Instructions Header */
+    .instructions {
+      background-color: #444;
+      padding: 10px;
+      margin-bottom: 10px;
+      border-radius: 4px;
+    }
+    /* Top Section */
+    .top-section {
       display: flex;
       flex-wrap: wrap;
-      align-items: center;
       justify-content: space-between;
+      align-items: center;
       padding: 10px;
-      border-bottom: 1px solid #444;
+      border-bottom: 1px solid #555;
+      margin-bottom: 10px;
     }
-    .top-frame button, .top-frame input, .top-frame label,
-    .middle-frame button, .middle-frame select, .middle-frame input,
-    .bottom-frame button {
+    .top-section > div {
       margin: 5px;
-      padding: 5px 8px;
-      background-color: #3e3e3e;
-      color: white;
-      border: none;
-      cursor: pointer;
+      flex: 1;
+      min-width: 250px;
     }
-    .middle-frame {
+    /* Middle Section */
+    .middle-section {
       display: flex;
       flex-wrap: wrap;
-      padding: 10px;
+      gap: 10px;
+      margin-bottom: 10px;
     }
-    .col {
+    .column {
       flex: 1;
       min-width: 300px;
+      background-color: #3e3e3e;
       padding: 10px;
-      box-sizing: border-box;
+      border-radius: 4px;
     }
     fieldset {
       border: 1px solid #555;
+      border-radius: 4px;
       margin-bottom: 10px;
       padding: 10px;
     }
@@ -55,146 +73,174 @@
       padding: 0 5px;
       font-weight: bold;
     }
-    select, input[type="text"], input[type="number"] {
-      padding: 3px;
-      background-color: #3e3e3e;
-      color: white;
-      border: 1px solid #555;
-    }
-    .bottom-frame {
+    /* Bottom Section */
+    .bottom-section {
       display: flex;
       flex-wrap: wrap;
       align-items: flex-start;
-      padding: 10px;
+      gap: 10px;
     }
     canvas {
       border: 1px solid #555;
-      margin-right: 10px;
+      background-color: #333;
     }
     .move-buttons {
       display: flex;
       flex-direction: column;
     }
     .move-buttons button {
-      margin: 2px 0;
+      margin: 4px 0;
+      padding: 5px 8px;
     }
-    /* Scrollable lists */
-    .list-box {
+    /* Buttons and Inputs */
+    button, input, select {
+      background-color: #555;
+      border: 1px solid #777;
+      color: #eee;
+      padding: 5px 8px;
+      margin: 2px;
+      border-radius: 3px;
+      cursor: pointer;
+    }
+    input[type="number"], input[type="text"] {
+      width: 80px;
+    }
+    select {
       width: 100%;
+    }
+    /* Scrollable List Boxes */
+    .list-box {
+      background-color: #444;
+      border: 1px solid #666;
+      color: #eee;
+      padding: 5px;
       height: 100px;
       overflow-y: auto;
-      background-color: #3e3e3e;
-      border: 1px solid #555;
-      padding: 5px;
-      box-sizing: border-box;
+      border-radius: 3px;
+    }
+    /* Responsive adjustments */
+    @media (max-width: 600px) {
+      .top-section {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .middle-section {
+        flex-direction: column;
+      }
+      .bottom-section {
+        flex-direction: column;
+      }
     }
   </style>
 </head>
 <body>
   <div class="container">
+    <h1>Fighting Fantasy – Warlock of Firetop Mountain</h1>
+    <div class="instructions">
+      <p><strong>Instructions:</strong> Roll your attributes, manage your consumables, equipment, treasures, and set up enemies. Use the combat controls to attack or flee. The map shows your journey; use the movement buttons to navigate. Gold is only adjusted manually. Hover over inputs/buttons for guidance.</p>
+    </div>
 
-    <!-- TOP FRAME: Attributes, Gold & Dice -->
-    <div class="top-frame">
+    <!-- TOP SECTION: Player Stats, Gold, Dice -->
+    <div class="top-section">
       <div id="attr-panel">
-        <button id="rollStatsBtn">Roll Stats</button>
+        <button id="rollStatsBtn" title="Roll to set your initial Skill, Stamina, and Luck">Roll Stats</button>
         <span id="attrDisplay">Skill: - | Stamina: -/- | Luck: - | Gold: -</span>
       </div>
       <div id="gold-panel">
-        <label for="goldInput">Gold Amount:</label>
-        <input type="number" id="goldInput" style="width:50px;" />
-        <button id="addGoldBtn">Add Gold</button>
-        <button id="removeGoldBtn">Remove Gold</button>
+        <label for="goldInput" title="Enter a number to adjust gold">Gold Amount:</label>
+        <input type="number" id="goldInput" placeholder="0" />
+        <button id="addGoldBtn" title="Add entered gold">Add Gold</button>
+        <button id="removeGoldBtn" title="Remove entered gold">Remove Gold</button>
       </div>
       <div id="dice-panel">
-        <button id="roll1D6Btn">1D6</button>
-        <button id="roll2D6Btn">2D6</button>
+        <button id="roll1D6Btn" title="Roll one six-sided die">1D6</button>
+        <button id="roll2D6Btn" title="Roll two six-sided dice">2D6</button>
         <span id="diceResult">Result: -</span>
       </div>
     </div>
 
-    <!-- MIDDLE FRAME: Two columns -->
-    <div class="middle-frame">
+    <!-- MIDDLE SECTION: Two Columns -->
+    <div class="middle-section">
       <!-- LEFT COLUMN: Inventories & Equipment -->
-      <div class="col">
+      <div class="column">
         <!-- Consumables Inventory -->
         <fieldset>
           <legend>Consumables Inventory</legend>
-          <div id="consumablesList" class="list-box"></div>
+          <div id="consumablesList" class="list-box" title="List of consumable items"></div>
           <div>
             <label for="consumableSelect">Select Consumable:</label>
             <select id="consumableSelect"></select>
-            <button id="addConsumableBtn">Add Consumable</button>
-            <button id="useConsumableBtn">Use Consumable</button>
-            <button id="removeConsumableBtn">Remove Consumable</button>
+            <button id="addConsumableBtn" title="Add selected consumable">Add Consumable</button>
+            <button id="useConsumableBtn" title="Use first consumable in list">Use Consumable</button>
+            <button id="removeConsumableBtn" title="Remove first consumable in list">Remove Consumable</button>
           </div>
         </fieldset>
         <!-- Treasure Inventory -->
         <fieldset>
           <legend>Treasure Inventory</legend>
-          <div id="treasureList" class="list-box"></div>
+          <div id="treasureList" class="list-box" title="List of treasure items"></div>
           <div>
             <label for="treasureSelect">Select Treasure:</label>
             <select id="treasureSelect"></select>
-            <button id="addTreasureBtn">Add Treasure</button>
-            <button id="removeTreasureBtn">Remove Treasure</button>
+            <button id="addTreasureBtn" title="Add selected treasure">Add Treasure</button>
+            <button id="removeTreasureBtn" title="Remove first treasure in list">Remove Treasure</button>
           </div>
         </fieldset>
         <!-- Equipment Panel -->
         <fieldset>
           <legend>Equipment</legend>
-          <div id="equipmentList" class="list-box"></div>
+          <div id="equipmentList" class="list-box" title="List of equipped items"></div>
           <div>
             <label for="equipmentSelect">Select Equipment:</label>
             <select id="equipmentSelect"></select>
-            <button id="equipItemBtn">Equip Item</button>
+            <button id="equipItemBtn" title="Equip selected item">Equip Item</button>
           </div>
         </fieldset>
       </div>
 
-      <!-- RIGHT COLUMN: Enemy Setup & Battle -->
-      <div class="col">
+      <!-- RIGHT COLUMN: Enemy Setup & Combat -->
+      <div class="column">
         <!-- Enemy Setup -->
         <fieldset>
           <legend>Enemy Setup</legend>
           <div>
-            <label>Custom Enemy:</label>
-            <input type="text" id="enemyName" placeholder="Name" style="width:80px;" />
-            <input type="number" id="enemySkill" placeholder="Skill" style="width:50px;" />
-            <input type="number" id="enemyStamina" placeholder="Stamina" style="width:50px;" />
-            <button id="addCustomEnemyBtn">Add Custom</button>
+            <label for="enemyName">Custom Enemy:</label>
+            <input type="text" id="enemyName" placeholder="Name" title="Enter enemy name" />
+            <input type="number" id="enemySkill" placeholder="Skill" title="Enter enemy Skill" />
+            <input type="number" id="enemyStamina" placeholder="Stamina" title="Enter enemy Stamina" />
+            <button id="addCustomEnemyBtn" title="Add custom enemy">Add Custom</button>
           </div>
           <div>
             <label for="enemySelect">Choose Enemy:</label>
             <select id="enemySelect"></select>
-            <button id="addSelectedEnemyBtn">Add Selected</button>
+            <button id="addSelectedEnemyBtn" title="Add selected enemy">Add Selected</button>
           </div>
         </fieldset>
         <!-- Battle Enemies List -->
         <fieldset>
           <legend>Battle Enemies</legend>
-          <div id="enemyList" class="list-box"></div>
+          <div id="enemyList" class="list-box" title="List of enemies in battle"></div>
         </fieldset>
         <!-- Combat Controls -->
         <fieldset>
           <legend>Combat Controls</legend>
-          <button id="attackBtn">Attack</button>
-          <label><input type="checkbox" id="useLuckChk"> Use Luck</label>
-          <button id="fleeBtn">Flee</button>
+          <button id="attackBtn" title="Attack the enemy">Attack</button>
+          <label title="Check to use luck during combat"><input type="checkbox" id="useLuckChk" /> Use Luck</label>
+          <button id="fleeBtn" title="Attempt to flee from battle">Flee</button>
         </fieldset>
       </div>
     </div>
 
-    <!-- BOTTOM FRAME: Map and Movement -->
-    <div class="bottom-frame">
-      <canvas id="mapCanvas" width="300" height="150"></canvas>
+    <!-- BOTTOM SECTION: Map & Movement -->
+    <div class="bottom-section">
+      <canvas id="mapCanvas" width="300" height="150" title="Map of your journey"></canvas>
       <div class="move-buttons">
-        <button id="moveUpBtn">Up</button>
-        <button id="moveDownBtn">Down</button>
-        <button id="moveLeftBtn">Left</button>
-        <button id="moveRightBtn">Right</button>
+        <button id="moveUpBtn" title="Move Up">Up</button>
+        <button id="moveDownBtn" title="Move Down">Down</button>
+        <button id="moveLeftBtn" title="Move Left">Left</button>
+        <button id="moveRightBtn" title="Move Right">Right</button>
       </div>
     </div>
-
   </div>
 
   <script>
@@ -204,7 +250,7 @@
     let skill = 0, stamina = 0, maxStamina = 0, luck = 0, gold = 0;
     // Consumables and Treasure (as objects mapping item -> count)
     const consumableTypes = {
-      "Healing Potion": "Restores 4 stamina (capped at initial value)",
+      "Healing Potion": "Restores 4 stamina (max capped at initial value)",
       "Elixir of Luck": "Increases luck by 2",
       "Strength Tonic": "Increases skill by 1",
       "Magic Elixir": "Restores 3 stamina (capped) and increases luck by 1",
@@ -237,7 +283,7 @@
     };
     let equipped = {};
 
-    // Enemies definitions (all from the first book)
+    // Enemies definitions (from the first book)
     const enemyTypes = {
       "Orc": { skill: 10, stamina: 12 },
       "Goblin": { skill: 9, stamina: 8 },
@@ -253,25 +299,20 @@
       "Werewolf": { skill: 8, stamina: 8 },
       "Wight": { skill: 9, stamina: 6 }
     };
-    // Gold drops removed; gold is manually controlled.
     let enemies = [];
 
     // Map variables
     let position = [0, 0];
-    let history = [[0,0]];
+    let history = [[0, 0]];
 
     // ---------- Helper Functions ----------
     function randDie() {
       return Math.floor(Math.random() * 6) + 1;
     }
-
-    // Update Attributes display
     function updateAttributes() {
       document.getElementById("attrDisplay").innerText =
         `Skill: ${skill} | Stamina: ${stamina}/${maxStamina} | Luck: ${luck} | Gold: ${gold}`;
     }
-
-    // Roll player attributes
     function rollAttributes() {
       initialSkill = randDie() + 6;
       initialStamina = randDie() + randDie() + 12;
@@ -285,8 +326,6 @@
       refreshEquipped();
       updateAttributes();
     }
-
-    // Gold controls
     function addGold() {
       const amt = parseInt(document.getElementById("goldInput").value);
       if (!isNaN(amt)) {
@@ -305,18 +344,16 @@
         alert("Enter a valid number for gold.");
       }
     }
-
-    // Dice roll
     function rollDice(n) {
       let rolls = [];
       for (let i = 0; i < n; i++) {
         rolls.push(randDie());
       }
-      const total = rolls.reduce((a,b)=>a+b,0);
+      const total = rolls.reduce((a, b) => a + b, 0);
       document.getElementById("diceResult").innerText = `Result: [${rolls.join(", ")}] (Total: ${total})`;
     }
 
-    // ---------- Consumables Inventory ----------
+    // ---------- Consumables ----------
     function refreshConsumables() {
       const listDiv = document.getElementById("consumablesList");
       listDiv.innerHTML = "";
@@ -339,7 +376,6 @@
         alert("No consumable to use.");
         return;
       }
-      // For simplicity, use the first item in the list
       const entry = listDiv.children[0].innerText;
       const item = entry.split(" x")[0];
       if (applyConsumableEffect(item)) {
@@ -368,7 +404,6 @@
         alert(`Elixir of Luck used. Luck: ${oldLuck} -> ${luck}`);
       } else if (item === "Strength Tonic") {
         const oldSkill = skill;
-        // Cannot exceed initial skill
         skill = Math.min(skill + 1, initialSkill);
         alert(`Strength Tonic used. Skill: ${oldSkill} -> ${skill}`);
       } else if (item === "Magic Elixir") {
@@ -392,7 +427,7 @@
       return true;
     }
 
-    // ---------- Treasure Inventory ----------
+    // ---------- Treasures ----------
     function refreshTreasures() {
       const listDiv = document.getElementById("treasureList");
       listDiv.innerHTML = "";
@@ -435,7 +470,6 @@
         return;
       }
       const data = equipmentTypes[equipName];
-      // For magic weapons (affects_initial), only one allowed
       if (data.affects_initial) {
         for (const eqp of Object.values(equipped)) {
           if (eqp.affects_initial) {
@@ -450,7 +484,6 @@
       }
       equipped[equipName] = data;
       refreshEquipped();
-      // Apply effects:
       if (data.potion) {
         if (equipName === "Potion of Skill") {
           skill = initialSkill;
@@ -465,22 +498,24 @@
           alert("Potion of Fortune used: Luck restored to initial value and increased by 1.");
         }
       } else {
-        // Normal equipment
+        const bonusSkill = data.skill || 0;
+        const bonusStam = data.stamina || 0;
+        const bonusLuck = data.luck || 0;
         if (data.affects_initial) {
-          initialSkill += data.skill;
-          skill += data.skill;
+          initialSkill += bonusSkill;
+          skill += bonusSkill;
         } else {
-          skill = Math.min(skill + data.skill, initialSkill);
+          skill = Math.min(skill + bonusSkill, initialSkill);
         }
-        maxStamina += data.stamina;
-        stamina = Math.min(stamina + data.stamina, maxStamina);
-        luck = Math.min(luck + data.luck, initialLuck);
+        maxStamina += bonusStam;
+        stamina = Math.min(stamina + bonusStam, maxStamina);
+        luck = Math.min(luck + bonusLuck, initialLuck);
       }
       updateAttributes();
       alert(`${equipName} equipped. Stats updated.`);
     }
 
-    // ---------- Enemy Setup and Battle ----------
+    // ---------- Enemy Setup & Battle ----------
     function refreshEnemySelect() {
       const enemySelect = document.getElementById("enemySelect");
       enemySelect.innerHTML = "";
@@ -517,7 +552,7 @@
       listDiv.innerHTML = "";
       enemies.forEach((e, idx) => {
         const div = document.createElement("div");
-        div.innerText = `${idx+1}. ${e.name}: ${e.stamina} HP`;
+        div.innerText = `${idx + 1}. ${e.name}: ${e.stamina} HP`;
         listDiv.appendChild(div);
       });
     }
@@ -535,7 +570,6 @@
         return;
       }
       let log = "";
-      // For each enemy, simulate a battle round
       enemies = enemies.filter(enemy => {
         const playerRoll = randDie() + randDie();
         const enemyRoll = randDie() + randDie();
@@ -603,11 +637,10 @@
 
     // ---------- Movement / Map ----------
     function move(direction) {
-      const moves = { "Up": [0,-1], "Down": [0,1], "Left": [-1,0], "Right": [1,0] };
+      const moves = { "Up": [0, -1], "Down": [0, 1], "Left": [-1, 0], "Right": [1, 0] };
       const [dx, dy] = moves[direction];
       position[0] += dx;
       position[1] += dy;
-      // Add new position if not already in history
       if (!history.some(p => p[0] === position[0] && p[1] === position[1])) {
         history.push([position[0], position[1]]);
       }
@@ -623,13 +656,11 @@
         ctx.fillStyle = "#555";
         ctx.fillRect(offset[0] + p[0]*scale, offset[1] + p[1]*scale, scale, scale);
       });
-      // Draw player's current position in blue
       ctx.fillStyle = "blue";
       ctx.fillRect(offset[0] + position[0]*scale, offset[1] + position[1]*scale, scale, scale);
     }
 
     // ---------- Initialization ----------
-    // Populate consumable and treasure select boxes and enemy select box
     function initSelects() {
       const consumableSelect = document.getElementById("consumableSelect");
       consumableSelect.innerHTML = "";
@@ -665,7 +696,6 @@
       }
     }
 
-    // Set up event listeners
     window.onload = function() {
       initSelects();
       document.getElementById("rollStatsBtn").onclick = rollAttributes;
