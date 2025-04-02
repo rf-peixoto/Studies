@@ -8,6 +8,15 @@ http://127.0.0.1:8000/jpgmulreq/1/image.jpg?key=&lq=1
 intitle:"index of" "web.config"
 inurl:"web.config" ext:config
 
+# APK marketplaces/stores:
+("download" | "free download") ("apk" | "ipa" | "android app" | "ios app") ("marketplace" | "store" | "hub") -site:play.google.com -site:apple.com
+intitle:index.of (apk | ipa) ("android" | "ios") (download | app)
+("apk download" | "apk free") ("store" | "market") inurl:apk -site:play.google.com
+inurl:apk ("free download" | "latest version") ("android" | "app") -site:google.com
+("top 10" | "best" | "list of") ("apk sites" | "android app stores") -site:android.com
+filetype:apk OR filetype:ipa ("download" | "android app") -site:play.google.com -site:apple.com
+
+
 # Python webapps:
 (inurl:"gradio" | inurl:"streamlit") ("keyword1" | "keyword2")
 
