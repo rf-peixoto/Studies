@@ -25,7 +25,7 @@ duckduckgo_results = []
 # === Search Loop ===
 for dork in dorks:
     for keyword in keywords:
-        query = f"{dork} {keyword}"
+        query = f'{dork} "{keyword}"'
         print(f"[SerpAPI] Searching: {query}")
         # SerpAPI query
         try:
