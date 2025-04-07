@@ -1,0 +1,12 @@
+{
+  "assetfinder_cmd": "assetfinder",
+  "nuclei_cmd": "nuclei",
+  "nmap_cmd": "nmap",
+  "shodan_endpoint": "https://internetdb.shodan.io",
+  "batch_word_limit": 50,
+  "llm_model": "deepseek-r1-distill-qwen-7b",
+  "llm_temperature": 0.7,
+  "llm_max_tokens": -1,
+  "retry_attempts": 3,
+  "retry_delay": 2
+}
