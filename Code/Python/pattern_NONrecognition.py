@@ -59,7 +59,25 @@ def validate_encoding(byte_seq: bytes, encoding: str) -> bool:
 def hash_bytes(byte_seq: List[int]) -> str:
     return hashlib.sha256(bytes(byte_seq)).hexdigest()
 
-def generate_patterns(count: int, must_be_valid: List[str], must_be_invalid: List[str], retry: int = 0, avoid_duplicates: bool = True) -> List[Dict]:
+def classify_pattern(byte_seq: List[int]) -> str:
+    if any(b in (0xC0, 0xC1) for b in byte_seq):
+        return "overlong"
+    if any(b > 0xF4 for b in byte_seq):
+        return "out-of-range"
+    if 0x1B in byte_seq:
+        return "escape-sequence"
+    if any(b == 0xFF for b in byte_seq):
+        return "padding/jamming"
+    return "mixed"
+
+def mutate_pattern(byte_seq: List[int], count: int = 2) -> List[int]:
+    seq = byte_seq[:]
+    for _ in range(count):
+        idx = random.randint(0, len(seq)-1)
+        seq[idx] = random.randint(0x00, 0xFF)
+    return seq
+
+def generate_patterns(count: int, must_be_valid: List[str], must_be_invalid: List[str], retry: int = 0, avoid_duplicates: bool = True, enable_mutation: bool = False, target_size: int = 0) -> List[Dict]:
     seen_hashes = set()
     patterns = []
     while len(patterns) < count:
@@ -74,8 +92,16 @@ def generate_patterns(count: int, must_be_valid: List[str], must_be_invalid: Lis
             selected_bytes += random.choice(seqs)
 
         unique_bytes = list(dict.fromkeys(selected_bytes))
-        hashed = hash_bytes(unique_bytes)
 
+        if enable_mutation:
+            unique_bytes = mutate_pattern(unique_bytes)
+
+        if target_size > 0:
+            while len(unique_bytes) < target_size:
+                unique_bytes.append(random.randint(0x00, 0xFF))
+            unique_bytes = unique_bytes[:target_size]
+
+        hashed = hash_bytes(unique_bytes)
         if avoid_duplicates and hashed in seen_hashes:
             continue
 
@@ -91,7 +117,8 @@ def generate_patterns(count: int, must_be_valid: List[str], must_be_invalid: Lis
             "hex": " ".join(f"{b:02X}" for b in unique_bytes),
             "invalid_in": sorted(invalids),
             "invalid_count": len(invalids),
-            "validation_results": validation
+            "validation_results": validation,
+            "signature": classify_pattern(unique_bytes)
         })
 
     patterns.sort(key=lambda x: x["invalid_count"], reverse=True)
@@ -111,13 +138,15 @@ def main():
     parser.add_argument("--output", type=str, default="patterns.json", help="Output JSON file.")
     parser.add_argument("--retry", type=int, default=0, help="Retry generation until a pattern breaks at least this many encodings.")
     parser.add_argument("--binary-dump", type=str, default=None, help="Folder to save patterns as raw binary files.")
+    parser.add_argument("--mutate", action="store_true", help="Enable mutation of base patterns.")
+    parser.add_argument("--size", type=int, default=6, help="Target byte size of each pattern.")
 
     args = parser.parse_args()
 
-    patterns = generate_patterns(args.count, args.valid_in, args.invalid_in, retry=args.retry)
+    patterns = generate_patterns(args.count, args.valid_in, args.invalid_in, retry=args.retry, enable_mutation=args.mutate, target_size=args.size)
 
     for idx, entry in enumerate(patterns, 1):
-        print(f"Pattern {idx}: {COLORS['red']}{entry['hex']}{COLORS['reset']}")
+        print(f"Pattern {idx}: {COLORS['red']}{entry['hex']}{COLORS['reset']} | Signature: {COLORS['green']}{entry['signature']}{COLORS['reset']}")
         print(f"  Invalid in: {COLORS['green']}{', '.join(entry['invalid_in'])}{COLORS['reset']}")
 
     with open(args.output, "w") as f:
