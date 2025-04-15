@@ -108,3 +108,11 @@ separator "SUMMARY"
 log "All scenarios executed. Check $TEST_DIR/$LOG for details."
 
 echo -e "\n[✔] Test suite completed."
+
+# =================== SCENARIO 7 ===================
+separator "Removing Test Keys"
+gpg --batch --yes --delete-secret-keys "Legit User"
+gpg --batch --yes --delete-keys "Legit User"
+gpg --batch --yes --delete-secret-keys "Short Key"
+gpg --batch --yes --delete-keys "Short Key"
+
