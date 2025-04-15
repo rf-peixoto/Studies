@@ -109,10 +109,14 @@ log "All scenarios executed. Check $TEST_DIR/$LOG for details."
 
 echo -e "\n[✔] Test suite completed."
 
-# =================== SCENARIO 7 ===================
-separator "Removing Test Keys"
-gpg --batch --yes --delete-secret-keys "Legit User"
-gpg --batch --yes --delete-keys "Legit User"
-gpg --batch --yes --delete-secret-keys "Short Key"
-gpg --batch --yes --delete-keys "Short Key"
+# =================== CLEANUP ===================
+separator "CLEANUP"
 
+log "Deleting generated test keys..."
+
+for uid in "Legit User" "Malicious Actor" "Short Key"; do
+    gpg --batch --yes --delete-secret-keys "$uid" >> "$LOG" 2>&1 || true
+    gpg --batch --yes --delete-keys "$uid" >> "$LOG" 2>&1 || true
+done
+
+log "Cleanup complete. All test keys removed."
