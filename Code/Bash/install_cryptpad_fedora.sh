@@ -40,7 +40,7 @@ sudo -u "$CP_USER" mkdir -p "$BASE_DIR"
 
 # Clone repo
 echo "[*] Cloning CryptPad repository..."
-sudo -u "$CP_USER" git clone https://github.com/xwiki-labs/cryptpad.git "$BASE_DIR"
+sudo -u "$CP_USER" git clone https://github.com/cryptpad/cryptpad.git "$BASE_DIR"
 
 # Podman container creation
 echo "[*] Building Podman container..."
