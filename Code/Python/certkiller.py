@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 
 # requirements.txt
+#tlslite-ng==0.8.2        # pure-Python TLS library
+#cryptography==44.0.3     # cryptographic primitives
+#pyecm==0.0.3             # Elliptic-curve factorization
+#gmpy2==2.2.1             # GMP multiple-precision support
 
 
 """
