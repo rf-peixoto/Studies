@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
-"""
-certkiller.py: Minimalistic, extensible PoC scanner for legacy TLS weaknesses.
 
-When a vulnerability is detected, prints a mini technical report to the terminal.
+# requirements.txt
+
+
+"""
+certkiller.py: Minimalistic, extensible PoC scanner for legacy TLS weaknesses,
+including a real Bleichenbacher (ROBOT) oracle check via robot-detect.
 
 Tests implemented:
   - FREAK     : EXPORT-RSA downgrade & key factoring (pyecm)
@@ -12,11 +15,11 @@ Tests implemented:
   - Sweet32   : 3DES support in TLS 1.2
   - DROWN     : SSL 2.0 support
   - Logjam    : DHE_EXPORT support (export DH)
-  - ROBOT     : RSA key-exchange support (potential Bleichenbacher risk)
+  - ROBOT     : Bleichenbacher RSA padding oracle test (via robot-detect)
 
 Usage:
   python3 certkiller.py example.com
-  python3 certkiller.py example.com --only freak,logjam
+  python3 certkiller.py example.com --only freak,robot
   python3 certkiller.py example.com -t "BASE64_IV||CIPHERTEXT"
 """
 
@@ -49,22 +52,20 @@ SUPPORTED_TESTS = [
 # ───── Utility Functions ─────
 
 def prf_tls10(secret: bytes, label: bytes, seed: bytes, size: int) -> bytes:
-    """
-    TLS 1.0 PRF per RFC2246: P_MD5 XOR P_SHA1
-    """
-    def p_hash(hash_mod, secret_part, data, out_len):
+    """TLS 1.0 PRF per RFC2246: P_MD5 XOR P_SHA1."""
+    def p_hash(hash_cls, secret_part, data, out_len):
         result = b""
         A = data
         while len(result) < out_len:
-            A = hmac.HMAC(secret_part, A, hash_mod(), backend=default_backend()).finalize()
-            result += hmac.HMAC(secret_part, A + data, hash_mod(), backend=default_backend()).finalize()
+            A = hmac.HMAC(secret_part, A, hash_cls(), backend=default_backend()).finalize()
+            result += hmac.HMAC(secret_part, A + data, hash_cls(), backend=default_backend()).finalize()
         return result[:out_len]
 
     half = len(secret) // 2
     S1, S2 = secret[:half], secret[half:]
     md5_bytes  = p_hash(hashes.MD5,  S1, label + seed, size)
     sha1_bytes = p_hash(hashes.SHA1, S2, label + seed, size)
-    return bytes(x ^ y for x, y in zip(md5_bytes, sha1_bytes))
+    return bytes(a ^ b for a, b in zip(md5_bytes, sha1_bytes))
 
 def derive_tls10_master(pre_master, client_rand, server_rand):
     return prf_tls10(pre_master, b"master secret", client_rand + server_rand, 48)
@@ -100,48 +101,35 @@ def build_private_key(p, q):
     return priv_nums.private_key(default_backend())
 
 def print_report(label, host, port, cmd, output):
-    """
-    Print a mini technical report for a vulnerable openssl test.
-    """
+    """Print a mini technical report for a vulnerable test."""
     now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    proto_line = None
-    cipher_line = None
+    proto, cipher = None, None
     for line in output.splitlines():
         if line.strip().startswith("Protocol"):
-            proto_line = line.split(":",1)[1].strip()
+            proto = line.split(":", 1)[1].strip()
         if line.strip().startswith("Cipher"):
-            cipher_line = line.split(":",1)[1].strip()
+            cipher = line.split(":", 1)[1].strip()
 
     print(f"\n=== [{label}] VULNERABILITY REPORT ===")
-    print(f"Timestamp         : {now}")
-    print(f"Target            : {host}:{port}")
-    print(f"Test              : {label}")
-    print(f"Openssl Command   : {' '.join(cmd)}")
-    if proto_line:
-        print(f"Negotiated Protocol: {proto_line}")
-    if cipher_line:
-        print(f"Negotiated Cipher  : {cipher_line}")
-    print("Handshake Output Snippet:")
-    snippet = output.splitlines()[:10]
-    for ln in snippet:
-        print("    " + ln)
+    print(f"Timestamp           : {now}")
+    print(f"Target              : {host}:{port}")
+    print(f"Test                : {label}")
+    print(f"Command             : {' '.join(cmd)}")
+    if proto:
+        print(f"Negotiated Protocol : {proto}")
+    if cipher:
+        print(f"Negotiated Cipher   : {cipher}")
+    print("Output Snippet:")
+    for ln in output.splitlines()[:10]:
+        print("   " + ln)
     print("=== End of Report ===\n")
 
 def test_openssl(host, port, proto, cipher, label):
-    """
-    Attempt an openssl handshake. On vulnerability, print a report.
-    Returns True if vulnerable, False if not, None on error.
-    """
-    cmd = [
-        OPENSSL_BIN, "s_client",
-        "-connect", f"{host}:{port}",
-        proto, "-cipher", cipher
-    ]
+    """Attempt an openssl handshake; on vuln, print report."""
+    cmd = [OPENSSL_BIN, "s_client", "-connect", f"{host}:{port}", proto, "-cipher", cipher]
     try:
-        proc = subprocess.run(
-            cmd, input="Q\n", text=True,
-            capture_output=True, timeout=TIMEOUT
-        )
+        proc = subprocess.run(cmd, input="Q\n", text=True,
+                              capture_output=True, timeout=TIMEOUT)
     except Exception as e:
         print(f"[?] {label}: test error ({e})")
         return None
@@ -157,7 +145,7 @@ def test_openssl(host, port, proto, cipher, label):
 # ───── Test Implementations ─────
 
 def run_freak(host, port, token):
-    """EXPORT-RSA → factor → derive master secret → optional decrypt."""
+    """EXPORT-RSA → factor → derive master-secret → optional decrypt."""
     try:
         sock = socket.create_connection((host, port))
         settings = HandshakeSettings()
@@ -206,7 +194,23 @@ def run_logjam(host, port, _):
     test_openssl(host, port, "-tls1", "EXP-EDH-RSA-DES-CBC-SHA", "Logjam (DHE_EXPORT)")
 
 def run_robot(host, port, _):
-    test_openssl(host, port, "-tls1_2", "AES256-SHA", "ROBOT (RSA key-exchange)")
+    """
+    Run a true Bleichenbacher oracle test via the 'robot-detect' tool.
+    Requires 'robot-detect' in your PATH.
+    """
+    cmd = ["robot-detect", host, str(port)]
+    print(f"[*] ROBOT: invoking {' '.join(cmd)}")
+    try:
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+    except Exception as e:
+        print(f"[?] ROBOT: test error ({e})")
+        return
+
+    out = proc.stdout + proc.stderr
+    if "NOT VULNERABLE" in out:
+        print("[*] ROBOT: no padding oracle detected → not vulnerable")
+    else:
+        print_report("ROBOT (Bleichenbacher oracle)", host, port, cmd, out)
 
 # ───── Main ─────
 
@@ -216,35 +220,31 @@ def main():
     )
     parser.add_argument("domain", help="Target host or IP")
     parser.add_argument("-p","--port", type=int, default=443)
-    parser.add_argument(
-        "-t","--token",
-        help="Base64 IV||ciphertext to decrypt (FREAK only)"
-    )
-    parser.add_argument(
-        "--only",
-        help="Comma-separated list of tests to run: " + ",".join(SUPPORTED_TESTS)
-    )
+    parser.add_argument("-t","--token",
+        help="Base64 IV||ciphertext to decrypt (FREAK only)")
+    parser.add_argument("--only",
+        help="Comma-separated list of tests: " + ",".join(SUPPORTED_TESTS))
     args = parser.parse_args()
 
     host, port, token = args.domain, args.port, args.token
     run_list = args.only.split(",") if args.only else SUPPORTED_TESTS
 
     tests = []
-    if "freak"   in run_list: tests.append(("freak",   run_freak,  (host, port, token)))
-    if "beast"   in run_list: tests.append(("beast",   test_openssl, (host, port, "-tls1",   "AES128-SHA",   "BEAST (TLS1.0 CBC)")))
-    if "poodle"  in run_list: tests.append(("poodle",  test_openssl, (host, port, "-ssl3",    "ALL",          "POODLE (SSL 3.0)")))
-    if "rc4"     in run_list: tests.append(("rc4",     test_openssl, (host, port, "-tls1_2", "RC4-SHA",      "RC4 (TLS 1.2)")))
-    if "sweet32" in run_list: tests.append(("sweet32", test_openssl, (host, port, "-tls1_2", "DES-CBC3-SHA", "Sweet32 (3DES TLS 1.2)")))
-    if "drown"   in run_list: tests.append(("drown",   test_openssl, (host, port, "-ssl2",    "ALL",          "DROWN (SSL 2.0)")))
-    if "logjam"  in run_list: tests.append(("logjam",  run_logjam, (host, port, None)))
-    if "robot"   in run_list: tests.append(("robot",   run_robot,  (host, port, None)))
+    if "freak"   in run_list: tests.append(("freak",   run_freak, (host,port,token)))
+    if "beast"   in run_list: tests.append(("beast",   test_openssl, (host,port,"-tls1","AES128-SHA","BEAST (TLS1.0 CBC)")))
+    if "poodle"  in run_list: tests.append(("poodle",  test_openssl, (host,port,"-ssl3","ALL","POODLE (SSL 3.0)")))
+    if "rc4"     in run_list: tests.append(("rc4",     test_openssl, (host,port,"-tls1_2","RC4-SHA","RC4 (TLS 1.2)")))
+    if "sweet32" in run_list: tests.append(("sweet32", test_openssl, (host,port,"-tls1_2","DES-CBC3-SHA","Sweet32 (3DES TLS 1.2)")))
+    if "drown"   in run_list: tests.append(("drown",   test_openssl, (host,port,"-ssl2","ALL","DROWN (SSL 2.0)")))
+    if "logjam"  in run_list: tests.append(("logjam",  run_logjam,   (host,port,None)))
+    if "robot"   in run_list: tests.append(("robot",   run_robot,    (host,port,None)))
 
     with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
         for future in as_completed({
             executor.submit(func, *params): name
             for name, func, params in tests
         }):
-            pass  # tests themselves print reports
+            pass  # each test prints its own output
 
 if __name__ == "__main__":
     main()
