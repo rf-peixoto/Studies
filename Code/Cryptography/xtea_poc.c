@@ -1,3 +1,6 @@
+// gcc -std=c11 -O2 -o xtea_poc xtea_poc.c
+
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
