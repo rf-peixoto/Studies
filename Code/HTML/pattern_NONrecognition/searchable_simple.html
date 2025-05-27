@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pattern JSON Visualizer</title>
+  <style>
+    :root {
+      --bg: #121212;
+      --fg: #e0e0e0;
+      --panel-bg: #1e1e1e;
+      --border: #333;
+      --gap: 1rem;
+      --pad: 1rem;
+    }
+    body {
+      margin: 0;
+      padding: var(--pad);
+      background: var(--bg);
+      color: var(--fg);
+      font-family: sans-serif;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: var(--pad);
+    }
+    #fileInput {
+      background: none;
+      border: 1px solid var(--fg);
+      color: var(--fg);
+      padding: 0.25rem 0.5rem;
+    }
+    #filterPanel {
+      background: var(--panel-bg);
+      border: 1px solid var(--border);
+      padding: var(--pad);
+      margin-bottom: var(--pad);
+      border-radius: 4px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: var(--gap);
+    }
+    #filterPanel label {
+      display: block;
+      font-size: 0.9rem;
+      margin-bottom: 0.25rem;
+    }
+    #filterPanel input[type="text"],
+    #filterPanel input[type="number"],
+    #filterPanel select {
+      width: 100%;
+      padding: 0.25rem;
+      background: none;
+      border: 1px solid var(--fg);
+      color: var(--fg);
+      border-radius: 2px;
+    }
+    #filterPanel .checkbox-list {
+      max-height: 150px;
+      overflow-y: auto;
+      border: 1px solid var(--border);
+      padding: 0.25rem;
+      border-radius: 2px;
+    }
+    #summary {
+      display: flex;
+      gap: var(--gap);
+      margin-bottom: var(--pad);
+    }
+    #summary p {
+      margin: 0;
+    }
+    .container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: var(--gap);
+      margin-bottom: var(--pad);
+    }
+    .chart-container {
+      background: var(--panel-bg);
+      padding: var(--pad);
+      border-radius: 4px;
+    }
+    .chart-container canvas {
+      width: 100%;
+      height: 300px;
+    }
+    #items {
+      margin-top: var(--pad);
+    }
+    #items h2 {
+      margin-bottom: 0.5rem;
+      font-size: 1.1rem;
+    }
+    #itemList {
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    #itemList details {
+      background: var(--panel-bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      margin-bottom: 0.5rem;
+      padding: 0.5rem;
+    }
+    #itemList summary {
+      cursor: pointer;
+      font-weight: bold;
+      outline: none;
+    }
+    #itemList dl {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 0.25rem 0.5rem;
+      margin: 0.5rem 0 0 0;
+    }
+    #itemList dt { font-weight: bold; }
+    #itemList dd { margin: 0; word-break: break-all; }
+    #itemList ul { margin: 0.5rem 0 0 1.25rem; padding: 0; }
+    #itemList li { list-style: disc; margin: 0; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <header>
+    <h1>Pattern JSON Visualizer</h1>
+    <input type="file" id="fileInput" accept=".json">
+  </header>
+
+  <!-- Filter & Search Panel -->
+  <div id="filterPanel" hidden>
+    <div>
+      <label for="searchInput">Search (hex, shellcode, signature, hash)</label>
+      <input type="text" id="searchInput" placeholder="Type to search…">
+    </div>
+    <div>
+      <label>Encoding filters (invalid in)</label>
+      <div class="checkbox-list" id="encodingFilters"></div>
+    </div>
+    <div>
+      <label>Signature filters</label>
+      <div class="checkbox-list" id="signatureFilters"></div>
+    </div>
+    <div>
+      <label for="minSize">Min Size</label>
+      <input type="number" id="minSize" min="0" placeholder="0">
+    </div>
+    <div>
+      <label for="maxSize">Max Size</label>
+      <input type="number" id="maxSize" min="0" placeholder="∞">
+    </div>
+    <div>
+      <label for="minInvalid">Min Invalid Count</label>
+      <input type="number" id="minInvalid" min="0" placeholder="0">
+    </div>
+    <div>
+      <label>Only with errors</label>
+      <input type="checkbox" id="hasErrors">
+    </div>
+  </div>
+
+  <div id="summary"></div>
+
+  <div class="container">
+    <div class="chart-container"><canvas id="sizeChart"></canvas></div>
+    <div class="chart-container"><canvas id="invalidCountChart"></canvas></div>
+    <div class="chart-container"><canvas id="signatureChart"></canvas></div>
+    <div class="chart-container"><canvas id="encodingChart"></canvas></div>
+  </div>
+
+  <section id="items">
+    <h2>Pattern Details</h2>
+    <div id="itemList"></div>
+  </section>
+
+  <script>
+    let originalData = [];
+    const fileInput = document.getElementById('fileInput');
+    const filterPanel = document.getElementById('filterPanel');
+
+    fileInput.addEventListener('change', e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          originalData = JSON.parse(reader.result);
+        } catch {
+          alert('Invalid JSON file.');
+          return;
+        }
+        // show filters
+        filterPanel.hidden = false;
+        setupFilters(originalData);
+        applyFilters();  // initial render
+      };
+      reader.readAsText(file);
+    });
+
+    // Build filter controls based on data
+    function setupFilters(data) {
+      const encSet = new Set();
+      const sigSet = new Set();
+      data.forEach(item => {
+        item.invalid_in.forEach(enc => encSet.add(enc));
+        sigSet.add(item.signature);
+      });
+      populateCheckboxList('encodingFilters', [...encSet].sort());
+      populateCheckboxList('signatureFilters', [...sigSet].sort());
+      // attach listeners
+      const controls = Array.from(filterPanel.querySelectorAll('input'));
+      controls.forEach(ctrl => ctrl.addEventListener('input', applyFilters));
+    }
+
+    function populateCheckboxList(containerId, items) {
+      const container = document.getElementById(containerId);
+      container.innerHTML = '';
+      items.forEach(val => {
+        const id = `${containerId}_${val.replace(/\W/g,'')}`;
+        const label = document.createElement('label');
+        label.style.display = 'block';
+        label.innerHTML = `<input type="checkbox" value="${val}" class="${containerId.slice(0,-1)}-filter" id="${id}"> ${val}`;
+        container.appendChild(label);
+      });
+    }
+
+    // Gather filter values and re-render
+    function applyFilters() {
+      const term = document.getElementById('searchInput').value.trim().toLowerCase();
+      const selectedEnc = getCheckedValues('encoding-filter');
+      const selectedSig = getCheckedValues('signature-filter');
+      const minSize = parseInt(document.getElementById('minSize').value) || 0;
+      const maxSize = parseInt(document.getElementById('maxSize').value) || Infinity;
+      const minInvalid = parseInt(document.getElementById('minInvalid').value) || 0;
+      const onlyErrors = document.getElementById('hasErrors').checked;
+
+      const filtered = originalData.filter(item => {
+        // search across multiple fields
+        if (term) {
+          const haystack = [item.hex, item.shellcode, item.signature, item.hash].join(' ').toLowerCase();
+          if (!haystack.includes(term)) return false;
+        }
+        // size
+        if (item.size < minSize || item.size > maxSize) return false;
+        // invalid count
+        if (item.invalid_count < minInvalid) return false;
+        // signature
+        if (selectedSig.length && !selectedSig.includes(item.signature)) return false;
+        // encoding
+        if (selectedEnc.length && !item.invalid_in.some(enc => selectedEnc.includes(enc))) return false;
+        // error details
+        if (onlyErrors && (!item.error_details || !Object.keys(item.error_details).length)) return false;
+        return true;
+      });
+
+      render(filtered);
+      renderItems(filtered);
+    }
+
+    function getCheckedValues(cls) {
+      return Array.from(document.querySelectorAll(`.${cls}:checked`)).map(cb => cb.value);
+    }
+
+    // existing render functions, unchanged
+    function render(data) {
+      const total      = data.length;
+      const avgSize    = total ? (data.reduce((sum,p)=>sum+p.size,0)/total).toFixed(2) : 0;
+      const avgInvalid = total ? (data.reduce((sum,p)=>sum+p.invalid_count,0)/total).toFixed(2) : 0;
+      document.getElementById('summary').innerHTML = `
+        <p>Total patterns: ${total}</p>
+        <p>Average size: ${avgSize} bytes</p>
+        <p>Average invalid count: ${avgInvalid}</p>
+      `;
+
+      const sizeDist      = aggregate(data,'size');
+      const invalidDist   = aggregate(data,'invalid_count');
+      const sigDist       = aggregate(data,'signature');
+      const encDist       = aggregateEncodings(data);
+
+      drawChart('sizeChart', 'bar', {
+        labels: Object.keys(sizeDist), datasets: [{ label:'Patterns', data:Object.values(sizeDist) }]
+      });
+      drawChart('invalidCountChart','bar', {
+        labels:Object.keys(invalidDist), datasets:[{ label:'Patterns', data:Object.values(invalidDist)}]
+      });
+      drawChart('signatureChart','pie', {
+        labels:Object.keys(sigDist), datasets:[{ data:Object.values(sigDist)}]
+      });
+      const topEnc = Object.entries(encDist).sort((a,b)=>b[1]-a[1]).slice(0,10);
+      drawChart('encodingChart','bar',{
+        labels:topEnc.map(e=>e[0]), datasets:[{ label:'Failures', data:topEnc.map(e=>e[1]) }]
+      });
+    }
+
+    function renderItems(data) {
+      const itemList = document.getElementById('itemList');
+      itemList.innerHTML = '';
+      data.forEach((item,idx) => {
+        const d = document.createElement('details');
+        const s = document.createElement('summary');
+        s.textContent = `#${idx+1}: ${item.hex} — ${item.signature}`;
+        d.appendChild(s);
+        const dl = document.createElement('dl');
+        addEntry(dl,'Size', item.size);
+        addEntry(dl,'Invalid Count', item.invalid_count);
+        addEntry(dl,'Invalid In', item.invalid_in.join(', '));
+        addEntry(dl,'Shellcode', item.shellcode);
+        addEntry(dl,'Hash', item.hash);
+        if (item.error_details && Object.keys(item.error_details).length) {
+          const div = document.createElement('div');
+          div.innerHTML = `<strong>Error Details:</strong><ul>${
+            Object.entries(item.error_details)
+                  .map(([e,err])=>`<li>${e}: ${err}</li>`).join('')
+          }</ul>`;
+          d.appendChild(div);
+        }
+        d.appendChild(dl);
+        itemList.appendChild(d);
+      });
+    }
+
+    function addEntry(dl, term, val) {
+      const dt = document.createElement('dt'); dt.textContent = term;
+      const dd = document.createElement('dd'); dd.textContent = val;
+      dl.appendChild(dt); dl.appendChild(dd);
+    }
+    function aggregate(data, key) {
+      return data.reduce((acc,it)=>{ acc[it[key]]=(acc[it[key]]||0)+1; return acc },{});
+    }
+    function aggregateEncodings(data) {
+      return data.reduce((acc,it)=>{
+        it.invalid_in.forEach(enc=>acc[enc]=(acc[enc]||0)+1);
+        return acc;
+      },{});
+    }
+    function drawChart(id, type, chartData) {
+      const ctx = document.getElementById(id).getContext('2d');
+      new Chart(ctx, {
+        type: type,
+        data: chartData,
+        options: {
+          responsive: true,
+          plugins: { legend: { labels: { color: '#e0e0e0' } } },
+          scales: {
+            x: { ticks: { color: '#e0e0e0' }, grid: { color: '#333' } },
+            y: { ticks: { color: '#e0e0e0' }, grid: { color: '#333' } }
+          }
+        }
+      });
+    }
+  </script>
+</body>
+</html>
