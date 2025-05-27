@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pattern JSON Visualizer — Industrial Edition</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #1a1a1a;
+      --panel-bg: #2e2e2e;
+      --fg-light: #d0d0d0;
+      --accent-metal: #8d99ae;
+      --accent-rust: #a83232;
+      --border-metal: #555;
+      --pad: 1rem;
+      --gap: 1rem;
+      --chart-height: 300px;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background-color: var(--bg-dark);
+      color: var(--fg-light);
+      font-family: 'Roboto Mono', monospace;
+      padding: var(--pad);
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 2px solid var(--border-metal);
+      padding-bottom: var(--pad);
+      margin-bottom: var(--pad);
+    }
+    header h1 {
+      font-weight: 700;
+      font-size: 1.5rem;
+      letter-spacing: 1px;
+      color: var(--accent-metal);
+      text-transform: uppercase;
+    }
+    #fileInput {
+      background: none;
+      border: 1px solid var(--accent-rust);
+      color: var(--fg-light);
+      padding: 0.5rem 1rem;
+      cursor: pointer;
+      transition: background 0.2s, box-shadow 0.2s;
+    }
+    #fileInput:hover {
+      background: rgba(168,50,50,0.2);
+      box-shadow: 0 0 8px var(--accent-rust);
+    }
+    #summary {
+      display: flex;
+      gap: var(--gap);
+      margin-bottom: var(--pad);
+    }
+    #summary p {
+      background-color: var(--panel-bg);
+      border-left: 4px solid var(--accent-metal);
+      padding: 0.5rem var(--gap);
+      flex: 1;
+    }
+    .container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px,1fr));
+      gap: var(--gap);
+      margin-bottom: var(--pad);
+    }
+    .chart-container {
+      background-color: var(--panel-bg);
+      border: 1px solid var(--border-metal);
+      border-radius: 2px;
+      padding: var(--pad);
+    }
+    .chart-container canvas {
+      width: 100%;
+      height: var(--chart-height);
+    }
+    #items {
+      margin-top: var(--pad);
+    }
+    #items h2 {
+      font-size: 1.25rem;
+      color: var(--accent-rust);
+      margin-bottom: 0.5rem;
+      border-bottom: 1px solid var(--border-metal);
+      padding-bottom: 0.5rem;
+    }
+    #itemList {
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    #itemList details {
+      background-color: var(--panel-bg);
+      border-left: 4px solid var(--accent-rust);
+      margin-bottom: 0.5rem;
+      padding: 0.5rem;
+    }
+    #itemList summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--accent-metal);
+      outline: none;
+    }
+    #itemList summary::-webkit-details-marker { display: none; }
+    #itemList summary:before {
+      content: '► ';
+      transition: transform 0.2s;
+    }
+    #itemList details[open] summary:before {
+      transform: rotate(90deg);
+    }
+    #itemList dl {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 0.25rem 0.5rem;
+      margin-top: 0.5rem;
+    }
+    #itemList dt {
+      color: var(--accent-metal);
+    }
+    #itemList dd {
+      word-break: break-all;
+    }
+    #itemList ul {
+      margin: 0.5rem 0 0 1.5rem;
+      list-style: disc inside;
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      Chart.defaults.color = getComputedStyle(document.documentElement).getPropertyValue('--fg-light').trim();
+      Chart.defaults.font.family = "'Roboto Mono', monospace";
+    });
+  </script>
+</head>
+<body>
+  <header>
+    <h1>Pattern JSON Visualizer</h1>
+    <input type="file" id="fileInput" accept=".json">
+  </header>
+
+  <div id="summary"></div>
+
+  <div class="container">
+    <div class="chart-container"><canvas id="sizeChart"></canvas></div>
+    <div class="chart-container"><canvas id="invalidCountChart"></canvas></div>
+    <div class="chart-container"><canvas id="signatureChart"></canvas></div>
+    <div class="chart-container"><canvas id="encodingChart"></canvas></div>
+  </div>
+
+  <section id="items">
+    <h2>Pattern Details</h2>
+    <div id="itemList"></div>
+  </section>
+
+  <script>
+    const fileInput = document.getElementById('fileInput');
+    fileInput.addEventListener('change', e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const data = JSON.parse(reader.result);
+          renderStats(data);
+          renderItems(data);
+        } catch {
+          alert('Invalid JSON file.');
+        }
+      };
+      reader.readAsText(file);
+    });
+
+    function renderStats(data) {
+      const total   = data.length;
+      const avgSize = (data.reduce((s,p) => s + p.size, 0) / total).toFixed(2);
+      const avgInv  = (data.reduce((s,p) => s + p.invalid_count, 0) / total).toFixed(2);
+      document.getElementById('summary').innerHTML = `
+        <p>Total patterns: ${total}</p>
+        <p>Average size: ${avgSize} bytes</p>
+        <p>Average invalid: ${avgInv}</p>
+      `;
+      const sizeDist = aggregate(data, 'size');
+      const invDist  = aggregate(data, 'invalid_count');
+      const sigDist  = aggregate(data, 'signature');
+      const encDist  = aggregateEncodings(data);
+
+      drawChart('sizeChart', 'bar',        Object.keys(sizeDist), Object.values(sizeDist));
+      drawChart('invalidCountChart', 'bar',Object.keys(invDist),  Object.values(invDist));
+      drawChart('signatureChart', 'pie',   Object.keys(sigDist),  Object.values(sigDist));
+      const topEnc = Object.entries(encDist).sort((a,b)=>b[1]-a[1]).slice(0,10);
+      drawChart('encodingChart', 'bar',    topEnc.map(e=>e[0]),  topEnc.map(e=>e[1]));
+    }
+
+    function renderItems(data) {
+      const list = document.getElementById('itemList');
+      list.innerHTML = '';
+      data.forEach((item,i) => {
+        const d = document.createElement('details');
+        const s = document.createElement('summary');
+        s.textContent = `#${i+1}: ${item.hex} — ${item.signature}`;
+        d.appendChild(s);
+        const dl = document.createElement('dl');
+        addEntry(dl, 'Size',          item.size);
+        addEntry(dl, 'Invalid Count', item.invalid_count);
+        addEntry(dl, 'Invalid In',    item.invalid_in.join(', '));
+        addEntry(dl, 'Shellcode',     item.shellcode);
+        addEntry(dl, 'Hash',          item.hash);
+        if (item.error_details && Object.keys(item.error_details).length) {
+          const div = document.createElement('div');
+          div.innerHTML = `<strong>Error Details:</strong><ul>${
+            Object.entries(item.error_details)
+              .map(([e,err]) => `<li>${e}: ${err}</li>`).join('')
+          }</ul>`;
+          d.appendChild(div);
+        }
+        d.appendChild(dl);
+        list.appendChild(d);
+      });
+    }
+
+    function addEntry(dl, term, val) {
+      const dt = document.createElement('dt'),
+            dd = document.createElement('dd');
+      dt.textContent = term; dd.textContent = val;
+      dl.append(dt, dd);
+    }
+
+    function aggregate(data, key) {
+      return data.reduce((acc,p) => {
+        acc[p[key]] = (acc[p[key]]||0) + 1;
+        return acc;
+      }, {});
+    }
+    function aggregateEncodings(data) {
+      return data.reduce((acc,p) => {
+        p.invalid_in.forEach(e => acc[e] = (acc[e]||0) + 1);
+        return acc;
+      }, {});
+    }
+
+    function drawChart(id, type, labels, values) {
+      const ctx = document.getElementById(id).getContext('2d');
+      new Chart(ctx, {
+        type: type,
+        data: {
+          labels: labels,
+          datasets: [{
+            label: type==='pie'? undefined : 'Count',
+            data: values,
+            backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--accent-metal').trim(),
+            borderColor: getComputedStyle(document.documentElement).getPropertyValue('--accent-rust').trim(),
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { labels: { color: getComputedStyle(document.documentElement).getPropertyValue('--fg-light').trim() } }
+          },
+          scales: type==='pie' ? {} : {
+            x: { ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--fg-light').trim() },
+                 grid: { color: getComputedStyle(document.documentElement).getPropertyValue('--border-metal').trim() } },
+            y: { ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--fg-light').trim() },
+                 grid: { color: getComputedStyle(document.documentElement).getPropertyValue('--border-metal').trim() } }
+          }
+        }
+      });
+    }
+  </script>
+</body>
+</html>
