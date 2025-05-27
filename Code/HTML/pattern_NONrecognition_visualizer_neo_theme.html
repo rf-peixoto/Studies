@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pattern JSON Visualizer — Cyberpunk Edition</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      /* Cyberpunk color palette */
+      --bg-gradient: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+      --fg: #39ff14;
+      --accent1: #ff0099;
+      --accent2: #00ffff;
+      --panel-bg: rgba(0,0,0,0.7);
+      --border: #ff0099;
+      --pad: 1rem;
+      --gap: 1rem;
+      --chart-h: 300px;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: var(--bg-gradient);
+      color: var(--fg);
+      font-family: 'Orbitron', monospace;
+      padding: var(--pad);
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: var(--pad);
+    }
+    header h1 {
+      font-size: 1.5rem;
+      color: var(--accent1);
+      text-shadow: 0 0 5px var(--accent1), 0 0 10px var(--accent1);
+    }
+    #fileInput {
+      background: none;
+      border: 1px solid var(--accent2);
+      color: var(--fg);
+      padding: 0.5rem 1rem;
+      font-family: inherit;
+      text-shadow: 0 0 3px var(--accent2);
+      cursor: pointer;
+    }
+    #fileInput:hover {
+      box-shadow: 0 0 8px var(--accent2);
+    }
+    #summary {
+      display: flex;
+      gap: var(--gap);
+      margin-bottom: var(--pad);
+    }
+    #summary p {
+      background: var(--panel-bg);
+      border: 1px solid var(--accent1);
+      border-radius: 4px;
+      padding: 0.5rem var(--gap);
+    }
+    .container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px,1fr));
+      gap: var(--gap);
+      margin-bottom: var(--pad);
+    }
+    .chart-container {
+      background: var(--panel-bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: var(--pad);
+      box-shadow: 0 0 10px var(--accent1);
+    }
+    .chart-container canvas {
+      width: 100%;
+      height: var(--chart-h);
+    }
+    #items {
+      margin-top: var(--pad);
+    }
+    #items h2 {
+      font-size: 1.25rem;
+      color: var(--accent2);
+      text-shadow: 0 0 5px var(--accent2);
+      margin-bottom: 0.5rem;
+    }
+    #itemList {
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    #itemList details {
+      background: var(--panel-bg);
+      border-left: 4px solid var(--accent1);
+      margin-bottom: 0.5rem;
+      padding: 0.5rem;
+    }
+    #itemList summary {
+      cursor: pointer;
+      color: var(--accent2);
+      font-weight: bold;
+      list-style: none;
+    }
+    #itemList summary::-webkit-details-marker { display: none; }
+    #itemList summary:before {
+      content: '▶ ';
+      display: inline-block;
+      transform: rotate(0deg);
+      transition: transform 0.2s;
+    }
+    #itemList details[open] summary:before {
+      transform: rotate(90deg);
+    }
+    #itemList dl {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 0.25rem 0.5rem;
+      margin-top: 0.5rem;
+    }
+    #itemList dt {
+      color: var(--accent1);
+    }
+    #itemList dd {
+      color: var(--fg);
+      word-break: break-all;
+    }
+    #itemList ul {
+      margin: 0.5rem 0 0 1.5rem;
+      padding: 0;
+      list-style: disc inside;
+    }
+    #itemList li { margin: 0; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    // Apply cyberpunk styling to Chart.js
+    document.addEventListener('DOMContentLoaded', () => {
+      Chart.defaults.color = getComputedStyle(document.documentElement).getPropertyValue('--fg').trim();
+      Chart.defaults.font.family = "'Orbitron', monospace";
+    });
+  </script>
+</head>
+<body>
+  <header>
+    <h1>Pattern JSON Visualizer</h1>
+    <input type="file" id="fileInput" accept=".json">
+  </header>
+
+  <div id="summary"></div>
+
+  <div class="container">
+    <div class="chart-container"><canvas id="sizeChart"></canvas></div>
+    <div class="chart-container"><canvas id="invalidCountChart"></canvas></div>
+    <div class="chart-container"><canvas id="signatureChart"></canvas></div>
+    <div class="chart-container"><canvas id="encodingChart"></canvas></div>
+  </div>
+
+  <section id="items">
+    <h2>Pattern Details</h2>
+    <div id="itemList"></div>
+  </section>
+
+  <script>
+    const fileInput = document.getElementById('fileInput');
+    fileInput.addEventListener('change', e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const data = JSON.parse(reader.result);
+          renderStats(data);
+          renderItems(data);
+        } catch {
+          alert('Invalid JSON file.');
+        }
+      };
+      reader.readAsText(file);
+    });
+
+    function renderStats(data) {
+      const total = data.length;
+      const avgSize = (data.reduce((s,p) => s + p.size, 0) / total).toFixed(2);
+      const avgInv = (data.reduce((s,p) => s + p.invalid_count, 0) / total).toFixed(2);
+      document.getElementById('summary').innerHTML = `
+        <p>Total patterns: ${total}</p>
+        <p>Avg size: ${avgSize} bytes</p>
+        <p>Avg invalid count: ${avgInv}</p>
+      `;
+      const sizeDist    = aggregate(data, 'size');
+      const invDist     = aggregate(data, 'invalid_count');
+      const sigDist     = aggregate(data, 'signature');
+      const encDist     = aggregateEncodings(data);
+      drawChart('sizeChart',        'bar',  { labels: Object.keys(sizeDist), data: Object.values(sizeDist) });
+      drawChart('invalidCountChart','bar',  { labels: Object.keys(invDist),  data: Object.values(invDist)  });
+      drawChart('signatureChart',   'pie',  { labels: Object.keys(sigDist),  data: Object.values(sigDist)  });
+      const topEnc = Object.entries(encDist).sort((a,b)=>b[1]-a[1]).slice(0,10);
+      drawChart('encodingChart',    'bar',  { labels: topEnc.map(e=>e[0]),  data: topEnc.map(e=>e[1])    });
+    }
+
+    function renderItems(data) {
+      const list = document.getElementById('itemList');
+      list.innerHTML = '';
+      data.forEach((item,i) => {
+        const d = document.createElement('details');
+        const s = document.createElement('summary');
+        s.textContent = `#${i+1}: ${item.hex} — ${item.signature}`;
+        d.appendChild(s);
+        const dl = document.createElement('dl');
+        addDL(dl, 'Size',          item.size);
+        addDL(dl, 'Invalid Count', item.invalid_count);
+        addDL(dl, 'Invalid In',    item.invalid_in.join(', '));
+        addDL(dl, 'Shellcode',     item.shellcode);
+        addDL(dl, 'Hash',          item.hash);
+        if (item.error_details && Object.keys(item.error_details).length) {
+          const div = document.createElement('div');
+          div.innerHTML = `<strong>Error Details:</strong><ul>${
+            Object.entries(item.error_details)
+              .map(([e,err]) => `<li>${e}: ${err}</li>`).join('')
+          }</ul>`;
+          d.appendChild(div);
+        }
+        d.appendChild(dl);
+        list.appendChild(d);
+      });
+    }
+
+    function addDL(dl, term, val) {
+      const dt = document.createElement('dt'), dd = document.createElement('dd');
+      dt.textContent = term; dd.textContent = val;
+      dl.append(dt, dd);
+    }
+
+    function aggregate(data, key) {
+      return data.reduce((a,p) => {
+        a[p[key]] = (a[p[key]]||0)+1;
+        return a;
+      }, {});
+    }
+    function aggregateEncodings(data) {
+      return data.reduce((a,p) => {
+        p.invalid_in.forEach(e => a[e] = (a[e]||0)+1);
+        return a;
+      }, {});
+    }
+
+    function drawChart(id, type, {labels, data}) {
+      const ctx = document.getElementById(id).getContext('2d');
+      new Chart(ctx, {
+        type: type,
+        data: {
+          labels: labels,
+          datasets: [{
+            label: type==='pie' ? undefined : 'Count',
+            data: data,
+            backgroundColor: type==='pie'
+              ? [getComputedStyle(document.documentElement).getPropertyValue('--accent2').trim(),
+                 getComputedStyle(document.documentElement).getPropertyValue('--accent1').trim(),
+                 getComputedStyle(document.documentElement).getPropertyValue('--fg').trim()]
+              : getComputedStyle(document.documentElement).getPropertyValue('--accent2').trim(),
+            borderColor: getComputedStyle(document.documentElement).getPropertyValue('--accent1').trim(),
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { labels: { color: getComputedStyle(document.documentElement).getPropertyValue('--fg').trim() } }
+          },
+          scales: type==='pie' ? {} : {
+            x: { ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--fg').trim() },
+                 grid: { color: 'rgba(255,255,255,0.1)' } },
+            y: { ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--fg').trim() },
+                 grid: { color: 'rgba(255,255,255,0.1)' } }
+          }
+        }
+      });
+    }
+  </script>
+</body>
+</html>
