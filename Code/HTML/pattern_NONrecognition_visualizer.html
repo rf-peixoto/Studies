@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pattern JSON Visualizer</title>
+  <style>
+    :root {
+      --bg: #121212;
+      --fg: #e0e0e0;
+      --panel-bg: #1e1e1e;
+      --border: #333;
+      --gap: 1rem;
+      --pad: 1rem;
+    }
+    body {
+      margin: 0;
+      padding: var(--pad);
+      background: var(--bg);
+      color: var(--fg);
+      font-family: sans-serif;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: var(--pad);
+    }
+    #fileInput {
+      background: none;
+      border: 1px solid var(--fg);
+      color: var(--fg);
+      padding: 0.25rem 0.5rem;
+    }
+    #summary {
+      display: flex;
+      gap: var(--gap);
+      margin-bottom: var(--pad);
+    }
+    #summary p {
+      margin: 0;
+    }
+    .container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: var(--gap);
+      margin-bottom: var(--pad);
+    }
+    .chart-container {
+      background: var(--panel-bg);
+      padding: var(--pad);
+      border-radius: 4px;
+    }
+    .chart-container canvas {
+      width: 100%;
+      height: 300px;
+    }
+    /* New items section */
+    #items {
+      margin-top: var(--pad);
+    }
+    #items h2 {
+      margin-bottom: 0.5rem;
+      font-size: 1.1rem;
+    }
+    #itemList {
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    #itemList details {
+      background: var(--panel-bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      margin-bottom: 0.5rem;
+      padding: 0.5rem;
+    }
+    #itemList summary {
+      cursor: pointer;
+      font-weight: bold;
+      outline: none;
+    }
+    #itemList dl {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 0.25rem 0.5rem;
+      margin: 0.5rem 0 0 0;
+    }
+    #itemList dt {
+      font-weight: bold;
+    }
+    #itemList dd {
+      margin: 0;
+      word-break: break-all;
+    }
+    #itemList ul {
+      margin: 0.5rem 0 0 1.25rem;
+      padding: 0;
+    }
+    #itemList li {
+      margin: 0;
+      list-style: disc;
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <header>
+    <h1>Pattern JSON Visualizer</h1>
+    <input type="file" id="fileInput" accept=".json">
+  </header>
+
+  <div id="summary"></div>
+
+  <div class="container">
+    <div class="chart-container"><canvas id="sizeChart"></canvas></div>
+    <div class="chart-container"><canvas id="invalidCountChart"></canvas></div>
+    <div class="chart-container"><canvas id="signatureChart"></canvas></div>
+    <div class="chart-container"><canvas id="encodingChart"></canvas></div>
+  </div>
+
+  <section id="items">
+    <h2>Pattern Details</h2>
+    <div id="itemList"></div>
+  </section>
+
+  <script>
+    const fileInput = document.getElementById('fileInput');
+    fileInput.addEventListener('change', e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const data = JSON.parse(reader.result);
+          render(data);
+          renderItems(data);
+        } catch {
+          alert('Invalid JSON file.');
+        }
+      };
+      reader.readAsText(file);
+    });
+
+    function render(data) {
+      const total = data.length;
+      const avgSize = (data.reduce((sum, p) => sum + p.size, 0) / total).toFixed(2);
+      const avgInvalid = (data.reduce((sum, p) => sum + p.invalid_count, 0) / total).toFixed(2);
+
+      document.getElementById('summary').innerHTML = `
+        <p>Total patterns: ${total}</p>
+        <p>Average size: ${avgSize} bytes</p>
+        <p>Average invalid count: ${avgInvalid}</p>
+      `;
+
+      // Prepare distributions
+      const sizeDist       = aggregate(data, 'size');
+      const invalidDist    = aggregate(data, 'invalid_count');
+      const signatureDist  = aggregate(data, 'signature');
+      const encodingDist   = aggregateEncodings(data);
+
+      // Draw charts
+      drawChart('sizeChart', 'bar', {
+        labels: Object.keys(sizeDist),
+        datasets: [{ label: 'Patterns', data: Object.values(sizeDist) }]
+      });
+      drawChart('invalidCountChart', 'bar', {
+        labels: Object.keys(invalidDist),
+        datasets: [{ label: 'Patterns', data: Object.values(invalidDist) }]
+      });
+      drawChart('signatureChart', 'pie', {
+        labels: Object.keys(signatureDist),
+        datasets: [{ data: Object.values(signatureDist) }]
+      });
+      const topEnc = Object.entries(encodingDist)
+        .sort((a,b) => b[1] - a[1])
+        .slice(0,10);
+      drawChart('encodingChart', 'bar', {
+        labels: topEnc.map(e => e[0]),
+        datasets: [{ label: 'Failures', data: topEnc.map(e => e[1]) }]
+      });
+    }
+
+    function renderItems(data) {
+      const itemList = document.getElementById('itemList');
+      itemList.innerHTML = '';
+      data.forEach((item, idx) => {
+        const d = document.createElement('details');
+        const s = document.createElement('summary');
+        s.textContent = `#${idx+1}: ${item.hex} — ${item.signature}`;
+        d.appendChild(s);
+        const dl = document.createElement('dl');
+        addEntry(dl, 'Size',           item.size);
+        addEntry(dl, 'Invalid Count',  item.invalid_count);
+        addEntry(dl, 'Invalid In',     item.invalid_in.join(', '));
+        addEntry(dl, 'Shellcode',      item.shellcode);
+        addEntry(dl, 'Hash',           item.hash);
+        if (item.error_details && Object.keys(item.error_details).length) {
+          const div = document.createElement('div');
+          div.innerHTML = `<strong>Error Details:</strong><ul>${
+            Object.entries(item.error_details)
+                  .map(([enc,err]) => `<li>${enc}: ${err}</li>`)
+                  .join('')
+          }</ul>`;
+          d.appendChild(div);
+        }
+        d.appendChild(dl);
+        itemList.appendChild(d);
+      });
+    }
+
+    function addEntry(dl, term, val) {
+      const dt = document.createElement('dt');
+      dt.textContent = term;
+      const dd = document.createElement('dd');
+      dd.textContent = val;
+      dl.appendChild(dt);
+      dl.appendChild(dd);
+    }
+
+    function aggregate(data, key) {
+      return data.reduce((acc, itm) => {
+        acc[itm[key]] = (acc[itm[key]]||0) + 1;
+        return acc;
+      }, {});
+    }
+    function aggregateEncodings(data) {
+      return data.reduce((acc, itm) => {
+        itm.invalid_in.forEach(enc => acc[enc] = (acc[enc]||0) + 1);
+        return acc;
+      }, {});
+    }
+
+    function drawChart(id, type, chartData) {
+      const ctx = document.getElementById(id).getContext('2d');
+      new Chart(ctx, {
+        type: type,
+        data: chartData,
+        options: {
+          responsive: true,
+          plugins: { legend: { labels: { color: '#e0e0e0' } } },
+          scales: {
+            x: { ticks: { color: '#e0e0e0' }, grid: { color: '#333' } },
+            y: { ticks: { color: '#e0e0e0' }, grid: { color: '#333' } }
+          }
+        }
+      });
+    }
+  </script>
+</body>
+</html>
