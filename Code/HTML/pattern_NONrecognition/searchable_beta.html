@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>CyberSec Pattern Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+  <style>
+    :root {
+      --bg-dark: #1a1a1a;
+      --panel-bg: #2e2e2e;
+      --fg: #d0d0d0;
+      --accent-metal: #8d99ae;
+      --accent-rust: #a83232;
+      --accent-alert: #dcdc00;
+      --border-metal: #555;
+      --pad: 1rem;
+      --gap: 1rem;
+      --chart-height: 300px;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: var(--bg-dark);
+      color: var(--fg);
+      font-family: 'Roboto Mono', monospace;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: var(--pad);
+      border-bottom: 2px solid var(--border-metal);
+    }
+    header h1 {
+      font-weight: 700;
+      font-size: 1.5rem;
+      color: var(--accent-metal);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    #fileInput {
+      background: none;
+      border: 1px solid var(--accent-rust);
+      color: var(--fg);
+      padding: 0.5rem 1rem;
+      cursor: pointer;
+    }
+    #fileInput:focus {
+      outline: 2px solid var(--accent-metal);
+    }
+    /* Loading overlay */
+    #loadingOverlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.8);
+      display: none; align-items: center; justify-content: center;
+      flex-direction: column; z-index: 9999;
+    }
+    .spinner {
+      border: 4px solid var(--panel-bg);
+      border-top: 4px solid var(--accent-rust);
+      border-radius: 50%;
+      width: 40px; height: 40px;
+      animation: spin 1s linear infinite;
+      margin-bottom: var(--gap);
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #progressBarContainer {
+      width: 80%; background: var(--panel-bg); border: 1px solid var(--border-metal);
+      height: 10px; border-radius: 4px; overflow: hidden;
+      margin-bottom: 0.5rem;
+    }
+    #progressBar {
+      height: 100%; width: 0; background: var(--accent-rust);
+    }
+    #progressText { font-size: 0.9rem; }
+    /* Filters */
+    #filters {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px,1fr));
+      gap: var(--gap);
+      padding: var(--pad);
+      background: var(--panel-bg);
+      border-bottom: 2px solid var(--border-metal);
+    }
+    #filters label {
+      font-size: 0.9rem; margin-bottom: 0.25rem; display: block;
+    }
+    #filters input, #filters select {
+      width: 100%;
+      background: none;
+      border: 1px solid var(--accent-rust);
+      color: var(--fg);
+      padding: 0.25rem;
+    }
+    #filters input:focus, #filters select:focus {
+      outline: 2px solid var(--accent-metal);
+    }
+    /* Overview cards */
+    #overview {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px,1fr));
+      gap: var(--gap);
+      padding: var(--pad);
+    }
+    .card {
+      background: var(--panel-bg);
+      border-left: 5px solid var(--accent-metal);
+      padding: var(--pad);
+      cursor: pointer;
+    }
+    .card h2 {
+      font-size: 1.1rem;
+      margin-bottom: 0.5rem;
+    }
+    .card p {
+      font-size: 1.2rem;
+    }
+    .card:focus { outline: 2px solid var(--accent-rust); }
+    /* Charts */
+    #charts {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px,1fr));
+      gap: var(--gap);
+      padding: var(--pad);
+      border-top: 2px solid var(--border-metal);
+      border-bottom: 2px solid var(--border-metal);
+    }
+    .chart-card {
+      background: var(--panel-bg);
+      border-top: 5px solid var(--accent-rust);
+      padding: var(--pad);
+    }
+    .chart-card canvas {
+      width: 100% !important;
+      height: var(--chart-height) !important;
+    }
+    /* Details */
+    #details {
+      padding: var(--pad);
+    }
+    #details h2 {
+      font-size: 1.25rem;
+      color: var(--accent-alert);
+      margin-bottom: 0.5rem;
+      border-bottom: 1px solid var(--border-metal);
+      padding-bottom: 0.25rem;
+    }
+    #itemList {
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    details {
+      background: var(--panel-bg);
+      border-left: 4px solid var(--accent-rust);
+      margin-bottom: 0.5rem;
+      padding: 0.5rem;
+    }
+    details.outlier {
+      border-left-color: var(--accent-alert);
+    }
+    summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--accent-metal);
+      outline: none;
+    }
+    summary:focus {
+      outline: 2px solid var(--accent-rust);
+    }
+    summary::-webkit-details-marker { display: none; }
+    summary:before {
+      content: '▶ ';
+      display: inline-block;
+      transition: transform 0.2s;
+    }
+    details[open] summary:before {
+      transform: rotate(90deg);
+    }
+    dl {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 0.25rem 0.5rem;
+      margin-top: 0.5rem;
+    }
+    dt { color: var(--accent-rust); }
+    dd { word-break: break-all; }
+    ul { margin: 0.5rem 0 0 1.5rem; list-style: disc inside; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>CyberSec Pattern Dashboard</h1>
+    <input type="file" id="fileInput" accept=".json" aria-label="Upload JSON file">
+  </header>
+
+  <div id="loadingOverlay" role="status" aria-live="polite">
+    <div class="spinner"></div>
+    <div id="progressBarContainer"><div id="progressBar"></div></div>
+    <div id="progressText">Loading: 0%</div>
+  </div>
+
+  <section id="filters" aria-label="Filter patterns">
+    <div>
+      <label for="searchBox">Search (hex or signature):</label>
+      <input type="text" id="searchBox" placeholder="Search…" />
+    </div>
+    <div>
+      <label for="sigSelect">Signature:</label>
+      <select id="sigSelect"><option>All</option></select>
+    </div>
+    <div>
+      <label for="encSelect">Failed Encoding:</label>
+      <select id="encSelect"><option>All</option></select>
+    </div>
+    <div>
+      <label for="sizeMin">Size (min-max):</label>
+      <input type="number" id="sizeMin" placeholder="Min" />
+      <input type="number" id="sizeMax" placeholder="Max" style="margin-top:.25rem;"/>
+    </div>
+    <div>
+      <label for="invMin">Invalid count (min-max):</label>
+      <input type="number" id="invMin" placeholder="Min" />
+      <input type="number" id="invMax" placeholder="Max" style="margin-top:.25rem;"/>
+    </div>
+  </section>
+
+  <section id="overview" aria-label="Summary metrics"></section>
+
+  <section id="charts">
+    <div class="chart-card">
+      <canvas id="sizeBucketChart" role="img" aria-label="Pattern size distribution"></canvas>
+    </div>
+    <div class="chart-card">
+      <canvas id="invalidCountChart" role="img" aria-label="Invalid-count distribution"></canvas>
+    </div>
+    <div class="chart-card">
+      <canvas id="signatureChart" role="img" aria-label="Top signatures distribution"></canvas>
+    </div>
+    <div class="chart-card">
+      <canvas id="encodingFailChart" role="img" aria-label="Top encoding failures"></canvas>
+    </div>
+  </section>
+
+  <section id="details" aria-label="Pattern details">
+    <h2>Pattern Details</h2>
+    <div id="itemList"></div>
+  </section>
+
+  <script>
+    // register datalabels
+    Chart.register(ChartDataLabels);
+
+    let originalData = [], filteredData = [];
+    let currentSortKey = 'index', currentSortOrder = 'asc';
+
+    const fileInput = document.getElementById('fileInput');
+    const overlay = document.getElementById('loadingOverlay');
+    const progressBar = document.getElementById('progressBar');
+    const progressText = document.getElementById('progressText');
+
+    fileInput.addEventListener('change', e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      showOverlay();
+      const reader = new FileReader();
+      reader.onprogress = evt => {
+        if (evt.lengthComputable) {
+          const pct = Math.floor(evt.loaded/evt.total*100);
+          progressBar.style.width = pct+'%';
+          progressText.textContent = 'Loading: '+pct+'%';
+        }
+      };
+      reader.onload = () => {
+        hideOverlay();
+        try {
+          const arr = JSON.parse(reader.result);
+          originalData = arr.map((p,i)=>({ ...p, _index:i }));
+          initializeFilters();
+          applyFilters();
+        } catch {
+          alert('Invalid JSON file.');
+        }
+      };
+      reader.onerror = () => {
+        hideOverlay();
+        alert('Error reading file.');
+      };
+      reader.readAsText(file);
+    });
+
+    function showOverlay() {
+      overlay.style.display = 'flex';
+      progressBar.style.width = '0%';
+      progressText.textContent = 'Loading: 0%';
+    }
+    function hideOverlay() {
+      overlay.style.display = 'none';
+    }
+
+    function initializeFilters() {
+      const sigs = [...new Set(originalData.map(p=>p.signature))].sort();
+      const encs = [...new Set(originalData.flatMap(p=>p.invalid_in))].sort();
+      const sigSelect = document.getElementById('sigSelect');
+      const encSelect = document.getElementById('encSelect');
+      sigSelect.innerHTML = '<option>All</option>' + sigs.map(s=>`<option>${s}</option>`).join('');
+      encSelect.innerHTML = '<option>All</option>' + encs.map(e=>`<option>${e}</option>`).join('');
+
+      const sizes = originalData.map(p=>p.size);
+      document.getElementById('sizeMin').value = Math.min(...sizes);
+      document.getElementById('sizeMax').value = Math.max(...sizes);
+      const invs = originalData.map(p=>p.invalid_count);
+      document.getElementById('invMin').value = Math.min(...invs);
+      document.getElementById('invMax').value = Math.max(...invs);
+
+      [
+        'searchBox','sigSelect','encSelect',
+        'sizeMin','sizeMax','invMin','invMax'
+      ].forEach(id=>{
+        document.getElementById(id)
+          .addEventListener('input',applyFilters);
+      });
+    }
+
+    function applyFilters() {
+      const sTerm = document.getElementById('searchBox').value.toLowerCase();
+      const sigF = document.getElementById('sigSelect').value;
+      const encF = document.getElementById('encSelect').value;
+      const sMin = Number(document.getElementById('sizeMin').value);
+      const sMax = Number(document.getElementById('sizeMax').value);
+      const iMin = Number(document.getElementById('invMin').value);
+      const iMax = Number(document.getElementById('invMax').value);
+
+      filteredData = originalData.filter(p=>{
+        if (sTerm) {
+          if (!p.hex.toLowerCase().includes(sTerm)
+           && !p.signature.toLowerCase().includes(sTerm)) {
+            return false;
+          }
+        }
+        if (sigF!=='All' && p.signature!==sigF) return false;
+        if (encF!=='All' && !p.invalid_in.includes(encF)) return false;
+        if (p.size < sMin || p.size > sMax) return false;
+        if (p.invalid_count < iMin || p.invalid_count > iMax) return false;
+        return true;
+      });
+
+      sortData();
+      updateOverview();
+      updateCharts();
+      updateDetails();
+    }
+
+    function sortData() {
+      const k = currentSortKey, o = currentSortOrder;
+      const dir = o==='asc'?1:-1;
+      filteredData.sort((a,b)=>{
+        let va = a[k], vb = b[k];
+        if (k==='signature') {
+          return va.localeCompare(vb) * dir;
+        }
+        return (va - vb) * dir;
+      });
+    }
+
+    function updateOverview() {
+      const total = filteredData.length;
+      const avgSize = total
+        ? (filteredData.reduce((s,p)=>s+p.size,0)/total).toFixed(2)
+        : 0;
+      const avgInv = total
+        ? (filteredData.reduce((s,p)=>s+p.invalid_count,0)/total).toFixed(2)
+        : 0;
+      const failedAny = filteredData.filter(p=>p.invalid_count>0).length;
+      const sigCount = new Set(filteredData.map(p=>p.signature)).size;
+
+      // anomaly detection (IQR)
+      const sizes = filteredData.map(p=>p.size).sort((a,b)=>a-b);
+      const invs  = filteredData.map(p=>p.invalid_count).sort((a,b)=>a-b);
+      const outliers = detectOutliers(sizes).concat(detectOutliers(invs));
+      const anomalies = new Set(outliers.map(i=>filteredData[i]._index));
+      filteredData.forEach((p,i)=> p.isOutlier = anomalies.has(p._index));
+      const anomalyCount = filteredData.filter(p=>p.isOutlier).length;
+
+      const cards = [
+        { title:'Total Patterns', value: total, sortKey:'index', order:'asc' },
+        { title:'Avg Size',       value: avgSize+' bytes', sortKey:'size', order:'asc' },
+        { title:'Avg Invalid',    value: avgInv, sortKey:'invalid_count', order:'desc' },
+        { title:'Failed Patterns',value: failedAny, sortKey:'invalid_count', order:'desc' },
+        { title:'Unique Signatures',value: sigCount, sortKey:'signature', order:'asc' },
+        { title:'Anomalies',      value: anomalyCount, sortKey:'none', order:'asc' }
+      ];
+
+      const ov = document.getElementById('overview');
+      ov.innerHTML = cards.map(c=>`
+        <div class="card" tabindex="0"
+             data-sort="${c.sortKey}"
+             data-order="${c.order}">
+          <h2>${c.title}</h2><p>${c.value}</p>
+        </div>
+      `).join('');
+
+      ov.querySelectorAll('.card').forEach(card=>{
+        card.addEventListener('click',onCardClick);
+        card.addEventListener('keypress',e=>{
+          if (e.key==='Enter') onCardClick.call(card,e);
+        });
+      });
+    }
+
+    function onCardClick() {
+      const key = this.dataset.sort;
+      if (key==='none') return;
+      if (currentSortKey === key) {
+        currentSortOrder = currentSortOrder==='asc'?'desc':'asc';
+      } else {
+        currentSortKey = key;
+        currentSortOrder = this.dataset.order;
+      }
+      applyFilters();
+    }
+
+    function updateCharts() {
+      const total = filteredData.length;
+      // size buckets
+      const buckets = { '<=2':0,'3–4':0,'5–8':0,'>8':0 };
+      const invDist = {}, sigDist = {}, encFail = {};
+      filteredData.forEach(p=>{
+        if (p.size<=2) buckets['<=2']++;
+        else if (p.size<=4) buckets['3–4']++;
+        else if (p.size<=8) buckets['5–8']++;
+        else buckets['>8']++;
+        invDist[p.invalid_count] = (invDist[p.invalid_count]||0)+1;
+        sigDist[p.signature] = (sigDist[p.signature]||0)+1;
+        p.invalid_in.forEach(e=> encFail[e] = (encFail[e]||0)+1);
+      });
+
+      // top5
+      const topSigs = Object.entries(sigDist).sort((a,b)=>b[1]-a[1]).slice(0,5);
+      const topEnc = Object.entries(encFail).sort((a,b)=>b[1]-a[1]).slice(0,5);
+
+      drawBar('sizeBucketChart', Object.keys(buckets), Object.values(buckets));
+      drawBar('invalidCountChart',
+              Object.keys(invDist), Object.values(invDist));
+      drawPie('signatureChart',
+              topSigs.map(e=>e[0]), topSigs.map(e=>e[1]));
+      drawBar('encodingFailChart',
+              topEnc.map(e=>e[0]), topEnc.map(e=>e[1]));
+    }
+
+    function updateDetails() {
+      const list = document.getElementById('itemList');
+      list.innerHTML = '';
+      const observer = new IntersectionObserver(onIntersect, {
+        root: list,
+        rootMargin: '100px',
+        threshold: 0.1
+      });
+      filteredData.forEach((p,i) => {
+        const d = document.createElement('details');
+        if (p.isOutlier) d.classList.add('outlier');
+        const s = document.createElement('summary');
+        s.textContent = `#${i+1}: ${p.hex} — ${p.signature}`;
+        s.tabIndex = 0;
+        d.appendChild(s);
+        d.dataset.index = i;
+        list.appendChild(d);
+        observer.observe(d);
+      });
+    }
+
+    function onIntersect(entries, obs) {
+      entries.forEach(e=> {
+        if (!e.isIntersecting) return;
+        const d = e.target;
+        const i = d.dataset.index;
+        renderDetail(d, filteredData[i]);
+        obs.unobserve(d);
+      });
+    }
+
+    function renderDetail(d, p) {
+      const dl = document.createElement('dl');
+      addEntry(dl,'Size',p.size);
+      addEntry(dl,'Invalid Count',p.invalid_count);
+      addEntry(dl,'Invalid In',p.invalid_in.join(', '));
+      addEntry(dl,'Shellcode',p.shellcode);
+      addEntry(dl,'Hash',p.hash);
+      if (p.error_details && Object.keys(p.error_details).length) {
+        const div = document.createElement('div');
+        div.innerHTML = `<strong>Error Details:</strong><ul>${
+          Object.entries(p.error_details)
+            .map(([e,er])=>`<li>${e}: ${er}</li>`).join('')
+        }</ul>`;
+        d.appendChild(div);
+      }
+      d.appendChild(dl);
+    }
+
+    function addEntry(dl, term, val) {
+      const dt = document.createElement('dt'),
+            dd = document.createElement('dd');
+      dt.textContent = term; dd.textContent = val;
+      dl.append(dt, dd);
+    }
+
+    // Chart drawing with datalabels
+    function drawBar(id, labels, data) {
+      const ctx = document.getElementById(id).getContext('2d');
+      new Chart(ctx, {
+        type: 'bar',
+        data: { labels, datasets:[{
+          data, backgroundColor:varGet('--accent-metal'),
+          borderColor: varGet('--accent-rust'), borderWidth:1
+        }]},
+        options: {
+          plugins: {
+            datalabels: {
+              anchor:'end', align:'top',
+              formatter:(v,ctx)=>{
+                const sum = ctx.chart.data.datasets[0].data
+                  .reduce((a,b)=>a+b,0);
+                const p = ((v/sum*100).toFixed(1))+'%';
+                return v+' ('+p+')';
+              },
+              color: varGet('--fg'), font:{ size:10 }
+            }
+          },
+          scales: {
+            x:{ ticks:{ color:varGet('--fg') }, grid:{ color:varGet('--border-metal') } },
+            y:{ ticks:{ color:varGet('--fg') }, grid:{ color:varGet('--border-metal') } }
+          }
+        }
+      });
+    }
+
+    function drawPie(id, labels, data) {
+      const ctx = document.getElementById(id).getContext('2d');
+      new Chart(ctx, {
+        type: 'pie',
+        data: { labels, datasets:[{
+          data,
+          backgroundColor: labels.map((_,i)=>[
+            varGet('--accent-rust'),
+            varGet('--accent-metal'),
+            varGet('--accent-alert'),
+            varGet('--accent-rust'),
+            varGet('--accent-metal')
+          ][i]),
+          borderColor: varGet('--border-metal'), borderWidth:1
+        }]},
+        options: {
+          plugins: {
+            datalabels: {
+              formatter:(v,ctx)=>{
+                const sum = ctx.chart.data.datasets[0].data
+                  .reduce((a,b)=>a+b,0);
+                return ((v/sum*100).toFixed(1))+'%';
+              },
+              color:varGet('--fg'), font:{ size:12 }
+            },
+            legend: {
+              labels: {
+                generateLabels: chart=>{
+                  const data = chart.data;
+                  return data.labels.map((lbl,i)=> {
+                    const val = data.datasets[0].data[i];
+                    const sum = data.datasets[0].data.reduce((a,b)=>a+b,0);
+                    const p = ((val/sum*100).toFixed(1))+'%';
+                    return { text: lbl+' ('+p+')', fillStyle:chart.data.datasets[0].backgroundColor[i], hidden:false, index:i };
+                  });
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function detectOutliers(sorted) {
+      const q1 = sorted[Math.floor((sorted.length/4))];
+      const q3 = sorted[Math.ceil((sorted.length*3)/4)];
+      const iqr = q3 - q1;
+      const lower = q1 - 1.5*iqr, upper = q3 + 1.5*iqr;
+      return sorted
+        .map((v,i)=> ({v,i}) )
+        .filter(o=> o.v<lower || o.v>upper )
+        .map(o=>o.i);
+    }
+
+    function varGet(name) {
+      return getComputedStyle(document.documentElement)
+        .getPropertyValue(name).trim();
+    }
+  </script>
+</body>
+</html>
