@@ -4,7 +4,6 @@ import time
 import argparse
 import sys
 
-# Attempt import of psutil
 try:
     import psutil
 except ImportError:
@@ -35,71 +34,94 @@ def get_counters():
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Monitor local network I/O over a specified interval"
+        description="Monitor local network I/O and compute upload allowances"
     )
     group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument(
-        "--weeks",   type=int, help="Number of weeks to monitor"
-    )
-    group.add_argument(
-        "--days",    type=int, help="Number of days to monitor"
-    )
-    group.add_argument(
-        "--hours",   type=int, help="Number of hours to monitor"
-    )
-    group.add_argument(
-        "--minutes", type=int, help="Number of minutes to monitor"
-    )
+    group.add_argument("--weeks",   type=int, help="Number of weeks to monitor")
+    group.add_argument("--days",    type=int, help="Number of days to monitor")
+    group.add_argument("--hours",   type=int, help="Number of hours to monitor")
+    group.add_argument("--minutes", type=int, help="Number of minutes to monitor")
     args = parser.parse_args()
 
-    # Determine interval count, unit and duration in seconds
+    # Determine interval count, unit, and total seconds
     if args.weeks is not None:
-        count, unit, duration = args.weeks, 'week', args.weeks * 7 * 24 * 3600
+        count, unit, duration = args.weeks, 'week',   args.weeks   * 7 * 24 * 3600
     elif args.days is not None:
-        count, unit, duration = args.days, 'day', args.days * 24 * 3600
+        count, unit, duration = args.days,  'day',    args.days    * 24 * 3600
     elif args.hours is not None:
-        count, unit, duration = args.hours, 'hour', args.hours * 3600
-    else:  # args.minutes is not None
+        count, unit, duration = args.hours, 'hour',   args.hours   * 3600
+    else:
         count, unit, duration = args.minutes, 'minute', args.minutes * 60
 
     plural = 's' if count != 1 else ''
-    print(f"Starting network I/O monitoring for {count} {unit}{plural} ({duration} seconds)...")
+    sys.stdout.write(
+        f"Monitoring network I/O for {count} {unit}{plural} ({duration} seconds)...\n"
+    )
 
-    # Capture counters at start and end
+    # Sample counters
     start = get_counters()
     time.sleep(duration)
     end = get_counters()
 
-    sent = end.bytes_sent   - start.bytes_sent
-    recv = end.bytes_recv   - start.bytes_recv
+    # Compute totals
+    sent = end.bytes_sent - start.bytes_sent
+    recv = end.bytes_recv - start.bytes_recv
 
-    # Total
-    print("\n=== Total Traffic ===")
-    print(f"Upload:   {sent} bytes ({human_readable(sent)})")
-    print(f"Download: {recv} bytes ({human_readable(recv)})")
-
-    # Sub‐interval averages
-    print("\n=== Average Traffic ===")
+    # Compute averages
+    avg_rate       = sent / duration  # bytes per second
     if unit == 'week':
-        days_count    = count * 7
-        hours_count   = days_count * 24
-        avg_sent_day  = sent / days_count
-        avg_recv_day  = recv / days_count
-        avg_sent_hour = sent / hours_count
-        avg_recv_hour = recv / hours_count
-        print(f"Per day:  Upload {human_readable(avg_sent_day)}, Download {human_readable(avg_recv_day)}")
-        print(f"Per hour: Upload {human_readable(avg_sent_hour)}, Download {human_readable(avg_recv_hour)}")
+        days_count  = count * 7
+        hours_count = days_count * 24
+        avg_per_day = sent / days_count
+        avg_per_hour= sent / hours_count
     elif unit == 'day':
-        hours_count   = count * 24
-        avg_sent_hour = sent / hours_count
-        avg_recv_hour = recv / hours_count
-        print(f"Per hour: Upload {human_readable(avg_sent_hour)}, Download {human_readable(avg_recv_hour)}")
+        hours_count = count * 24
+        avg_per_day = None
+        avg_per_hour= sent / hours_count
     elif unit == 'hour':
         minutes_count = count * 60
-        avg_sent_min  = sent / minutes_count
-        avg_recv_min  = recv / minutes_count
-        print(f"Per minute: Upload {human_readable(avg_sent_min)}, Download {human_readable(avg_recv_min)}")
-    # unit == 'minute': no further breakdown
+        avg_per_day = None
+        avg_per_hour= None
+        avg_per_min = sent / minutes_count
+    else:  # minute
+        avg_per_day = None
+        avg_per_hour= None
+        avg_per_min = None
+
+    # Report measured usage
+    sys.stdout.write("\n=== Measured Traffic ===\n")
+    sys.stdout.write(f"Upload:   {sent} bytes ({human_readable(sent)})\n")
+    sys.stdout.write(f"Download: {recv} bytes ({human_readable(recv)})\n")
+
+    # Report historical averages
+    sys.stdout.write("\n=== Historical Upload Averages ===\n")
+    sys.stdout.write(f"Average rate: {avg_rate:.2f} B/s ({human_readable(avg_rate)}/s)\n")
+    if unit == 'week':
+        sys.stdout.write(f"Per day:    {human_readable(avg_per_day)}\n")
+        sys.stdout.write(f"Per hour:   {human_readable(avg_per_hour)}\n")
+    elif unit == 'day':
+        sys.stdout.write(f"Per hour:   {human_readable(avg_per_hour)}\n")
+    elif unit == 'hour':
+        sys.stdout.write(f"Per minute: {human_readable(avg_per_min)}\n")
+
+    # Recommend allowances for next interval
+    sys.stdout.write("\n=== Recommended Upload Allowance for Next Interval ===\n")
+    sys.stdout.write(
+        f"Total budget: {sent} bytes ({human_readable(sent)})\n"
+    )
+    sys.stdout.write(
+        f"Maintain ≤ {avg_rate:.2f} B/s ({human_readable(avg_rate)}/s)\n"
+    )
+    if unit == 'week':
+        sys.stdout.write(
+            f"Limit per day:  {human_readable(avg_per_day)}\n"
+            f"Limit per hour: {human_readable(avg_per_hour)}\n"
+        )
+    elif unit == 'day':
+        sys.stdout.write(f"Limit per hour: {human_readable(avg_per_hour)}\n")
+    elif unit == 'hour':
+        sys.stdout.write(f"Limit per minute: {human_readable(avg_per_min)}\n")
+    # for minute interval, only total budget applies
 
 if __name__ == "__main__":
     main()
