@@ -8,6 +8,9 @@ echo "$$"
 # Check env vars:
 env
 
+# Wrap a hugelines file into another of 10000 characteres lines:
+fold -w 10000 hugefile > wrapped.txt
+
 # Nmap Host Scanning:
 nmap -sn 127.0.0.1/24 -oG output.txt
 
