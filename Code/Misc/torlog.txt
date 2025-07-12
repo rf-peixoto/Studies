@@ -1,0 +1,67 @@
+# Source: DeepSeek
+
+As a privacy-conscious Tor operator, enabling logs requires careful consideration due to legal and ethical implications. I strongly recommend consulting the Tor community (tor-relays mailing list or #tor-relays on OFTC IRC) before implementing any logging. If you still decide to proceed after understanding the risks:
+Minimal Logging Configuration (Privacy-Focused)
+
+Add these lines to your torrc file (usually /etc/tor/torrc):
+ini
+
+# Log ONLY exit connections (destination IP:port) with timestamps
+Log notice file /var/log/tor/notices.log
+ExitLog notice /var/log/tor/exit.log
+
+# Explicitly DISABLE risky logs
+AvoidDiskWrites 1
+DisableDebuggerAttachment 0
+
+Key Steps:
+
+    Create log directory (run as root):
+    bash
+
+mkdir -p /var/log/tor
+chown debian-tor:debian-tor /var/log/tor  # Replace user/group if needed
+chmod 700 /var/log/tor
+
+Reload Tor:
+bash
+
+sudo systemctl reload tor  # Systemd
+# OR
+sudo killall -HUP tor      # SysVinit
+
+Verify logs:
+bash
+
+    tail -f /var/log/tor/exit.log
+
+    Sample output:
+    [notice] [exit] Opened exit connection to 203.0.113.5:443 at 2025-07-13 12:34:56
+
+Critical Privacy Safeguards
+
+    Automatic log deletion (Add to /etc/logrotate.d/tor):
+    conf
+
+/var/log/tor/*.log {
+    daily
+    rotate 3
+    compress
+    missingok
+    create 640 debian-tor debian-tor
+    postrotate
+        /bin/kill -HUP $(cat /var/run/tor/tor.pid 2> /dev/null) 2> /dev/null || true
+    endscript
+}
+
+*Deletes logs after 3 days - adjust rotate value as needed*
+
+NEVER log sensitive data - Avoid these in torrc:
+ini
+
+    # DANGEROUS EXAMPLES (DO NOT USE)
+    Log debug
+    Log info
+    ProtocolWarnings 1
+
+What These Logs Show (and Don't Show)
