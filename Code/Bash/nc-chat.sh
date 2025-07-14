@@ -2,7 +2,9 @@
 # secure_chat.sh: Simple encrypted chat via netcat
 # Usage: 
 #   Server: ./secure_chat.sh server <PORT> <PASSWORD>
+# ./secure_chat.sh server 4444 mySecretPassword
 #   Client: ./secure_chat.sh client <SERVER_IP> <PORT> <PASSWORD>
+# ./secure_chat.sh client 192.168.1.100 4444 mySecretPassword
 
 set -e
 
