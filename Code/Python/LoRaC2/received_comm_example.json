@@ -1,0 +1,7 @@
+{
+  "command": "allowed_command",
+  "sender": 123456,
+  "nonce": "base64-encoded-random",
+  "timestamp": 1689876543.21,
+  "hmac": "signature"
+}
