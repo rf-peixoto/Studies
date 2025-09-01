@@ -1,8 +1,5 @@
 #!/usr/bin/env bash
 # Extract all third-party (non-system) apps from a connected Android device/emulator.
-# Each app is saved under ./extracted_apks/<package>/ with all its APK files (base + splits).
-# Usage: ./extract_3p_apks.sh [output_dir]
-# Example: ./extract_3p_apks.sh /tmp/apk_dump
 
 set -euo pipefail
 
@@ -16,10 +13,10 @@ fi
 # Start ADB server if needed
 adb start-server >/dev/null 2>&1 || true
 
-# Try to run adbd as root on emulators (won't hurt if it fails on devices)
+# Try to run adbd as root on emulators
 if ! adb shell 'id -u' 2>/dev/null | grep -qx '0'; then
   adb root >/dev/null 2>&1 || true
-  # adbd may restart; give it a moment
+  # adbd may restart
   sleep 1
 fi
 
