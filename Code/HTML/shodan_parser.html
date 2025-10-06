@@ -1,0 +1,448 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Network Results — Module / IP / Port Validator</title>
+<style>
+  :root{ --bg:#0f1720; --panel:#0b1220; --muted:#9aa6b2; --accent:#2dd4bf; --border:rgba(255,255,255,0.06); color-scheme:dark;
+         font-family: Inter, Roboto, "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial; }
+  body{margin:0;background:linear-gradient(180deg,#061225 0%, #091525 100%);color:#e8eef4}
+  header{display:flex;gap:16px;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border)}
+  h1{font-size:16px;margin:0;font-weight:600}
+  .sub{color:var(--muted);font-size:12px}
+  .controls{display:flex;gap:8px;flex-wrap:wrap}
+  .btn,.select,.input{background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:8px;color:#cfe6ee;padding:8px;font-size:13px}
+  .btn{cursor:pointer}
+  .btn.primary{border-color:rgba(45,212,191,0.25);color:var(--accent)}
+  main{padding:14px}
+  .pane{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.015));border:1px solid var(--border);border-radius:10px}
+  .toolbar{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--border)}
+  .left{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .right{display:flex;gap:8px;align-items:center}
+  #search{min-width:260px}
+  table{width:100%;border-collapse:collapse}
+  th,td{padding:10px 12px;border-bottom:1px dashed rgba(255,255,255,0.06);text-align:left;vertical-align:middle;font-size:13px;white-space:nowrap}
+  th{color:#9fb1c0;font-weight:600;font-size:12px;cursor:pointer;user-select:none;position:relative}
+  th .dir{position:absolute;right:8px;opacity:.65}
+  tr:hover td{background:rgba(255,255,255,0.025)}
+  .tag{display:inline-flex;gap:6px;align-items:center;padding:4px 8px;border-radius:999px;font-size:12px;background:rgba(255,255,255,0.04);border:1px solid var(--border)}
+  .tag.ip{color:#86f6e6}
+  .tag.port{color:#c7c5ff}
+  .tag.prod{color:#ffd59e}
+  .tag.mod{color:#ffe28a}
+  a, a:visited{color:#8fb7ff;text-decoration:none}
+  a:hover{text-decoration:underline}
+  .icon{font:12px/1 monospace;opacity:.9}
+  .muted{color:var(--muted)}
+  .row-actions{display:flex;gap:6px;flex-wrap:wrap}
+  .pill{padding:4px 8px;border-radius:999px;background:rgba(255,255,255,0.04);font-size:12px}
+  footer{padding:10px 14px;border-top:1px solid var(--border);color:var(--muted);font-size:12px}
+  textarea#raw{width:100%;height:120px;background:transparent;border:1px solid var(--border);border-radius:8px;color:#cfe6ee;padding:8px}
+  @media (max-width:1100px){.hide-md{display:none}}
+  @media (max-width:900px){.hide-sm{display:none}}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Network Results — Module / IP / Port Validator</h1>
+    <div class="sub">Sortable. Focus on <strong>product</strong>, <strong>module</strong> (ftp/ntp/ssh/…),
+      <strong>ip_str</strong>, <strong>port</strong>, and <strong>org</strong>.</div>
+  </div>
+  <div class="controls">
+    <input id="file" class="btn" type="file" accept=".json" />
+    <button id="paste" class="btn">Paste JSON</button>
+    <button id="loadRaw" class="btn">Load pasted</button>
+    <button id="clear" class="btn">Clear</button>
+  </div>
+</header>
+
+<main>
+  <section class="pane">
+    <div class="toolbar">
+      <div class="left">
+        <input id="search" class="input" placeholder="Search product / module / ip / port / org / ASN" />
+        <span class="pill"><span id="count">0</span> rows</span>
+        <span class="pill hide-sm">Unique IPs: <span id="uniqueIps">0</span></span>
+      </div>
+      <div class="right">
+        <label class="muted hide-sm">Open scheme:</label>
+        <select id="scheme" class="select">
+          <option value="auto" selected>auto (module-aware)</option>
+          <option value="http">http</option>
+          <option value="https">https</option>
+        </select>
+        <button id="exportFiltered" class="btn">Export CSV</button>
+        <button id="copyIps" class="btn">Copy IPs</button>
+      </div>
+    </div>
+
+    <div style="overflow:auto; max-height:65vh">
+      <table>
+        <thead>
+          <tr>
+            <th data-key="#"           data-type="num"># <span class="dir"></span></th>
+            <th data-key="product"     data-type="str">Product <span class="dir"></span></th>
+            <th data-key="module"      data-type="str">Module <span class="dir"></span></th>
+            <th data-key="org"         data-type="str">Org <span class="dir"></span></th>
+            <th data-key="ip"          data-type="ip">IP <span class="dir"></span></th>
+            <th data-key="port"        data-type="num">Port <span class="dir"></span></th>
+            <th class="hide-md" data-key="notes" data-type="str">Notes <span class="dir"></span></th>
+            <th data-key="actions"     data-type="na">Validate</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+
+    <div style="padding:10px 12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;border-top:1px solid var(--border)">
+      <textarea id="raw" placeholder="Paste JSON here… (array or NDJSON)"></textarea>
+      <div class="row-actions">
+        <button class="btn" data-filter="has:product">has:product</button>
+        <button class="btn" data-filter="has:module">has:module</button>
+        <button class="btn" data-filter="module:ssh">module:ssh</button>
+        <button class="btn" data-filter="module:ftp">module:ftp</button>
+        <button class="btn" data-filter="port:80">port:80</button>
+        <button class="btn" data-filter="port:443">port:443</button>
+        <button class="btn" data-filter="ssl">ssl</button>
+        <button class="btn" data-filter="http">http</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  Click column headers to sort. In Auto mode, links use module-specific schemes when possible (e.g., <code>ssh://</code>, <code>ftp://</code>); otherwise they fall back to HTTP/HTTPS.
+</footer>
+
+<script>
+/* ================== Data handling ================== */
+const fileInput = document.getElementById('file');
+const tbody = document.getElementById('tbody');
+const search = document.getElementById('search');
+const countEl = document.getElementById('count');
+const uniqueIpsEl = document.getElementById('uniqueIps');
+const schemeSel = document.getElementById('scheme');
+const raw = document.getElementById('raw');
+let records = [];   // normalized
+let filtered = [];
+let sortState = { key: 'product_priority', dir: 'desc' }; // products first
+
+function parseNDJSONorArray(text){
+  text = text.trim();
+  if(!text) return [];
+  try{
+    const j = JSON.parse(text);
+    return Array.isArray(j) ? j : [j];
+  }catch{
+    const out = [];
+    for(const line of text.split(/\r?\n/)){
+      const l = line.trim();
+      if(!l) continue;
+      try{ out.push(JSON.parse(l)); }catch{ throw new Error('Invalid JSON/NDJSON.'); }
+    }
+    return out;
+  }
+}
+
+function norm(rec){
+  const ip = rec.ip_str || (rec.ip ? (typeof rec.ip === 'number' ? intToIPv4(rec.ip) : String(rec.ip)) : '');
+  const port = rec.port ?? '';
+  const product = rec.product ?? rec.banner_product ?? '';
+  // module: prefer explicit field, else infer
+  const module = inferModule(rec, port);
+  const hasSSL = !!(rec.ssl || rec.tls || String(module).toLowerCase()==='https');
+  const hasHTTP = !!(rec.http || String(module).toLowerCase().startsWith('http'));
+  const hostnames = arrayOrStr(rec.hostnames);
+  const domains = arrayOrStr(rec.domains);
+  const asn = rec.asn || rec.ASN || '';
+  const isp = rec.isp || '';
+  const org = rec.org || '';
+  const ts = rec.timestamp || rec.seen_at || '';
+  const product_priority = product ? 1 : 0;
+  return { ip, port, product, module, hasSSL, hasHTTP, hostnames, domains, asn, isp, org, ts, product_priority, raw: rec };
+}
+
+function inferModule(rec, port){
+  // 1) explicit
+  if(rec.module) return String(rec.module).toLowerCase();
+  if(rec._shodan && rec._shodan.module) return String(rec._shodan.module).toLowerCase();
+  // 2) protocol hints
+  if(rec.http) return (rec.ssl || rec.tls || rec.port===443) ? 'https' : 'http';
+  // 3) port-based heuristic
+  const p = Number(port);
+  const byPort = {
+    20:'ftp-data', 21:'ftp', 22:'ssh', 23:'telnet', 25:'smtp', 53:'dns', 67:'dhcp', 68:'dhcp',
+    69:'tftp', 80:'http', 110:'pop3', 111:'rpcbind', 123:'ntp', 135:'msrpc', 137:'netbios-ns',
+    139:'netbios-ssn', 143:'imap', 161:'snmp', 389:'ldap', 443:'https', 445:'smb',
+    465:'smtps', 500:'isakmp', 5060:'sip', 5353:'mdns', 5672:'amqp', 5900:'vnc', 6379:'redis',
+    873:'rsync', 11211:'memcached', 1433:'mssql', 1521:'oracle', 2049:'nfs', 2181:'zookeeper',
+    27017:'mongodb', 3306:'mysql', 3389:'rdp', 5432:'postgresql', 6379:'redis', 8883:'mqtts', 1883:'mqtt'
+  };
+  if(byPort[p]) return byPort[p];
+  // 4) loose banner/product hints
+  const prod = (rec.product||'').toLowerCase();
+  if(prod.includes('ssh')) return 'ssh';
+  if(prod.includes('ftp')) return 'ftp';
+  if(prod.includes('rdp')) return 'rdp';
+  if(prod.includes('vnc')) return 'vnc';
+  if(prod.includes('redis')) return 'redis';
+  if(prod.includes('postgres')) return 'postgresql';
+  if(prod.includes('mysql')) return 'mysql';
+  if(prod.includes('mongo')) return 'mongodb';
+  if(prod.includes('kafka')) return 'kafka';
+  if(prod.includes('amqp')) return 'amqp';
+  if(prod.includes('ldap')) return 'ldap';
+  if(prod.includes('telnet')) return 'telnet';
+  if(prod.includes('smtp')) return 'smtp';
+  if(prod.includes('imap')) return 'imap';
+  if(prod.includes('pop3')) return 'pop3';
+  return '';
+}
+
+function arrayOrStr(x){ if(!x) return ''; return Array.isArray(x)? x.join(', ') : String(x); }
+function intToIPv4(i){ try{ i = Number(i)>>>0; return [(i>>>24)&255,(i>>>16)&255,(i>>>8)&255,i&255].join('.'); }catch{ return String(i); } }
+function escapeHTML(s){ return String(s).replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;' }[m])); }
+
+/* ================== Sorting ================== */
+const thead = document.querySelector('thead');
+thead.addEventListener('click', (ev)=>{
+  const th = ev.target.closest('th');
+  if(!th || th.dataset.key==='actions' || !th.dataset.key) return;
+  const key = th.dataset.key;
+  const prev = sortState.key === key ? sortState.dir : null;
+  sortState = { key, dir: prev === 'asc' ? 'desc' : 'asc' };
+  applySort();
+  updateSortIndicators();
+});
+
+function applySort(){
+  const key = sortState.key;
+  const dir = sortState.dir === 'asc' ? 1 : -1;
+  filtered.sort((a,b)=>{
+    if(key === '#') return 0; // stable index (no-op)
+    if(key === 'notes'){ const sa = notesText(a), sb = notesText(b); return dir * sa.localeCompare(sb); }
+    if(key === 'ip'){ return dir * compareIP(a.ip, b.ip); }
+    const va = (a[key] ?? ''), vb = (b[key] ?? '');
+    if(typeof va === 'number' || typeof vb === 'number' || key==='port'){ return dir * (Number(va) - Number(vb)); }
+    return dir * String(va).localeCompare(String(vb), undefined, {numeric:true, sensitivity:'base'});
+  });
+  renderTable(filtered);
+}
+function compareIP(a,b){
+  const A = a.split('.').map(x=>parseInt(x,10));
+  const B = b.split('.').map(x=>parseInt(x,10));
+  if(A.length!==4 || B.length!==4 || A.some(isNaN) || B.some(isNaN)) return String(a).localeCompare(String(b));
+  for(let i=0;i<4;i++){ if(A[i]!==B[i]) return A[i]-B[i]; }
+  return 0;
+}
+function updateSortIndicators(){
+  document.querySelectorAll('th .dir').forEach(s=>s.textContent='');
+  const th = [...document.querySelectorAll('th')].find(t=>t.dataset.key===sortState.key);
+  if(th){ th.querySelector('.dir').textContent = sortState.dir==='asc' ? '▲' : '▼'; }
+}
+
+/* ================== Rendering ================== */
+function modulePreferredScheme(mod, hasSSL, port){
+  if(schemeSel.value!=='auto') return schemeSel.value; // user override to http/https
+  const m = String(mod||'').toLowerCase();
+  // Module-aware schemes; if OS/browser lacks a handler, the click may do nothing.
+  const map = {
+    'ssh':'ssh', 'sftp':'sftp', 'ftp':'ftp', 'ftps':'ftps',
+    'rdp':'rdp', 'vnc':'vnc', 'smb':'smb',
+    'telnet':'telnet', 'ldap':'ldap', 'ldaps':'ldaps',
+    'postgresql':'postgresql', 'mysql':'mysql', 'mssql':'tsql',
+    'redis':'redis', 'amqp':'amqp', 'kafka':'kafka',
+    'mqtt':'mqtt', 'mqtts':'mqtts'
+  };
+  if(map[m]) return map[m];
+  // HTTP family fallback
+  if(m==='https' || hasSSL || Number(port)===443) return 'https';
+  return (m==='http' ? 'http' : 'http');
+}
+
+function makeHostURL(ip, mod, hasSSL, port){
+  const scheme = modulePreferredScheme(mod, hasSSL, port);
+  return `${scheme}://${ip}`;
+}
+function makePortURL(ip, port, mod, hasSSL){
+  const scheme = modulePreferredScheme(mod, hasSSL, port);
+  return `${scheme}://${ip}:${port}`;
+}
+function notesText(r){
+  const bits = [];
+  if(r.module) bits.push(`mod:${r.module}`);
+  if(r.hasHTTP) bits.push('http');
+  if(r.hasSSL) bits.push('ssl');
+  if(r.domains) bits.push(`dom:${r.domains}`);
+  if(r.hostnames) bits.push(`host:${r.hostnames}`);
+  if(r.asn) bits.push(`asn:${r.asn}`);
+  return bits.join(' | ');
+}
+
+function renderTable(list){
+  tbody.innerHTML = '';
+  list.forEach((r, i) => {
+    const tr = document.createElement('tr');
+
+    // #
+    const tdIdx = document.createElement('td');
+    tdIdx.textContent = String(i+1);
+
+    // Product
+    const tdProd = document.createElement('td');
+    tdProd.innerHTML = r.product ? `<span class="tag prod" title="product">${escapeHTML(r.product)}</span>` : '<span class="muted">—</span>';
+
+    // Module
+    const tdMod = document.createElement('td');
+    tdMod.innerHTML = r.module ? `<span class="tag mod" title="module">${escapeHTML(r.module)}</span>` : '<span class="muted">—</span>';
+
+    // Org
+    const tdOrg = document.createElement('td');
+    tdOrg.textContent = r.org || '—';
+    if(!r.org) tdOrg.className='muted';
+
+    // IP (clickable)
+    const tdIP = document.createElement('td');
+    if(r.ip){
+      const hostURL = makeHostURL(r.ip, r.module, r.hasSSL, r.port);
+      tdIP.innerHTML = `<a href="${hostURL}" target="_blank" rel="noopener" class="tag ip" title="Open ${hostURL}"><span class="icon">⤴</span> ${r.ip}</a>`;
+    } else {
+      tdIP.innerHTML = '<span class="muted">—</span>';
+    }
+
+    // Port (clickable)
+    const tdPort = document.createElement('td');
+    if(r.ip && r.port){
+      const portURL = makePortURL(r.ip, r.port, r.module, r.hasSSL);
+      tdPort.innerHTML = `<a href="${portURL}" target="_blank" rel="noopener" class="tag port" title="Open ${portURL}"><span class="icon">⤴</span> ${r.port}</a>`;
+    } else {
+      tdPort.innerHTML = r.port ? `<span class="tag port">${r.port}</span>` : '<span class="muted">—</span>';
+    }
+
+    // Notes
+    const tdNotes = document.createElement('td'); tdNotes.className='hide-md';
+    const bitsHtml = notesText(r).split(' | ').filter(Boolean).map(b=>`<span class="pill">${escapeHTML(b)}</span>`).join(' ');
+    tdNotes.innerHTML = bitsHtml || '<span class="muted">—</span>';
+
+    // Validate
+    const tdAct = document.createElement('td');
+    tdAct.innerHTML = `
+      <div class="row-actions">
+        ${r.ip ? `<button class="btn primary" data-open="host" data-i="${i}">Open IP</button>`:''}
+        ${r.ip && r.port ? `<button class="btn" data-open="port" data-i="${i}">Open Port</button>`:''}
+        ${r.ip ? `<button class="btn" data-copy="ip" data-i="${i}">Copy IP</button>`:''}
+        ${r.port ? `<button class="btn" data-copy="port" data-i="${i}">Copy Port</button>`:''}
+      </div>
+    `;
+
+    [tdIdx, tdProd, tdMod, tdOrg, tdIP, tdPort, tdNotes, tdAct].forEach(td=>tr.appendChild(td));
+    tbody.appendChild(tr);
+  });
+
+  // Wire actions
+  tbody.querySelectorAll('button[data-open]').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      const r = filtered[Number(b.dataset.i)];
+      const kind = b.dataset.open;
+      if(kind==='host'){
+        const u = makeHostURL(r.ip, r.module, r.hasSSL, r.port);
+        window.open(u,'_blank','noopener');
+      }else if(kind==='port'){
+        const u = makePortURL(r.ip, r.port, r.module, r.hasSSL);
+        window.open(u,'_blank','noopener');
+      }
+    });
+  });
+  tbody.querySelectorAll('button[data-copy]').forEach(b=>{
+    b.addEventListener('click', async ()=>{
+      const r = filtered[Number(b.dataset.i)];
+      const field = b.dataset.copy;
+      const text = field==='ip' ? r.ip : String(r.port);
+      try{ await navigator.clipboard.writeText(text); b.textContent = 'Copied'; setTimeout(()=>b.textContent = field==='ip'?'Copy IP':'Copy Port', 1000);}catch{}
+    });
+  });
+
+  // KPIs
+  countEl.textContent = String(list.length);
+  const ips = new Set(list.map(x=>x.ip).filter(Boolean));
+  uniqueIpsEl.textContent = String(ips.size);
+}
+
+/* ================== Search / Filters ================== */
+function applySearch(){
+  const q = search.value.trim().toLowerCase();
+  if(!q){ filtered = records.slice(); applySort(); return; }
+  const parts = q.split(/\s+/);
+  filtered = records.filter(r=>{
+    return parts.every(p=>{
+      if(p==='ssl') return r.hasSSL;
+      if(p==='http') return r.hasHTTP;
+      if(p==='has:product') return !!r.product;
+      if(p==='has:module') return !!r.module;
+      if(p.startsWith('module:')) return String(r.module||'').toLowerCase()===p.split(':',2)[1];
+      if(p.startsWith('port:')) return String(r.port) === p.split(':',2)[1];
+      if(p.startsWith('ip:')) return String(r.ip).includes(p.split(':',2)[1]);
+      // generic match
+      const hay = `${r.product} ${r.module} ${r.ip} ${r.port} ${r.org} ${r.hostnames} ${r.domains} ${r.asn} ${r.isp}`.toLowerCase();
+      return hay.includes(p);
+    });
+  });
+  applySort();
+}
+
+/* ================== IO ================== */
+function loadText(text){
+  const data = parseNDJSONorArray(text);
+  const normed = data.map(norm);
+  records = normed;
+  filtered = normed.slice();
+  sortState = { key:'product_priority', dir:'desc' }; // products first
+  applySort();
+  updateSortIndicators();
+}
+fileInput.addEventListener('change', async (e)=>{
+  const f = e.target.files[0]; if(!f) return;
+  loadText(await f.text());
+});
+document.getElementById('paste').addEventListener('click', ()=>{
+  raw.value=''; raw.focus();
+  alert('Paste your JSON into the box below, then click "Load pasted".');
+});
+document.getElementById('loadRaw').addEventListener('click', ()=>{ if(!raw.value.trim()) return alert('Paste JSON first.'); loadText(raw.value); });
+document.getElementById('clear').addEventListener('click', ()=>{
+  records=[]; filtered=[]; tbody.innerHTML=''; countEl.textContent='0'; uniqueIpsEl.textContent='0'; raw.value='';
+  document.querySelectorAll('th .dir').forEach(s=>s.textContent='');
+});
+document.getElementById('exportFiltered').addEventListener('click', ()=> exportCSV(filtered.length?filtered:records));
+document.getElementById('copyIps').addEventListener('click', async ()=>{
+  const ips = [...new Set((filtered.length?filtered:records).map(r=>r.ip).filter(Boolean))];
+  if(!ips.length) return alert('No IPs to copy.');
+  try{ await navigator.clipboard.writeText(ips.join('\n')); alert('IPs copied.'); }catch{}
+});
+search.addEventListener('input', applySearch);
+document.querySelectorAll('button[data-filter]').forEach(b=>b.addEventListener('click', ()=>{ search.value = b.dataset.filter; applySearch(); }));
+schemeSel.addEventListener('change', ()=>renderTable(filtered));
+
+/* ================== CSV Export ================== */
+function exportCSV(list){
+  if(!list || !list.length) return alert('Nothing to export.');
+  const header = ['product','module','org','ip','port','ssl','http','domains','hostnames','asn','isp','timestamp'];
+  const rows = [header.join(',')];
+  for(const r of list){
+    rows.push([
+      q(r.product), q(r.module), q(r.org), q(r.ip), q(r.port),
+      q(r.hasSSL?'1':''), q(r.hasHTTP?'1':''), q(r.domains), q(r.hostnames),
+      q(r.asn), q(r.isp), q(r.ts)
+    ].join(','));
+  }
+  const blob = new Blob([rows.join('\n')], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = Object.assign(document.createElement('a'), {href:url, download:'results.csv'});
+  document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+}
+function q(s){ return '"' + String(s??'').replace(/"/g,'""') + '"'; }
+</script>
+</body>
+</html>
