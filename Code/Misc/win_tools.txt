@@ -1,0 +1,57 @@
+mshta.exe — Microsoft HTML Application host; runs .hta files and remote JavaScript/VBScript with COM access.
+
+ie4uinit.exe — Internet Explorer user initialization utility; used for icon cache and per-user settings synchronization.
+
+hh.exe — Microsoft HTML Help executable; opens .chm files which can contain and run active script.
+
+bitsadmin.exe — Legacy Background Intelligent Transfer Service client for creating and managing upload/download jobs.
+
+esentutl.exe — Extensible Storage Engine database utility for dumping, repairing, and copying ESE (Windows) databases.
+
+ntdsutil.exe — Active Directory database maintenance utility used to interact with ntds.dit on Domain Controllers.
+
+whoami.exe — Displays the current user context including privileges and group memberships (/priv, /groups).
+
+tasklist.exe — Enumerates running processes and loaded modules; supports remote queries (/S) and module listing (/M).
+
+netsh.exe — Networking configuration and diagnostic tool (firewall, WLAN profiles, portproxy, built-in packet tracing).
+
+forfiles.exe — File iteration utility that executes commands on matching files (supports filters and /c actions).
+
+wscript.exe / cscript.exe — Windows Script Host engines for running VBScript/JScript and instantiating COM objects.
+
+wevtutil.exe — Windows Event log utility to query, export, and clear event channels.
+
+vssadmin.exe — Volume Shadow Copy Service administration tool for listing and deleting shadow copies.
+
+wbadmin.exe — Windows Backup command-line tool for creating and managing system backups.
+
+schtasks.exe — Task Scheduler command-line tool for creating, querying, and managing scheduled tasks (including SYSTEM).
+
+reg.exe — Registry command-line tool with remote registry query capabilities (\\TARGET\HKLM\...).
+
+rundll32.exe — Host executable for calling exported functions from DLLs (used to invoke DLL-registered functionality).
+
+dxdiag.exe — DirectX diagnostics utility that exports system GPU/driver and system configuration information.
+
+systeminfo.exe — System information tool reporting OS version, installed hotfixes, uptime, domain, and architecture.
+
+recimg.exe — (Windows 8/older Windows 10 feature) Create custom recovery images of the system.
+
+cmdkey.exe — Credential management utility to list, create, and delete stored credentials for remote resources.
+
+runas.exe — Run a program under alternate credentials (includes /netonly mode for remote-only credentials).
+
+wmic.exe — WMI command-line interface for local and remote queries and process/service management (deprecated but present).
+
+pktmon.exe — Built-in packet monitor capable of capturing and exporting network traffic to pcapng-compatible formats.
+
+makecab.exe — Native cabinet (.cab) creation tool for compressing files into .cab archives.
+
+extrac32.exe — Extraction utility for .cab archives and certain packaged resources.
+
+printui.dll (invoked via rundll32 printui.dll,PrintUIEntry) — Printer management entrypoint usable for silent printer/driver installs.
+
+clip.exe — Command-line clipboard utility that places stdin into the Windows clipboard.
+
+msinfo32.exe — System Information GUI with command-line export capability for a full hardware/software inventory.
