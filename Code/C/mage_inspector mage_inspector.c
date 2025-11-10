@@ -1,3 +1,5 @@
+// ps: Kimi AI is a liar.
+
 // mage_inspector.c - Bare-Metal Memory Access Entropy Forensics
 // Compiles on Linux 5.10+ with: clang -O2 -o mage_inspector mage_inspector.c -lelf -lz
 // Requires: libbpf-dev, linux-headers:
