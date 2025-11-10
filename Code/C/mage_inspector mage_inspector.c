@@ -1,6 +1,15 @@
 // mage_inspector.c - Bare-Metal Memory Access Entropy Forensics
 // Compiles on Linux 5.10+ with: clang -O2 -o mage_inspector mage_inspector.c -lelf -lz
-// Requires: libbpf-dev, linux-headers
+// Requires: libbpf-dev, linux-headers:
+
+// Actual dependencies
+// sudo apt-get install libbpf-dev linux-headers-$(uname -r) clang llvm zlib1g-dev
+
+// The eBPF bytecode is simplified. Real implementation requires BPF skeleton generation:
+// bpftool gen skeleton mage_inspector.bpf.o > mage_inspector.skel.h
+
+// Then compile userspace:
+// clang -O2 -g -o mage_inspector mage_inspector.c -lbpf -lelf -lz -lpthread
 
 #include <stdio.h>
 #include <stdlib.h>
