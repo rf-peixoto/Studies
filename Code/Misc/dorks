@@ -16,6 +16,9 @@ inurl:apk ("free download" | "latest version") ("android" | "app") -site:google.
 ("top 10" | "best" | "list of") ("apk sites" | "android app stores") -site:android.com
 filetype:apk OR filetype:ipa ("download" | "android app") -site:play.google.com -site:apple.com
 
+# Slack configs:
+link:"https://join.slack.com/t/"
+"join.slack.com" ext:pdf
 
 # Python webapps:
 (inurl:"gradio" | inurl:"streamlit") ("keyword1" | "keyword2")
