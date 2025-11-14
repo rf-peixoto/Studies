@@ -466,6 +466,9 @@ intitle:"index of" "*.php|clientes|admin|cadastros|storage|public|contato|contra
 
 inurl:apidocs | inurl:api-docs | inurl:swagger | inurl:api-explorer site:"com"
 
+# Git tokens:
+ghp_ OR github_patP OR gho_ OR ghu_ OR ghs_
+
 Classified docs:
 intitle:report (nessus | qualys | acunetix | arachini) ext:pdf
 site:DOMAIN ext:pdf ("internal use" | "confidential" | "redacted" | "classified" | "secret") 
