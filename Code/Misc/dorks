@@ -468,6 +468,7 @@ inurl:apidocs | inurl:api-docs | inurl:swagger | inurl:api-explorer site:"com"
 
 # Git tokens:
 ghp_ OR github_pat OR gho_ OR ghu_ OR ghs_
+(site:github.com | site:gitlab.com | intitle:GitLab | site:bitbucket.org)
 
 Classified docs:
 intitle:report (nessus | qualys | acunetix | arachini) ext:pdf
