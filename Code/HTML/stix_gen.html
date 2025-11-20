@@ -1,0 +1,1335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STIX Generator - Threat Intelligence Creator</title>
+    <style>
+        :root {
+            --primary: #3a86ff;
+            --secondary: #8338ec;
+            --dark: #121212;
+            --darker: #0a0a0a;
+            --light: #e0e0e0;
+            --gray: #424242;
+            --success: #06d6a0;
+            --warning: #ffd166;
+            --danger: #ef476f;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--darker);
+            color: var(--light);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--gray);
+        }
+
+        h1 {
+            color: var(--primary);
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: var(--light);
+            opacity: 0.8;
+            font-size: 1.1rem;
+        }
+
+        .app-container {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            gap: 20px;
+        }
+
+        .sidebar {
+            background-color: var(--dark);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .object-list {
+            list-style: none;
+        }
+
+        .object-list li {
+            margin-bottom: 10px;
+        }
+
+        .object-btn {
+            width: 100%;
+            padding: 12px 15px;
+            background-color: var(--gray);
+            color: var(--light);
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .object-btn:hover {
+            background-color: var(--primary);
+            transform: translateX(5px);
+        }
+
+        .object-btn.active {
+            background-color: var(--primary);
+            font-weight: bold;
+        }
+
+        .main-content {
+            background-color: var(--dark);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .form-section {
+            display: none;
+        }
+
+        .form-section.active {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--light);
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 12px;
+            background-color: var(--darker);
+            border: 1px solid var(--gray);
+            border-radius: 5px;
+            color: var(--light);
+            font-size: 0.9rem;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .checkbox-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .checkbox-item input {
+            width: auto;
+        }
+
+        .btn {
+            padding: 12px 20px;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .btn:hover {
+            background-color: var(--secondary);
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background-color: var(--gray);
+        }
+
+        .btn-secondary:hover {
+            background-color: #555;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .output-container {
+            margin-top: 30px;
+            background-color: var(--darker);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .output-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        #output {
+            background-color: var(--dark);
+            padding: 15px;
+            border-radius: 5px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            white-space: pre-wrap;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .help-text {
+            font-size: 0.8rem;
+            color: #aaa;
+            margin-top: 5px;
+        }
+
+        .required::after {
+            content: " *";
+            color: var(--danger);
+        }
+
+        .tab-content {
+            margin-top: 20px;
+        }
+
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid var(--gray);
+            margin-bottom: 20px;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+        }
+
+        .tab.active {
+            border-bottom: 3px solid var(--primary);
+            color: var(--primary);
+        }
+
+        @media (max-width: 768px) {
+            .app-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .sidebar {
+                order: 2;
+            }
+            
+            .main-content {
+                order: 1;
+            }
+            
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>STIX Generator</h1>
+            <p class="subtitle">Create Structured Threat Information Expression (STIX) files with an intuitive form-based interface</p>
+        </header>
+        
+        <div class="app-container">
+            <div class="sidebar">
+                <h3>STIX Objects</h3>
+                <ul class="object-list">
+                    <li><button class="object-btn active" data-target="indicator">Indicator</button></li>
+                    <li><button class="object-btn" data-target="malware">Malware</button></li>
+                    <li><button class="object-btn" data-target="attack-pattern">Attack Pattern</button></li>
+                    <li><button class="object-btn" data-target="campaign">Campaign</button></li>
+                    <li><button class="object-btn" data-target="threat-actor">Threat Actor</button></li>
+                    <li><button class="object-btn" data-target="course-of-action">Course of Action</button></li>
+                    <li><button class="object-btn" data-target="report">Report</button></li>
+                    <li><button class="object-btn" data-target="relationship">Relationship</button></li>
+                    <li><button class="object-btn" data-target="sighting">Sighting</button></li>
+                    <li><button class="object-btn" data-target="observed-data">Observed Data</button></li>
+                </ul>
+            </div>
+            
+            <div class="main-content">
+                <!-- Indicator Form -->
+                <div class="form-section active" id="indicator">
+                    <h2>Indicator</h2>
+                    <p class="help-text">Indicators contain patterns that can be used to detect suspicious or malicious cyber activity.</p>
+                    
+                    <div class="form-group">
+                        <label for="indicator-name" class="required">Name</label>
+                        <input type="text" id="indicator-name" placeholder="Enter indicator name">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="indicator-description">Description</label>
+                        <textarea id="indicator-description" rows="3" placeholder="Provide a description of the indicator"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="indicator-pattern" class="required">Pattern</label>
+                        <textarea id="indicator-pattern" rows="4" placeholder="Enter STIX pattern (e.g., [file:hashes.MD5 = '...'])"></textarea>
+                        <p class="help-text">Use STIX Patterning language to define the detection pattern</p>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="indicator-pattern-type" class="required">Pattern Type</label>
+                            <select id="indicator-pattern-type">
+                                <option value="stix">STIX</option>
+                                <option value="snort">Snort</option>
+                                <option value="yara">YARA</option>
+                                <option value="sigma">Sigma</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="indicator-valid-from" class="required">Valid From</label>
+                            <input type="datetime-local" id="indicator-valid-from">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="indicator-valid-until">Valid Until</label>
+                        <input type="datetime-local" id="indicator-valid-until">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Indicator Types</label>
+                        <div class="checkbox-group">
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="indicator-type-anomalous" value="anomalous-activity">
+                                <label for="indicator-type-anomalous">Anomalous Activity</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="indicator-type-c2" value="command-and-control">
+                                <label for="indicator-type-c2">Command & Control</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="indicator-type-malware" value="malicious-activity">
+                                <label for="indicator-type-malware">Malicious Activity</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="indicator-type-attribution" value="attribution">
+                                <label for="indicator-type-attribution">Attribution</label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="action-buttons">
+                        <button class="btn" id="generate-indicator">Generate Indicator</button>
+                        <button class="btn btn-secondary" id="reset-indicator">Reset Form</button>
+                    </div>
+                </div>
+                
+                <!-- Malware Form -->
+                <div class="form-section" id="malware">
+                    <h2>Malware</h2>
+                    <p class="help-text">Malware objects represent malicious code and software used in cyber attacks.</p>
+                    
+                    <div class="form-group">
+                        <label for="malware-name" class="required">Name</label>
+                        <input type="text" id="malware-name" placeholder="Enter malware name">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="malware-description">Description</label>
+                        <textarea id="malware-description" rows="3" placeholder="Provide a description of the malware"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Malware Types</label>
+                        <div class="checkbox-group">
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="malware-type-virus" value="virus">
+                                <label for="malware-type-virus">Virus</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="malware-type-worm" value="worm">
+                                <label for="malware-type-worm">Worm</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="malware-type-trojan" value="trojan">
+                                <label for="malware-type-trojan">Trojan</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="malware-type-ransomware" value="ransomware">
+                                <label for="malware-type-ransomware">Ransomware</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="malware-type-spyware" value="spyware">
+                                <label for="malware-type-spyware">Spyware</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="malware-type-rat" value="remote-access-trojan">
+                                <label for="malware-type-rat">Remote Access Trojan</label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="malware-is-family">Is Family</label>
+                        <select id="malware-is-family">
+                            <option value="true">Yes</option>
+                            <option value="false">No</option>
+                        </select>
+                        <p class="help-text">Indicates if this object represents a malware family or a specific instance</p>
+                    </div>
+                    
+                    <div class="action-buttons">
+                        <button class="btn" id="generate-malware">Generate Malware</button>
+                        <button class="btn btn-secondary" id="reset-malware">Reset Form</button>
+                    </div>
+                </div>
+                
+                <!-- Attack Pattern Form -->
+                <div class="form-section" id="attack-pattern">
+                    <h2>Attack Pattern</h2>
+                    <p class="help-text">Attack Patterns describe ways that adversaries attempt to compromise targets.</p>
+                    
+                    <div class="form-group">
+                        <label for="attack-pattern-name" class="required">Name</label>
+                        <input type="text" id="attack-pattern-name" placeholder="Enter attack pattern name">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="attack-pattern-description">Description</label>
+                        <textarea id="attack-pattern-description" rows="3" placeholder="Provide a description of the attack pattern"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="attack-pattern-capec-id">CAPEC ID</label>
+                        <input type="text" id="attack-pattern-capec-id" placeholder="e.g., CAPEC-163">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Kill Chain Phases</label>
+                        <div class="checkbox-group">
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="killchain-recon" value="reconnaissance">
+                                <label for="killchain-recon">Reconnaissance</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="killchain-weaponization" value="weaponization">
+                                <label for="killchain-weaponization">Weaponization</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="killchain-delivery" value="delivery">
+                                <label for="killchain-delivery">Delivery</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="killchain-exploitation" value="exploitation">
+                                <label for="killchain-exploitation">Exploitation</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="killchain-installation" value="installation">
+                                <label for="killchain-installation">Installation</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="killchain-command" value="command-and-control">
+                                <label for="killchain-command">Command & Control</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="killchain-actions" value="actions-on-objectives">
+                                <label for="killchain-actions">Actions on Objectives</label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="action-buttons">
+                        <button class="btn" id="generate-attack-pattern">Generate Attack Pattern</button>
+                        <button class="btn btn-secondary" id="reset-attack-pattern">Reset Form</button>
+                    </div>
+                </div>
+                
+                <!-- Campaign Form -->
+                <div class="form-section" id="campaign">
+                    <h2>Campaign</h2>
+                    <p class="help-text">Campaigns group adversarial behaviors that occur over time against specific targets.</p>
+                    
+                    <div class="form-group">
+                        <label for="campaign-name" class="required">Name</label>
+                        <input type="text" id="campaign-name" placeholder="Enter campaign name">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="campaign-description">Description</label>
+                        <textarea id="campaign-description" rows="3" placeholder="Provide a description of the campaign"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="campaign-objective">Objective</label>
+                        <input type="text" id="campaign-objective" placeholder="Campaign's primary goal or objective">
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="campaign-first-seen">First Seen</label>
+                            <input type="datetime-local" id="campaign-first-seen">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="campaign-last-seen">Last Seen</label>
+                            <input type="datetime-local" id="campaign-last-seen">
+                        </div>
+                    </div>
+                    
+                    <div class="action-buttons">
+                        <button class="btn" id="generate-campaign">Generate Campaign</button>
+                        <button class="btn btn-secondary" id="reset-campaign">Reset Form</button>
+                    </div>
+                </div>
+                
+                <!-- Threat Actor Form -->
+                <div class="form-section" id="threat-actor">
+                    <h2>Threat Actor</h2>
+                    <p class="help-text">Threat Actors represent individuals, groups, or organizations believed to be operating with malicious intent.</p>
+                    
+                    <div class="form-group">
+                        <label for="threat-actor-name" class="required">Name</label>
+                        <input type="text" id="threat-actor-name" placeholder="Enter threat actor name">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="threat-actor-description">Description</label>
+                        <textarea id="threat-actor-description" rows="3" placeholder="Provide a description of the threat actor"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Threat Actor Types</label>
+                        <div class="checkbox-group">
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="threat-type-crime" value="crime-syndicate">
+                                <label for="threat-type-crime">Crime Syndicate</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="threat-type-activist" value="activist">
+                                <label for="threat-type-activist">Activist</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="threat-type-nation" value="nation-state">
+                                <label for="threat-type-nation">Nation State</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="threat-type-competitor" value="competitor">
+                                <label for="threat-type-competitor">Competitor</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="threat-type-insider" value="insider-threat">
+                                <label for="threat-type-insider">Insider Threat</label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="threat-actor-sophistication">Sophistication Level</label>
+                        <select id="threat-actor-sophistication">
+                            <option value="none">None</option>
+                            <option value="minimal">Minimal</option>
+                            <option value="intermediate">Intermediate</option>
+                            <option value="advanced">Advanced</option>
+                            <option value="expert">Expert</option>
+                            <option value="innovator">Innovator</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="threat-actor-motivation">Primary Motivation</label>
+                        <select id="threat-actor-motivation">
+                            <option value="accidental">Accidental</option>
+                            <option value="coercion">Coercion</option>
+                            <option value="dominance">Dominance</option>
+                            <option value="ideology">Ideology</option>
+                            <option value="notoriety">Notoriety</option>
+                            <option value="organizational-gain">Organizational Gain</option>
+                            <option value="personal-gain">Personal Gain</option>
+                            <option value="personal-satisfaction">Personal Satisfaction</option>
+                            <option value="revenge">Revenge</option>
+                            <option value="unpredictable">Unpredictable</option>
+                        </select>
+                    </div>
+                    
+                    <div class="action-buttons">
+                        <button class="btn" id="generate-threat-actor">Generate Threat Actor</button>
+                        <button class="btn btn-secondary" id="reset-threat-actor">Reset Form</button>
+                    </div>
+                </div>
+                
+                <!-- Course of Action Form -->
+                <div class="form-section" id="course-of-action">
+                    <h2>Course of Action</h2>
+                    <p class="help-text">Courses of Action are actions taken to prevent or respond to attacks.</p>
+                    
+                    <div class="form-group">
+                        <label for="coa-name" class="required">Name</label>
+                        <input type="text" id="coa-name" placeholder="Enter course of action name">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="coa-description" class="required">Description</label>
+                        <textarea id="coa-description" rows="4" placeholder="Provide a detailed description of the course of action"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Action Type</label>
+                        <div class="checkbox-group">
+                            <div class="checkbox-item">
+                                <input type="radio" id="coa-type-preventive" name="coa-type" value="preventive">
+                                <label for="coa-type-preventive">Preventive</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="radio" id="coa-type-responsive" name="coa-type" value="responsive">
+                                <label for="coa-type-responsive">Responsive</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="radio" id="coa-type-detective" name="coa-type" value="detective">
+                                <label for="coa-type-detective">Detective</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="radio" id="coa-type-deterrent" name="coa-type" value="deterrent">
+                                <label for="coa-type-deterrent">Deterrent</label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="action-buttons">
+                        <button class="btn" id="generate-coa">Generate Course of Action</button>
+                        <button class="btn btn-secondary" id="reset-coa">Reset Form</button>
+                    </div>
+                </div>
+                
+                <!-- Report Form -->
+                <div class="form-section" id="report">
+                    <h2>Report</h2>
+                    <p class="help-text">Reports are collections of threat intelligence focused on one or more topics.</p>
+                    
+                    <div class="form-group">
+                        <label for="report-name" class="required">Name</label>
+                        <input type="text" id="report-name" placeholder="Enter report name">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="report-description">Description</label>
+                        <textarea id="report-description" rows="3" placeholder="Provide a description of the report"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="report-published" class="required">Published Date</label>
+                        <input type="datetime-local" id="report-published">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Report Types</label>
+                        <div class="checkbox-group">
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="report-type-threat" value="threat-report">
+                                <label for="report-type-threat">Threat Report</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="report-type-attack" value="attack-pattern">
+                                <label for="report-type-attack">Attack Pattern</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="report-type-campaign" value="campaign">
+                                <label for="report-type-campaign">Campaign</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="report-type-indicator" value="indicator">
+                                <label for="report-type-indicator">Indicator</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="report-type-malware" value="malware">
+                                <label for="report-type-malware">Malware</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="report-type-observed" value="observed-data">
+                                <label for="report-type-observed">Observed Data</label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="action-buttons">
+                        <button class="btn" id="generate-report">Generate Report</button>
+                        <button class="btn btn-secondary" id="reset-report">Reset Form</button>
+                    </div>
+                </div>
+                
+                <!-- Relationship Form -->
+                <div class="form-section" id="relationship">
+                    <h2>Relationship</h2>
+                    <p class="help-text">Relationships link STIX objects to describe how they are related to each other.</p>
+                    
+                    <div class="form-group">
+                        <label for="relationship-type" class="required">Relationship Type</label>
+                        <select id="relationship-type">
+                            <option value="related-to">Related To</option>
+                            <option value="derived-from">Derived From</option>
+                            <option value="duplicate-of">Duplicate Of</option>
+                            <option value="targets">Targets</option>
+                            <option value="uses">Uses</option>
+                            <option value="mitigates">Mitigates</option>
+                            <option value="indicates">Indicates</option>
+                            <option value="based-on">Based On</option>
+                            <option value="attributed-to">Attributed To</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="relationship-description">Description</label>
+                        <textarea id="relationship-description" rows="3" placeholder="Provide a description of the relationship"></textarea>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="relationship-source" class="required">Source Reference</label>
+                            <input type="text" id="relationship-source" placeholder="e.g., indicator--a932...">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="relationship-target" class="required">Target Reference</label>
+                            <input type="text" id="relationship-target" placeholder="e.g., malware--b532...">
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="relationship-start">Start Time</label>
+                            <input type="datetime-local" id="relationship-start">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="relationship-stop">Stop Time</label>
+                            <input type="datetime-local" id="relationship-stop">
+                        </div>
+                    </div>
+                    
+                    <div class="action-buttons">
+                        <button class="btn" id="generate-relationship">Generate Relationship</button>
+                        <button class="btn btn-secondary" id="reset-relationship">Reset Form</button>
+                    </div>
+                </div>
+                
+                <!-- Sighting Form -->
+                <div class="form-section" id="sighting">
+                    <h2>Sighting</h2>
+                    <p class="help-text">Sightings denote that something in CTI was seen.</p>
+                    
+                    <div class="form-group">
+                        <label for="sighting-description">Description</label>
+                        <textarea id="sighting-description" rows="3" placeholder="Provide a description of the sighting"></textarea>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="sighting-first-seen">First Seen</label>
+                            <input type="datetime-local" id="sighting-first-seen">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="sighting-last-seen">Last Seen</label>
+                            <input type="datetime-local" id="sighting-last-seen">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="sighting-count">Count</label>
+                        <input type="number" id="sighting-count" min="0" value="1">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="sighting-of-ref" class="required">Sighting Of Reference</label>
+                        <input type="text" id="sighting-of-ref" placeholder="e.g., indicator--a932...">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="sighting-where">Where Sighted (Identity Reference)</label>
+                        <input type="text" id="sighting-where" placeholder="e.g., identity--c532...">
+                    </div>
+                    
+                    <div class="action-buttons">
+                        <button class="btn" id="generate-sighting">Generate Sighting</button>
+                        <button class="btn btn-secondary" id="reset-sighting">Reset Form</button>
+                    </div>
+                </div>
+                
+                <!-- Observed Data Form -->
+                <div class="form-section" id="observed-data">
+                    <h2>Observed Data</h2>
+                    <p class="help-text">Observed Data conveys information about cyber security related entities such as files, systems, and networks.</p>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="observed-first" class="required">First Observed</label>
+                            <input type="datetime-local" id="observed-first">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="observed-last" class="required">Last Observed</label>
+                            <input type="datetime-local" id="observed-last">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="observed-number" class="required">Number Observed</label>
+                        <input type="number" id="observed-number" min="1" value="1">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="observed-objects">Object References</label>
+                        <textarea id="observed-objects" rows="3" placeholder="List of SCO references (one per line)"></textarea>
+                        <p class="help-text">Enter one STIX Cyber-observable Object reference per line</p>
+                    </div>
+                    
+                    <div class="action-buttons">
+                        <button class="btn" id="generate-observed">Generate Observed Data</button>
+                        <button class="btn btn-secondary" id="reset-observed">Reset Form</button>
+                    </div>
+                </div>
+                
+                <div class="output-container">
+                    <div class="output-header">
+                        <h3>Generated STIX Output</h3>
+                        <button class="btn btn-secondary" id="copy-output">Copy to Clipboard</button>
+                    </div>
+                    <pre id="output">Your STIX content will appear here...</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Object navigation
+        document.querySelectorAll('.object-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                // Remove active class from all buttons
+                document.querySelectorAll('.object-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                
+                // Add active class to clicked button
+                this.classList.add('active');
+                
+                // Hide all form sections
+                document.querySelectorAll('.form-section').forEach(section => {
+                    section.classList.remove('active');
+                });
+                
+                // Show the target form section
+                const targetId = this.getAttribute('data-target');
+                document.getElementById(targetId).classList.add('active');
+            });
+        });
+
+        // Helper function to generate UUID (simplified version)
+        function generateUUID() {
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                const r = Math.random() * 16 | 0;
+                const v = c === 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        }
+
+        // Helper function to get current datetime in ISO format
+        function getCurrentDateTime() {
+            return new Date().toISOString().slice(0, 16);
+        }
+
+        // Helper function to format datetime for STIX
+        function formatDateTimeForSTIX(dateTimeString) {
+            return dateTimeString ? dateTimeString + 'Z' : new Date().toISOString();
+        }
+
+        // Generate Indicator
+        document.getElementById('generate-indicator').addEventListener('click', function() {
+            const name = document.getElementById('indicator-name').value;
+            const description = document.getElementById('indicator-description').value;
+            const pattern = document.getElementById('indicator-pattern').value;
+            const patternType = document.getElementById('indicator-pattern-type').value;
+            const validFrom = document.getElementById('indicator-valid-from').value;
+            const validUntil = document.getElementById('indicator-valid-until').value;
+            
+            // Get selected indicator types
+            const indicatorTypes = [];
+            document.querySelectorAll('#indicator input[type="checkbox"]:checked').forEach(checkbox => {
+                indicatorTypes.push(checkbox.value);
+            });
+            
+            // Basic validation
+            if (!name || !pattern || !patternType || !validFrom) {
+                alert('Please fill in all required fields');
+                return;
+            }
+            
+            // Generate STIX JSON
+            const stixObject = {
+                "type": "indicator",
+                "spec_version": "2.1",
+                "id": "indicator--" + generateUUID(),
+                "created": new Date().toISOString(),
+                "modified": new Date().toISOString(),
+                "name": name,
+                "description": description,
+                "pattern": pattern,
+                "pattern_type": patternType,
+                "valid_from": formatDateTimeForSTIX(validFrom),
+                "indicator_types": indicatorTypes
+            };
+            
+            if (validUntil) {
+                stixObject.valid_until = formatDateTimeForSTIX(validUntil);
+            }
+            
+            // Display the output
+            document.getElementById('output').textContent = JSON.stringify(stixObject, null, 2);
+        });
+
+        // Generate Malware
+        document.getElementById('generate-malware').addEventListener('click', function() {
+            const name = document.getElementById('malware-name').value;
+            const description = document.getElementById('malware-description').value;
+            const isFamily = document.getElementById('malware-is-family').value === 'true';
+            
+            // Get selected malware types
+            const malwareTypes = [];
+            document.querySelectorAll('#malware input[type="checkbox"]:checked').forEach(checkbox => {
+                malwareTypes.push(checkbox.value);
+            });
+            
+            // Basic validation
+            if (!name) {
+                alert('Please fill in all required fields');
+                return;
+            }
+            
+            // Generate STIX JSON
+            const stixObject = {
+                "type": "malware",
+                "spec_version": "2.1",
+                "id": "malware--" + generateUUID(),
+                "created": new Date().toISOString(),
+                "modified": new Date().toISOString(),
+                "name": name,
+                "description": description,
+                "is_family": isFamily,
+                "malware_types": malwareTypes
+            };
+            
+            // Display the output
+            document.getElementById('output').textContent = JSON.stringify(stixObject, null, 2);
+        });
+
+        // Generate Attack Pattern
+        document.getElementById('generate-attack-pattern').addEventListener('click', function() {
+            const name = document.getElementById('attack-pattern-name').value;
+            const description = document.getElementById('attack-pattern-description').value;
+            const capecId = document.getElementById('attack-pattern-capec-id').value;
+            
+            // Get selected kill chain phases
+            const killChainPhases = [];
+            document.querySelectorAll('#attack-pattern input[type="checkbox"]:checked').forEach(checkbox => {
+                killChainPhases.push({
+                    "kill_chain_name": "lockheed-martin-cyber-kill-chain",
+                    "phase_name": checkbox.value
+                });
+            });
+            
+            // Basic validation
+            if (!name) {
+                alert('Please fill in all required fields');
+                return;
+            }
+            
+            // Generate STIX JSON
+            const stixObject = {
+                "type": "attack-pattern",
+                "spec_version": "2.1",
+                "id": "attack-pattern--" + generateUUID(),
+                "created": new Date().toISOString(),
+                "modified": new Date().toISOString(),
+                "name": name,
+                "description": description,
+                "kill_chain_phases": killChainPhases
+            };
+            
+            if (capecId) {
+                stixObject.external_references = [{
+                    "source_name": "capec",
+                    "external_id": capecId
+                }];
+            }
+            
+            // Display the output
+            document.getElementById('output').textContent = JSON.stringify(stixObject, null, 2);
+        });
+
+        // Generate Campaign
+        document.getElementById('generate-campaign').addEventListener('click', function() {
+            const name = document.getElementById('campaign-name').value;
+            const description = document.getElementById('campaign-description').value;
+            const objective = document.getElementById('campaign-objective').value;
+            const firstSeen = document.getElementById('campaign-first-seen').value;
+            const lastSeen = document.getElementById('campaign-last-seen').value;
+            
+            // Basic validation
+            if (!name) {
+                alert('Please fill in all required fields');
+                return;
+            }
+            
+            // Generate STIX JSON
+            const stixObject = {
+                "type": "campaign",
+                "spec_version": "2.1",
+                "id": "campaign--" + generateUUID(),
+                "created": new Date().toISOString(),
+                "modified": new Date().toISOString(),
+                "name": name,
+                "description": description,
+                "objective": objective
+            };
+            
+            if (firstSeen) {
+                stixObject.first_seen = formatDateTimeForSTIX(firstSeen);
+            }
+            
+            if (lastSeen) {
+                stixObject.last_seen = formatDateTimeForSTIX(lastSeen);
+            }
+            
+            // Display the output
+            document.getElementById('output').textContent = JSON.stringify(stixObject, null, 2);
+        });
+
+        // Generate Threat Actor
+        document.getElementById('generate-threat-actor').addEventListener('click', function() {
+            const name = document.getElementById('threat-actor-name').value;
+            const description = document.getElementById('threat-actor-description').value;
+            const sophistication = document.getElementById('threat-actor-sophistication').value;
+            const motivation = document.getElementById('threat-actor-motivation').value;
+            
+            // Get selected threat actor types
+            const threatActorTypes = [];
+            document.querySelectorAll('#threat-actor input[type="checkbox"]:checked').forEach(checkbox => {
+                threatActorTypes.push(checkbox.value);
+            });
+            
+            // Basic validation
+            if (!name) {
+                alert('Please fill in all required fields');
+                return;
+            }
+            
+            // Generate STIX JSON
+            const stixObject = {
+                "type": "threat-actor",
+                "spec_version": "2.1",
+                "id": "threat-actor--" + generateUUID(),
+                "created": new Date().toISOString(),
+                "modified": new Date().toISOString(),
+                "name": name,
+                "description": description,
+                "threat_actor_types": threatActorTypes,
+                "sophistication": sophistication,
+                "primary_motivation": motivation
+            };
+            
+            // Display the output
+            document.getElementById('output').textContent = JSON.stringify(stixObject, null, 2);
+        });
+
+        // Generate Course of Action
+        document.getElementById('generate-coa').addEventListener('click', function() {
+            const name = document.getElementById('coa-name').value;
+            const description = document.getElementById('coa-description').value;
+            
+            // Get selected action type
+            let actionType = "";
+            document.querySelectorAll('#course-of-action input[type="radio"]:checked').forEach(radio => {
+                actionType = radio.value;
+            });
+            
+            // Basic validation
+            if (!name || !description) {
+                alert('Please fill in all required fields');
+                return;
+            }
+            
+            // Generate STIX JSON
+            const stixObject = {
+                "type": "course-of-action",
+                "spec_version": "2.1",
+                "id": "course-of-action--" + generateUUID(),
+                "created": new Date().toISOString(),
+                "modified": new Date().toISOString(),
+                "name": name,
+                "description": description
+            };
+            
+            // Display the output
+            document.getElementById('output').textContent = JSON.stringify(stixObject, null, 2);
+        });
+
+        // Generate Report
+        document.getElementById('generate-report').addEventListener('click', function() {
+            const name = document.getElementById('report-name').value;
+            const description = document.getElementById('report-description').value;
+            const published = document.getElementById('report-published').value;
+            
+            // Get selected report types
+            const reportTypes = [];
+            document.querySelectorAll('#report input[type="checkbox"]:checked').forEach(checkbox => {
+                reportTypes.push(checkbox.value);
+            });
+            
+            // Basic validation
+            if (!name || !published) {
+                alert('Please fill in all required fields');
+                return;
+            }
+            
+            // Generate STIX JSON
+            const stixObject = {
+                "type": "report",
+                "spec_version": "2.1",
+                "id": "report--" + generateUUID(),
+                "created": new Date().toISOString(),
+                "modified": new Date().toISOString(),
+                "name": name,
+                "description": description,
+                "published": formatDateTimeForSTIX(published),
+                "report_types": reportTypes,
+                "object_refs": [] // Would normally contain references to other objects
+            };
+            
+            // Display the output
+            document.getElementById('output').textContent = JSON.stringify(stixObject, null, 2);
+        });
+
+        // Generate Relationship
+        document.getElementById('generate-relationship').addEventListener('click', function() {
+            const relationshipType = document.getElementById('relationship-type').value;
+            const description = document.getElementById('relationship-description').value;
+            const sourceRef = document.getElementById('relationship-source').value;
+            const targetRef = document.getElementById('relationship-target').value;
+            const startTime = document.getElementById('relationship-start').value;
+            const stopTime = document.getElementById('relationship-stop').value;
+            
+            // Basic validation
+            if (!relationshipType || !sourceRef || !targetRef) {
+                alert('Please fill in all required fields');
+                return;
+            }
+            
+            // Generate STIX JSON
+            const stixObject = {
+                "type": "relationship",
+                "spec_version": "2.1",
+                "id": "relationship--" + generateUUID(),
+                "created": new Date().toISOString(),
+                "modified": new Date().toISOString(),
+                "relationship_type": relationshipType,
+                "description": description,
+                "source_ref": sourceRef,
+                "target_ref": targetRef
+            };
+            
+            if (startTime) {
+                stixObject.start_time = formatDateTimeForSTIX(startTime);
+            }
+            
+            if (stopTime) {
+                stixObject.stop_time = formatDateTimeForSTIX(stopTime);
+            }
+            
+            // Display the output
+            document.getElementById('output').textContent = JSON.stringify(stixObject, null, 2);
+        });
+
+        // Generate Sighting
+        document.getElementById('generate-sighting').addEventListener('click', function() {
+            const description = document.getElementById('sighting-description').value;
+            const firstSeen = document.getElementById('sighting-first-seen').value;
+            const lastSeen = document.getElementById('sighting-last-seen').value;
+            const count = document.getElementById('sighting-count').value;
+            const sightingOfRef = document.getElementById('sighting-of-ref').value;
+            const whereSighted = document.getElementById('sighting-where').value;
+            
+            // Basic validation
+            if (!sightingOfRef) {
+                alert('Please fill in all required fields');
+                return;
+            }
+            
+            // Generate STIX JSON
+            const stixObject = {
+                "type": "sighting",
+                "spec_version": "2.1",
+                "id": "sighting--" + generateUUID(),
+                "created": new Date().toISOString(),
+                "modified": new Date().toISOString(),
+                "sighting_of_ref": sightingOfRef,
+                "count": parseInt(count) || 1
+            };
+            
+            if (description) {
+                stixObject.description = description;
+            }
+            
+            if (firstSeen) {
+                stixObject.first_seen = formatDateTimeForSTIX(firstSeen);
+            }
+            
+            if (lastSeen) {
+                stixObject.last_seen = formatDateTimeForSTIX(lastSeen);
+            }
+            
+            if (whereSighted) {
+                stixObject.where_sighted_refs = [whereSighted];
+            }
+            
+            // Display the output
+            document.getElementById('output').textContent = JSON.stringify(stixObject, null, 2);
+        });
+
+        // Generate Observed Data
+        document.getElementById('generate-observed').addEventListener('click', function() {
+            const firstObserved = document.getElementById('observed-first').value;
+            const lastObserved = document.getElementById('observed-last').value;
+            const numberObserved = document.getElementById('observed-number').value;
+            const objectsText = document.getElementById('observed-objects').value;
+            
+            // Basic validation
+            if (!firstObserved || !lastObserved || !numberObserved) {
+                alert('Please fill in all required fields');
+                return;
+            }
+            
+            // Parse object references
+            const objectRefs = objectsText.split('\n')
+                .map(line => line.trim())
+                .filter(line => line.length > 0);
+            
+            // Generate STIX JSON
+            const stixObject = {
+                "type": "observed-data",
+                "spec_version": "2.1",
+                "id": "observed-data--" + generateUUID(),
+                "created": new Date().toISOString(),
+                "modified": new Date().toISOString(),
+                "first_observed": formatDateTimeForSTIX(firstObserved),
+                "last_observed": formatDateTimeForSTIX(lastObserved),
+                "number_observed": parseInt(numberObserved) || 1,
+                "object_refs": objectRefs
+            };
+            
+            // Display the output
+            document.getElementById('output').textContent = JSON.stringify(stixObject, null, 2);
+        });
+
+        // Reset forms
+        document.querySelectorAll('[id^="reset-"]').forEach(button => {
+            button.addEventListener('click', function() {
+                const formId = this.id.replace('reset-', '');
+                document.getElementById(formId).querySelectorAll('input, textarea, select').forEach(element => {
+                    if (element.type === 'checkbox' || element.type === 'radio') {
+                        element.checked = false;
+                    } else {
+                        element.value = '';
+                    }
+                });
+                
+                // Reset default values for datetime fields
+                if (formId === 'indicator') {
+                    document.getElementById('indicator-valid-from').value = getCurrentDateTime();
+                    document.getElementById('indicator-valid-until').value = getCurrentDateTime();
+                }
+            });
+        });
+
+        // Copy to clipboard
+        document.getElementById('copy-output').addEventListener('click', function() {
+            const outputText = document.getElementById('output').textContent;
+            navigator.clipboard.writeText(outputText).then(() => {
+                const originalText = this.textContent;
+                this.textContent = 'Copied!';
+                setTimeout(() => {
+                    this.textContent = originalText;
+                }, 2000);
+            });
+        });
+
+        // Set default datetime values
+        const now = new Date();
+        const formattedNow = now.toISOString().slice(0, 16);
+        
+        // Set default values for datetime fields
+        document.getElementById('indicator-valid-from').value = formattedNow;
+        
+        // Add one week for valid until
+        const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+        const formattedNextWeek = nextWeek.toISOString().slice(0, 16);
+        document.getElementById('indicator-valid-until').value = formattedNextWeek;
+        
+        // Set default for report published date
+        document.getElementById('report-published').value = formattedNow;
+        
+        // Set default for observed data
+        document.getElementById('observed-first').value = formattedNow;
+        document.getElementById('observed-last').value = formattedNow;
+    </script>
+</body>
+</html>
