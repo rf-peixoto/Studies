@@ -14,7 +14,7 @@ from colorama import Fore, Style, init
 import argparse
 import sys
 import os
-import csv
+import csv  # NEW: for CSV output
 
 # Initialize colorama for cross-platform colored output
 init(autoreset=True)
@@ -24,7 +24,7 @@ class SecurityScanner:
         self.timeout = timeout
         self.keep_files = keep_files
         self.verbose = verbose
-        self.minimal = minimal
+        self.minimal = minimal  # NEW: minimal console output mode
         self.session = requests.Session()
         self.session.headers.update({
             'User-Agent': 'HTTP Probe 1.0',
@@ -82,7 +82,7 @@ class SecurityScanner:
             return [], None
 
     def test_put(self, base_url):
-        """Test PUT method by uploading a file"""
+        """Test PUT method by uploading a file and give you the test URL."""
         test_filename = self.generate_test_filename()
         test_content = f"Security test content - {time.time()}"
         test_url = urljoin(base_url, test_filename)
@@ -101,7 +101,8 @@ class SecurityScanner:
             'get_status': None,
             'test_file': test_filename,
             'test_url': test_url,
-            'test_content': test_content
+            'test_content': test_content,
+            'evidence_url': None,
         }
 
         try:
@@ -114,23 +115,35 @@ class SecurityScanner:
             results['put_allowed'] = put_response.status_code in [200, 201, 204]
 
             if results['put_allowed']:
+                # Always keep the URL as evidence
+                results['evidence_url'] = test_url
+
                 if self.verbose and not self.minimal:
                     print("  PUT successful, testing accessibility...")
 
                 get_response = self.session.get(test_url, timeout=self.timeout)
                 results['get_status'] = get_response.status_code
-                results['file_accessible'] = (get_response.status_code == 200 and
-                                              test_content in get_response.text)
+                results['file_accessible'] = (
+                    get_response.status_code == 200 and test_content in get_response.text
+                )
 
                 if results['file_accessible']:
-                    self.print_status(f"VULNERABLE: PUT allows file upload and public access: {test_url}", "critical")
+                    # Strong, verifiable evidence: concrete URL
+                    self.print_status(
+                        f"VULNERABLE: PUT allows file upload and public access at {test_url}",
+                        "critical"
+                    )
                 else:
-                    self.print_status("WARNING: PUT allowed but file not accessible", "warning")
+                    # Still show where we tried to upload
+                    self.print_status(
+                        f"WARNING: PUT allowed (upload attempted at {test_url}) but file not accessible",
+                        "warning"
+                    )
 
                 if not self.keep_files:
                     try:
                         self.session.delete(test_url, timeout=self.timeout)
-                    except:
+                    except Exception:
                         pass
             else:
                 if self.verbose and not self.minimal:
@@ -142,31 +155,81 @@ class SecurityScanner:
 
         return results
 
+
     def test_post(self, base_url):
-        """Test POST method"""
-        test_data = {
-            "security_test": "test_data",
-            "timestamp": time.time(),
-            "random": random.randint(1000, 9999)
-        }
+        """
+        Test POST method by attempting to upload a test file and
+        returning any URL the server gives back (Location header or JSON).
+        """
+        test_filename = self.generate_test_filename()
+        test_content = f"Security test POST content - {time.time()}"
 
         results = {
             'post_allowed': False,
             'status_code': None,
-            'response_received': False
+            'response_received': False,
+            'resource_url': None,       # Where the server says the file/obj ended up (if any)
+            'test_filename': test_filename,
         }
 
         try:
             if self.verbose and not self.minimal:
-                print("  Testing POST method")
+                print("  Testing POST method (multipart with test file)")
+                print(f"  Target: {base_url}")
 
-            response = self.session.post(base_url, json=test_data, timeout=self.timeout)
+            # Multipart upload with a fake "file"
+            files = {
+                'file': (test_filename, test_content, 'text/plain')
+            }
+            data = {
+                'filename': test_filename,
+                'security_test': 'http_method_probe'
+            }
+
+            response = self.session.post(base_url, files=files, data=data, timeout=self.timeout)
             results['status_code'] = response.status_code
-            results['post_allowed'] = response.status_code in [200, 201, 202, 204]
             results['response_received'] = len(response.content) > 0
+            results['post_allowed'] = response.status_code in [200, 201, 202, 204]
 
             if results['post_allowed']:
-                self.print_status("WARNING: POST method is functional", "warning")
+                # Try to infer where the resource ended up
+                resource_url = None
+
+                # 1. Location / Content-Location header
+                resource_url = (
+                    response.headers.get('Location') or
+                    response.headers.get('Content-Location')
+                )
+
+                # 2. JSON body with "url", "location", "href", "path", "id"
+                if not resource_url and 'application/json' in response.headers.get('Content-Type', ''):
+                    try:
+                        js = response.json()
+                        for key in ['url', 'location', 'href', 'path']:
+                            if isinstance(js, dict) and key in js:
+                                resource_url = js[key]
+                                break
+                        # handle simple case id -> base_url/id
+                        if not resource_url and isinstance(js, dict) and 'id' in js:
+                            resource_url = str(js['id'])
+                    except ValueError:
+                        pass
+
+                # Normalize the URL if it looks like a path
+                if resource_url:
+                    if not resource_url.lower().startswith(('http://', 'https://')):
+                        resource_url = urljoin(base_url, resource_url)
+                    results['resource_url'] = resource_url
+                    self.print_status(
+                        f"WARNING: POST method is functional; server returned resource at {resource_url}",
+                        "warning"
+                    )
+                else:
+                    # No explicit resource URL -> still warn, but explicitly say evidence is limited
+                    self.print_status(
+                        "WARNING: POST method is functional, but server did not provide a resource URL",
+                        "warning"
+                    )
             else:
                 if self.verbose and not self.minimal:
                     print("  POST method not functional")
@@ -176,6 +239,7 @@ class SecurityScanner:
                 print(f"  POST test failed: {e}")
 
         return results
+
 
     def test_delete(self, base_url):
         """Test DELETE method"""
@@ -232,16 +296,17 @@ class SecurityScanner:
         return results
 
     def test_trace(self, url):
-        """Test TRACE method"""
+        """Test TRACE method and show verifiable echoed data."""
         results = {
             'trace_allowed': False,
             'echoes_request': False,
-            'status_code': None
+            'status_code': None,
+            'evidence_snippet': None,
         }
 
         try:
-            test_header = f"X-Test-Header-{random.randint(1000, 9999)}"
-            self.session.headers.update({'X-Test-Header': test_header})
+            test_header_value = f"X-Test-{random.randint(1000, 9999)}"
+            self.session.headers.update({'X-Test-Header': test_header_value})
 
             if self.verbose and not self.minimal:
                 print("  Testing TRACE method")
@@ -251,15 +316,33 @@ class SecurityScanner:
             results['trace_allowed'] = response.status_code == 200
 
             if results['trace_allowed']:
-                response_text = response.text.upper()
-                has_echo = any(header in response_text for header in
-                               ['USER-AGENT', 'X-TEST-HEADER', 'SECURITY-SCANNER'])
+                response_text = response.text
+                upper_text = response_text.upper()
+
+                has_echo = any(
+                    marker in upper_text
+                    for marker in ['USER-AGENT', 'X-TEST-HEADER', 'SECURITY-SCANNER']
+                )
                 results['echoes_request'] = has_echo
 
                 if has_echo:
-                    self.print_status("VULNERABLE: TRACE method echoes requests (XST vulnerability)", "critical")
+                    # Take short snippet as verifiable evidence
+                    snippet = response_text[:200].replace('\r', '').replace('\n', ' ')
+                    results['evidence_snippet'] = snippet
+
+                    self.print_status(
+                        "VULNERABLE: TRACE method echoes requests (XST vulnerability)",
+                        "critical"
+                    )
+                    self.print_status(
+                        f"TRACE echo sample: {snippet}",
+                        "warning"
+                    )
                 else:
-                    self.print_status("WARNING: TRACE allowed but no request echoing", "warning")
+                    self.print_status(
+                        "WARNING: TRACE allowed but no obvious request echoing detected",
+                        "warning"
+                    )
             else:
                 if self.verbose and not self.minimal:
                     print("  TRACE method not functional")
@@ -269,6 +352,7 @@ class SecurityScanner:
                 print(f"  TRACE test failed: {e}")
 
         return results
+
 
     def test_patch(self, url):
         """Test PATCH method"""
