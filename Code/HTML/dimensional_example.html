@@ -14,7 +14,6 @@
       --text-main: #e5e9f0;
       --text-muted: #8b92a4;
       --border-subtle: #1b232f;
-      --inner-scale: 0.5; /* used for 4D "w" parameter */
       --radius-lg: 14px;
     }
 
@@ -88,6 +87,7 @@
       box-shadow: 0 18px 40px rgba(0,0,0,0.5);
       position: relative;
       overflow: hidden;
+      outline: none;
     }
 
     .card::before {
@@ -101,6 +101,11 @@
       pointer-events: none;
     }
 
+    .card:focus-visible {
+      box-shadow: 0 0 0 1px rgba(78,161,255,0.8), 0 18px 40px rgba(0,0,0,0.7);
+      border-color: rgba(78,161,255,0.9);
+    }
+
     .card-inner {
       position: relative;
       z-index: 1;
@@ -111,6 +116,7 @@
       justify-content: space-between;
       align-items: baseline;
       margin-bottom: 0.75rem;
+      gap: 0.75rem;
     }
 
     .card-title {
@@ -146,6 +152,7 @@
       border: 1px solid rgba(255,255,255,0.08);
       background: rgba(0,0,0,0.25);
       font-size: 0.7rem;
+      white-space: nowrap;
     }
 
     .pill-dot {
@@ -169,6 +176,12 @@
       gap: 0.5rem;
       align-items: center;
       flex-wrap: wrap;
+    }
+
+    .coord-display {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      font-family: "SF Mono", ui-monospace, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     }
 
     /* 1D LINE --------------------------------------------------------- */
@@ -284,12 +297,6 @@
       background: transparent;
     }
 
-    .coord-display {
-      font-size: 0.75rem;
-      color: var(--text-muted);
-      font-family: "SF Mono", ui-monospace, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-    }
-
     /* 3D & 4D VIEWPORTS ---------------------------------------------- */
 
     .viewport-3d {
@@ -304,6 +311,11 @@
       display: flex;
       align-items: center;
       justify-content: center;
+    }
+
+    .viewport-3d.drag-active {
+      box-shadow: 0 0 0 1px rgba(78,161,255,0.9), 0 18px 40px rgba(0,0,0,0.9);
+      border-color: rgba(78,161,255,0.9);
     }
 
     .viewport-3d-inner {
@@ -333,18 +345,6 @@
       transform-style: preserve-3d;
     }
 
-    .cube.outer {
-      /* outer cube just uses default size */
-    }
-
-    .cube.inner {
-      position: absolute;
-      inset: 0;
-      margin: auto;
-      transform-origin: center center;
-      transform: scale(var(--inner-scale));
-    }
-
     .face {
       position: absolute;
       width: 100%;
@@ -361,14 +361,6 @@
       backdrop-filter: blur(3px);
     }
 
-    .cube.inner .face {
-      border-style: dashed;
-      border-color: rgba(78,161,255,0.9);
-      background: radial-gradient(circle at top left, rgba(78,161,255,0.16), rgba(0,0,0,0.9));
-      box-shadow: 0 0 35px rgba(78,161,255,0.85);
-    }
-
-    /* Cube face positions */
     .face.front  { transform: translateZ(4rem); }
     .face.back   { transform: rotateY(180deg) translateZ(4rem); }
     .face.right  { transform: rotateY(90deg) translateZ(4rem); }
@@ -395,10 +387,6 @@
     .axis-label.y { top: 0.45rem; left: 1.2rem; }
     .axis-label.z { top: 0.45rem; right: 1.1rem; }
 
-    .w-control {
-      width: 100%;
-    }
-
     .value-pill {
       font-family: "SF Mono", ui-monospace, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
       font-size: 0.8rem;
@@ -407,6 +395,7 @@
       border-radius: 999px;
       padding: 0.1rem 0.6rem;
       border: 1px solid rgba(78,161,255,0.7);
+      white-space: nowrap;
     }
 
     /* Sliders */
@@ -447,6 +436,17 @@
       background: rgba(255,255,255,0.12);
     }
 
+    /* 4D specific small HUD */
+    .hud {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      font-family: "SF Mono", ui-monospace, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+
+    .hud strong {
+      color: var(--accent);
+      font-weight: 500;
+    }
   </style>
 </head>
 <body>
@@ -459,7 +459,7 @@
 
   <main class="container">
     <!-- 1D -------------------------------------------------------------->
-    <section class="card">
+    <section class="card" tabindex="0">
       <div class="card-inner">
         <div class="card-header">
           <div>
@@ -473,7 +473,7 @@
         </div>
         <div class="card-body">
           <p class="hint">
-            Move the marker along the line. This is a single-degree-of-freedom space.
+            Move the marker along the line. A point in 1D is described by a single number <code>x</code>.
           </p>
 
           <div class="line-viewport">
@@ -500,7 +500,7 @@
     </section>
 
     <!-- 2D -------------------------------------------------------------->
-    <section class="card">
+    <section class="card" tabindex="0">
       <div class="card-inner">
         <div class="card-header">
           <div>
@@ -514,7 +514,7 @@
         </div>
         <div class="card-body">
           <p class="hint">
-            Navigate the active cell using the buttons or your keyboard arrows.
+            Navigate the active cell using the buttons or your keyboard arrows. A point in 2D uses two numbers.
           </p>
 
           <div class="matrix-viewport">
@@ -540,14 +540,14 @@
           </div>
 
           <p class="hint">
-            Tip: focus this section and use your arrow keys to move.
+            Tip: focus this card and use your arrow keys to move.
           </p>
         </div>
       </div>
     </section>
 
     <!-- 3D -------------------------------------------------------------->
-    <section class="card">
+    <section class="card" tabindex="0">
       <div class="card-inner">
         <div class="card-header">
           <div>
@@ -556,12 +556,13 @@
           </div>
           <span class="pill">
             <span class="pill-dot"></span>
-            drag to rotate
+            drag · arrows · reset
           </span>
         </div>
         <div class="card-body">
           <p class="hint">
-            Click and drag inside the viewport to rotate the cube in 3D.
+            Click / touch and drag inside the viewport to rotate the cube in 3D.
+            When this card is focused, arrow keys also rotate it; press <code>R</code> to reset.
           </p>
 
           <div class="viewport-3d" id="cubeViewport">
@@ -584,61 +585,68 @@
           </div>
 
           <div class="controls-row">
-            <span class="hint">Hold mouse and drag to explore 3D rotations.</span>
+            <span class="hint">3D rotation is just adding one more coordinate <code>z</code>.</span>
+            <button class="btn small btn-ghost" id="cubeReset">Reset view</button>
           </div>
         </div>
       </div>
     </section>
 
     <!-- 4D -------------------------------------------------------------->
-<!-- 4D -------------------------------------------------------------->
-<section class="card">
-  <div class="card-inner">
-    <div class="card-header">
-      <div>
-        <h2 class="card-title">4D · Tesseract Projection</h2>
-        <div class="card-caption">Coordinates <code>(x, y, z, w)</code></div>
-      </div>
-      <span class="pill">
-        <span class="pill-dot"></span>
-        4D → 3D → 2D
-      </span>
-    </div>
-    <div class="card-body">
-      <p class="hint">
-        This is a real 4D hypercube (tesseract) projection: vertices live in
-        <code>(x, y, z, w)</code>. The slider rotates in the 4D planes involving
-        <code>w</code>, and dragging rotates the 3D viewpoint.
-      </p>
+    <section class="card" tabindex="0">
+      <div class="card-inner">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">4D · Tesseract Projection</h2>
+            <div class="card-caption">Coordinates <code>(x, y, z, w)</code></div>
+          </div>
+          <span class="pill">
+            <span class="pill-dot"></span>
+            4D → 3D → 2D
+          </span>
+        </div>
+        <div class="card-body">
+          <p class="hint">
+            This is a real 4D hypercube (tesseract) projection. Vertices live in <code>(x, y, z, w)</code>.
+            The slider rotates in planes that involve <code>w</code>. Drag / touch to rotate the 3D view.
+            When focused, use arrow keys to rotate the view, and <code>Q</code>/<code>E</code> to adjust 4D rotation;
+            press <code>R</code> to reset.
+          </p>
 
-      <div class="viewport-3d" id="tessViewport">
-        <canvas id="tessCanvas"></canvas>
-        <span class="axis-label x">x</span>
-        <span class="axis-label y">y</span>
-        <span class="axis-label z">z</span>
-      </div>
+          <div class="viewport-3d" id="tessViewport">
+            <canvas id="tessCanvas"></canvas>
+            <span class="axis-label x">x</span>
+            <span class="axis-label y">y</span>
+            <span class="axis-label z">z</span>
+          </div>
 
-      <div class="controls-row">
-        <label class="hint" for="wSlider">
-          4D rotation angle involving <code>w</code>:
-        </label>
-        <div class="controls-row-right">
-          <input
-            id="wSlider"
-            class="w-control"
-            type="range"
-            min="0"
-            max="100"
-            step="1"
-            value="50"
-          />
-          <span class="value-pill" id="wValue">w-angle ≈ 0.79 rad</span>
+          <div class="controls-row">
+            <div class="hud" id="tessCoord">
+              Hover a vertex to inspect its rotated 4D coordinates.
+            </div>
+          </div>
+
+          <div class="controls-row">
+            <label class="hint" for="wSlider">
+              4D rotation involving <code>w</code>:
+            </label>
+            <div class="controls-row-right">
+              <input
+                id="wSlider"
+                class="w-control"
+                type="range"
+                min="0"
+                max="100"
+                step="1"
+                value="50"
+              />
+              <span class="value-pill" id="wValue">θ<sub>xw</sub> ≈ 0.55, θ<sub>yw</sub> ≈ 0.31</span>
+              <button class="btn small btn-ghost" id="wReset">Reset</button>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
-  </div>
-</section>
-
+    </section>
   </main>
 
   <script>
@@ -670,7 +678,6 @@
       let x = 0;
       let y = 0;
 
-      // build cells
       const cells = [];
       for (let row = 0; row < size; row++) {
         cells[row] = [];
@@ -679,7 +686,6 @@
           cell.className = "matrix-cell";
           cell.dataset.row = row;
           cell.dataset.col = col;
-          cell.textContent = ""; // keep clean; could show indices if desired
           grid.appendChild(cell);
           cells[row][col] = cell;
         }
@@ -697,7 +703,6 @@
         updateActive();
       }
 
-      // button controls
       const btns = grid.parentElement.querySelectorAll("button[data-dir]");
       btns.forEach(btn => {
         btn.addEventListener("click", () => {
@@ -709,9 +714,7 @@
         });
       });
 
-      // keyboard arrows when focus is inside this card
       const card = grid.closest(".card");
-      card.tabIndex = 0; // make focusable
       card.addEventListener("keydown", e => {
         switch (e.key) {
           case "ArrowUp":
@@ -736,10 +739,9 @@
       updateActive();
     })();
 
-    // Utility: drag-rotate for 3D rotators
-    function attachDragRotation(viewportInner, rotator, startAngles) {
-      let rotX = startAngles.x;
-      let rotY = startAngles.y;
+    // Utility: drag-rotate for CSS 3D (3D cube)
+    function attachDragRotationCSS(viewport, viewportInner, rotator, state) {
+      let { rotX, rotY } = state;
       let dragging = false;
       let lastX = 0;
       let lastY = 0;
@@ -748,11 +750,13 @@
         rotator.style.transform = `rotateX(${rotX}deg) rotateY(${rotY}deg)`;
       }
 
+      // Mouse
       viewportInner.addEventListener("mousedown", (e) => {
         dragging = true;
         lastX = e.clientX;
         lastY = e.clientY;
         viewportInner.classList.add("dragging");
+        viewport.classList.add("drag-active");
       });
 
       window.addEventListener("mousemove", (e) => {
@@ -763,18 +767,50 @@
         lastY = e.clientY;
         rotY += dx * 0.5;
         rotX -= dy * 0.5;
-        rotX = Math.max(-89, Math.min(89, rotX)); // limit polar angle a bit
+        rotX = Math.max(-89, Math.min(89, rotX));
+        state.rotX = rotX;
+        state.rotY = rotY;
         applyTransform();
       });
 
       window.addEventListener("mouseup", () => {
+        if (!dragging) return;
         dragging = false;
         viewportInner.classList.remove("dragging");
+        viewport.classList.remove("drag-active");
       });
 
-      viewportInner.addEventListener("mouseleave", () => {
+      // Touch
+      viewportInner.addEventListener("touchstart", (e) => {
+        if (e.touches.length !== 1) return;
+        const t = e.touches[0];
+        dragging = true;
+        lastX = t.clientX;
+        lastY = t.clientY;
+        viewportInner.classList.add("dragging");
+        viewport.classList.add("drag-active");
+      }, { passive: true });
+
+      window.addEventListener("touchmove", (e) => {
+        if (!dragging || e.touches.length !== 1) return;
+        const t = e.touches[0];
+        const dx = t.clientX - lastX;
+        const dy = t.clientY - lastY;
+        lastX = t.clientX;
+        lastY = t.clientY;
+        rotY += dx * 0.5;
+        rotX -= dy * 0.5;
+        rotX = Math.max(-89, Math.min(89, rotX));
+        state.rotX = rotX;
+        state.rotY = rotY;
+        applyTransform();
+      }, { passive: true });
+
+      window.addEventListener("touchend", () => {
+        if (!dragging) return;
         dragging = false;
         viewportInner.classList.remove("dragging");
+        viewport.classList.remove("drag-active");
       });
 
       applyTransform();
@@ -782,30 +818,76 @@
 
     // ---------------- 3D CUBE ----------------------------------------
     (function init3D() {
+      const viewport = document.getElementById("cubeViewport");
       const inner = document.getElementById("cubeViewportInner");
       const rotator = document.getElementById("cubeRotator");
-      attachDragRotation(inner, rotator, { x: -24, y: 32 });
+      const resetBtn = document.getElementById("cubeReset");
+      const card = viewport.closest(".card");
+
+      const state = { rotX: -24, rotY: 32 };
+      attachDragRotationCSS(viewport, inner, rotator, state);
+
+      function applyTransform() {
+        rotator.style.transform = `rotateX(${state.rotX}deg) rotateY(${state.rotY}deg)`;
+      }
+
+      resetBtn.addEventListener("click", () => {
+        state.rotX = -24;
+        state.rotY = 32;
+        applyTransform();
+      });
+
+      card.addEventListener("keydown", (e) => {
+        let handled = false;
+        const step = 5;
+        switch (e.key) {
+          case "ArrowUp":
+            state.rotX = Math.max(-89, state.rotX - step);
+            handled = true;
+            break;
+          case "ArrowDown":
+            state.rotX = Math.min(89, state.rotX + step);
+            handled = true;
+            break;
+          case "ArrowLeft":
+            state.rotY -= step;
+            handled = true;
+            break;
+          case "ArrowRight":
+            state.rotY += step;
+            handled = true;
+            break;
+          case "r":
+          case "R":
+            state.rotX = -24;
+            state.rotY = 32;
+            handled = true;
+            break;
+        }
+        if (handled) {
+          applyTransform();
+          e.preventDefault();
+        }
+      });
+
+      applyTransform();
     })();
 
+    // ---------------- 4D TESSERACT (REAL PROJECTION) --------------------
 // ---------------- 4D TESSERACT (REAL PROJECTION) --------------------
 (function init4D() {
   const viewport = document.getElementById("tessViewport");
   const canvas = document.getElementById("tessCanvas");
   const slider = document.getElementById("wSlider");
   const valueLabel = document.getElementById("wValue");
+  const resetBtn = document.getElementById("wReset");
+  const coordHud = document.getElementById("tessCoord");
+  const card = viewport.closest(".card");
 
-  // Resize canvas to fit viewport
-  function resizeCanvas() {
-    const rect = viewport.getBoundingClientRect();
-    canvas.width = rect.width;
-    canvas.height = rect.height;
-  }
-  resizeCanvas();
-  window.addEventListener("resize", resizeCanvas);
-
+  // IMPORTANT: create ctx BEFORE anything can call draw()
   const ctx = canvas.getContext("2d");
 
-  // 16 vertices of a 4D hypercube: (±1, ±1, ±1, ±1)
+  // 16 vertices of the 4D hypercube: (±1, ±1, ±1, ±1)
   const vertices4D = [];
   for (let x of [-1, 1]) {
     for (let y of [-1, 1]) {
@@ -817,78 +899,44 @@
     }
   }
 
-  // Build edge list: connect vertices that differ in exactly one coordinate
+  // Build edge list with flag indicating if it's a w-edge
   const edges = [];
   for (let i = 0; i < vertices4D.length; i++) {
     for (let j = i + 1; j < vertices4D.length; j++) {
-      let diff = 0;
+      let diffCount = 0;
+      let diffIndex = -1;
       for (let k = 0; k < 4; k++) {
-        if (vertices4D[i][k] !== vertices4D[j][k]) diff++;
+        if (vertices4D[i][k] !== vertices4D[j][k]) {
+          diffCount++;
+          diffIndex = k;
+        }
       }
-      if (diff === 1) edges.push([i, j]);
+      if (diffCount === 1) {
+        edges.push({
+          i,
+          j,
+          wEdge: diffIndex === 3
+        });
+      }
     }
   }
 
-  // 4D rotation angles
-  // We'll rotate in two 4D planes involving w:
-  //  - XW plane
-  //  - YW plane
+  // 4D rotation angles (XW and YW)
   let angleXW = Math.PI / 4;
   let angleYW = Math.PI / 6;
 
-  // 3D view angles (like camera yaw/pitch) controlled by dragging
-  let viewRotX = -0.6; // around X axis
-  let viewRotY = 0.8;  // around Y axis
+  // 3D view angles (camera yaw/pitch)
+  let viewRotX = -0.6;
+  let viewRotY = 0.8;
 
-  // Drag handling on the whole viewport
+  // Interaction state
   let dragging = false;
   let lastX = 0;
   let lastY = 0;
+  let userInteracted = false;
+  let highlightIndex = null;
 
-  viewport.addEventListener("mousedown", (e) => {
-    dragging = true;
-    lastX = e.clientX;
-    lastY = e.clientY;
-  });
-
-  window.addEventListener("mousemove", (e) => {
-    if (!dragging) return;
-    const dx = e.clientX - lastX;
-    const dy = e.clientY - lastY;
-    lastX = e.clientX;
-    lastY = e.clientY;
-
-    // adjust 3D view angles
-    viewRotY += dx * 0.005;
-    viewRotX += dy * 0.005;
-
-    draw();
-  });
-
-  window.addEventListener("mouseup", () => {
-    dragging = false;
-  });
-
-  viewport.addEventListener("mouseleave", () => {
-    dragging = false;
-  });
-
-  // Slider: map 0..100 -> 0..π for 4D rotation strength
-  function updateWAngle() {
-    const v = parseInt(slider.value, 10); // 0..100
-    const a = (v / 100) * Math.PI;       // 0..π
-    angleXW = a * 0.7; // some variation between XW and YW
-    angleYW = a * 0.4;
-    valueLabel.textContent = `w-angle ≈ ${a.toFixed(2)} rad`;
-    draw();
-  }
-
-  slider.addEventListener("input", updateWAngle);
-  updateWAngle();
-
-  // ---- math helpers ----
   function rotate4D_XW(p, angle) {
-    // rotate in X-W plane: (x, y, z, w)
     const [x, y, z, w] = p;
     const c = Math.cos(angle);
     const s = Math.sin(angle);
@@ -898,7 +946,6 @@
   }
 
   function rotate4D_YW(p, angle) {
-    // rotate in Y-W plane
     const [x, y, z, w] = p;
     const c = Math.cos(angle);
     const s = Math.sin(angle);
@@ -908,7 +955,6 @@
   }
 
   function rotate3D_X(p, angle) {
-    // rotate around X axis: (x, y, z)
     const [x, y, z] = p;
     const c = Math.cos(angle);
     const s = Math.sin(angle);
@@ -932,51 +978,65 @@
     const scale = Math.min(width, height) * 0.22;
     const cx = width / 2;
     const cy = height / 2;
-
-    // simple perspective based on z
-    const depth = 3; // camera distance
+    const depth = 5;
     const factor = depth / (depth + z);
     const sx = x * scale * factor + cx;
     const sy = y * scale * factor + cy;
     return [sx, sy];
   }
 
+  // Main draw function (uses ctx, now safely initialized)
   function draw() {
     const { width, height } = canvas;
     ctx.clearRect(0, 0, width, height);
 
-    // Compute projected positions
-    const projected = vertices4D.map(v => {
-      // 4D rotation first
-      let p4 = v;
+    const projected = [];
+    const rotated4List = [];
+    const rotated3List = [];
+
+    for (let idx = 0; idx < vertices4D.length; idx++) {
+      let p4 = vertices4D[idx].slice();
+      // 4D rotations
       p4 = rotate4D_XW(p4, angleXW);
       p4 = rotate4D_YW(p4, angleYW);
+      rotated4List[idx] = p4;
 
-      // drop w -> we get (x, y, z)
-      let [x, y, z, w] = p4;
-      let p3 = [x, y, z];
+      const [xr, yr, zr, wr] = p4;
 
-      // 3D view rotations (camera-like)
+      // 4D perspective using w
+      const k4 = 3;
+      const factor4 = k4 / (k4 - wr);
+      let p3 = [xr * factor4, yr * factor4, zr * factor4];
+
+      // 3D view rotations
       p3 = rotate3D_X(p3, viewRotX);
       p3 = rotate3D_Y(p3, viewRotY);
+      rotated3List[idx] = p3;
 
-      // project to screen
-      return projectTo2D(p3);
-    });
+      projected[idx] = projectTo2D(p3);
+    }
 
     // Draw edges
-    ctx.lineWidth = 1.2;
-    for (const [i, j] of edges) {
+    for (const edge of edges) {
+      const i = edge.i;
+      const j = edge.j;
       const [x1, y1] = projected[i];
       const [x2, y2] = projected[j];
 
-      // inner edges (vertices with w=+1) vs outer (w=-1) show slightly different opacity
-      const w1 = vertices4D[i][3];
-      const w2 = vertices4D[j][3];
-      const inner = (w1 > 0 && w2 > 0);
-      const alpha = inner ? 0.95 : 0.4;
+      const z1 = rotated3List[i][2];
+      const z2 = rotated3List[j][2];
+      const avgZ = (z1 + z2) / 2;
+      const normalizedDepth = 0.5 + Math.tanh(avgZ * 0.4) * 0.5;
 
-      ctx.strokeStyle = `rgba(78,161,255,${alpha})`;
+      const baseAlpha = edge.wEdge ? 0.9 : 0.45;
+      const alpha = baseAlpha * (0.4 + 0.6 * (1 - normalizedDepth));
+
+      const color = edge.wEdge
+        ? `rgba(255,210,120,${alpha})`
+        : `rgba(78,161,255,${alpha})`;
+
+      ctx.strokeStyle = color;
+      ctx.lineWidth = edge.wEdge ? 1.4 : 1.1;
       ctx.beginPath();
       ctx.moveTo(x1, y1);
       ctx.lineTo(x2, y2);
@@ -986,19 +1046,260 @@
     // Draw vertices
     for (let idx = 0; idx < projected.length; idx++) {
       const [x, y] = projected[idx];
-      const w = vertices4D[idx][3];
-      const inner = w > 0;
+      const [xr, yr, zr, wr] = rotated4List[idx];
+      const baseRadius = 2.4;
+      const inner = vertices4D[idx][3] > 0;
+
+      let r = inner ? baseRadius + 0.9 : baseRadius;
+      let fill;
+
+      if (highlightIndex === idx) {
+        r += 1.4;
+        fill = "rgba(255,255,255,1)";
+      } else {
+        fill = inner
+          ? "rgba(78,161,255,1)"
+          : "rgba(190,205,255,0.75)";
+      }
+
+      const depthFade = 0.7 + 0.3 * (1 - Math.tanh(Math.abs(zr) * 0.4));
 
       ctx.beginPath();
-      ctx.arc(x, y, inner ? 3.2 : 2.6, 0, Math.PI * 2);
-      ctx.fillStyle = inner
-        ? "rgba(78,161,255,1)"
-        : "rgba(190,205,255,0.7)";
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fillStyle = fill;
+      ctx.globalAlpha = depthFade;
       ctx.fill();
+      ctx.globalAlpha = 1;
     }
   }
 
+  // Resize handler (safe: ctx is already defined)
+  function resizeCanvas() {
+    const rect = viewport.getBoundingClientRect();
+    canvas.width = rect.width;
+    canvas.height = rect.height;
+    draw();
+  }
+
+  window.addEventListener("resize", resizeCanvas);
+  resizeCanvas(); // initial size + draw
+
+  // Slider -> 4D angles
+  function updateWAngle() {
+    const v = parseInt(slider.value, 10); // 0..100
+    const a = (v / 100) * Math.PI;       // 0..π
+    angleXW = a * 0.7;
+    angleYW = a * 0.4;
+    valueLabel.innerHTML =
+      `θ<sub>xw</sub> ≈ ${angleXW.toFixed(2)}, ` +
+      `θ<sub>yw</sub> ≈ ${angleYW.toFixed(2)}`;
+    draw();
+  }
+
+  slider.addEventListener("input", () => {
+    userInteracted = true;
+    updateWAngle();
+  });
+
+  resetBtn.addEventListener("click", () => {
+    viewRotX = -0.6;
+    viewRotY = 0.8;
+    slider.value = "50";
+    updateWAngle();
+    coordHud.textContent =
+      "Hover a vertex to inspect its rotated 4D coordinates.";
+    userInteracted = true;
+  });
+
+  updateWAngle(); // initialize label & draw
+
+  // Drag to rotate view
+  function startDrag(clientX, clientY) {
+    dragging = true;
+    lastX = clientX;
+    lastY = clientY;
+    viewport.classList.add("drag-active");
+  }
+
+  function moveDrag(clientX, clientY) {
+    if (!dragging) return;
+    const dx = clientX - lastX;
+    const dy = clientY - lastY;
+    lastX = clientX;
+    lastY = clientY;
+    viewRotY += dx * 0.005;
+    viewRotX += dy * 0.005;
+    userInteracted = true;
+    draw();
+  }
+
+  function endDrag() {
+    if (!dragging) return;
+    dragging = false;
+    viewport.classList.remove("drag-active");
+  }
+
+  viewport.addEventListener("mousedown", (e) => {
+    startDrag(e.clientX, e.clientY);
+  });
+
+  window.addEventListener("mousemove", (e) => {
+    moveDrag(e.clientX, e.clientY);
+  });
+
+  window.addEventListener("mouseup", endDrag);
+  viewport.addEventListener("mouseleave", endDrag);
+
+  viewport.addEventListener("touchstart", (e) => {
+    if (e.touches.length !== 1) return;
+    const t = e.touches[0];
+    startDrag(t.clientX, t.clientY);
+  }, { passive: true });
+
+  window.addEventListener("touchmove", (e) => {
+    if (!dragging || e.touches.length !== 1) return;
+    const t = e.touches[0];
+    moveDrag(t.clientX, t.clientY);
+  }, { passive: true });
+
+  window.addEventListener("touchend", endDrag);
+
+  // Hover: find nearest vertex and show its rotated 4D coordinates
+  canvas.addEventListener("mousemove", (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+
+    const projected = [];
+    const rotated4List = [];
+
+    for (let idx = 0; idx < vertices4D.length; idx++) {
+      let p4 = vertices4D[idx].slice();
+      p4 = rotate4D_XW(p4, angleXW);
+      p4 = rotate4D_YW(p4, angleYW);
+      rotated4List[idx] = p4;
+
+      const [xr, yr, zr, wr] = p4;
+      const k4 = 3;
+      const factor4 = k4 / (k4 - wr);
+      let p3 = [xr * factor4, yr * factor4, zr * factor4];
+      p3 = rotate3D_X(p3, viewRotX);
+      p3 = rotate3D_Y(p3, viewRotY);
+      projected[idx] = projectTo2D(p3);
+    }
+
+    let minDist2 = Infinity;
+    let bestIdx = null;
+    for (let idx = 0; idx < projected.length; idx++) {
+      const [x, y] = projected[idx];
+      const dx = x - mx;
+      const dy = y - my;
+      const d2 = dx * dx + dy * dy;
+      if (d2 < minDist2) {
+        minDist2 = d2;
+        bestIdx = idx;
+      }
+    }
+
+    const radiusThreshold2 = 25; // ~5px
+    if (bestIdx !== null && minDist2 <= radiusThreshold2) {
+      highlightIndex = bestIdx;
+      const [xr, yr, zr, wr] = rotated4List[bestIdx];
+      coordHud.innerHTML =
+        `<strong>vertex ${bestIdx}</strong> · ` +
+        `(x', y', z', w') ≈ (${xr.toFixed(2)}, ${yr.toFixed(2)}, ${zr.toFixed(2)}, ${wr.toFixed(2)})`;
+    } else {
+      highlightIndex = null;
+      coordHud.textContent =
+        "Hover a vertex to inspect its rotated 4D coordinates.";
+    }
+
+    draw();
+  });
+
+  canvas.addEventListener("mouseleave", () => {
+    highlightIndex = null;
+    coordHud.textContent =
+      "Hover a vertex to inspect its rotated 4D coordinates.";
+    draw();
+  });
+
+  // Keyboard controls on the card
+  card.addEventListener("keydown", (e) => {
+    let handled = false;
+    const stepView = 0.08;
+    const stepW = 0.04;
+
+    switch (e.key) {
+      case "ArrowUp":
+        viewRotX -= stepView;
+        handled = true;
+        break;
+      case "ArrowDown":
+        viewRotX += stepView;
+        handled = true;
+        break;
+      case "ArrowLeft":
+        viewRotY -= stepView;
+        handled = true;
+        break;
+      case "ArrowRight":
+        viewRotY += stepView;
+        handled = true;
+        break;
+      case "q":
+      case "Q":
+        angleXW -= stepW;
+        angleYW -= stepW * 0.5;
+        handled = true;
+        break;
+      case "e":
+      case "E":
+        angleXW += stepW;
+        angleYW += stepW * 0.5;
+        handled = true;
+        break;
+      case "r":
+      case "R":
+        viewRotX = -0.6;
+        viewRotY = 0.8;
+        slider.value = "50";
+        updateWAngle();
+        handled = true;
+        break;
+    }
+
+    if (handled) {
+      userInteracted = true;
+      valueLabel.innerHTML =
+        `θ<sub>xw</sub> ≈ ${angleXW.toFixed(2)}, ` +
+        `θ<sub>yw</sub> ≈ ${angleYW.toFixed(2)}`;
+      draw();
+      e.preventDefault();
+    }
+  });
+
+  // Subtle auto-rotation until user interacts
+  let lastTime = null;
+  function animate(timestamp) {
+    if (lastTime == null) lastTime = timestamp;
+    const dt = (timestamp - lastTime) / 1000;
+    lastTime = timestamp;
+
+    if (!userInteracted) {
+      angleXW += dt * 0.2;
+      angleYW += dt * 0.11;
+      draw();
+      valueLabel.innerHTML =
+        `θ<sub>xw</sub> ≈ ${angleXW.toFixed(2)}, ` +
+        `θ<sub>yw</sub> ≈ ${angleYW.toFixed(2)}`;
+    }
+
+    window.requestAnimationFrame(animate);
+  }
+
   draw();
+  window.requestAnimationFrame(animate);
 })();
 
   </script>
