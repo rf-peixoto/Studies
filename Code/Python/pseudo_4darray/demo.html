@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Real 4D Map · Secret Point Demo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <style>
+    :root {
+      --bg: #05070a;
+      --card-bg: #10141c;
+      --accent: #4ea1ff;
+      --accent-soft: rgba(78,161,255,0.18);
+      --text-main: #e5e9f0;
+      --text-muted: #8b92a4;
+      --border-subtle: #1b2534;
+      --radius-lg: 12px;
+      --mono: "SF Mono", ui-monospace, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top, #121725 0, #05070a 55%, #020306 100%);
+      color: var(--text-main);
+      min-height: 100vh;
+      padding: 1.5rem 1rem 2.5rem;
+    }
+    h1, h2 {
+      font-weight: 500;
+      letter-spacing: 0.05em;
+    }
+    h1 {
+      text-transform: uppercase;
+      font-size: 1.4rem;
+      margin-bottom: 0.5rem;
+    }
+    .subtitle {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      max-width: 860px;
+      margin-bottom: 1.5rem;
+    }
+    .badge {
+      display: inline-block;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      color: var(--accent);
+      border-radius: 999px;
+      border: 1px solid rgba(78,161,255,0.5);
+      padding: 0.15rem 0.6rem;
+      background: radial-gradient(circle at top, rgba(78,161,255,0.16), transparent 65%);
+      margin-bottom: 0.5rem;
+    }
+    main {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: grid;
+      gap: 1.25rem;
+    }
+    @media (min-width: 960px) {
+      main {
+        grid-template-columns: 320px 1fr;
+        align-items: flex-start;
+      }
+    }
+    .card {
+      background: linear-gradient(150deg, rgba(255,255,255,0.02), rgba(0,0,0,0.7));
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border-subtle);
+      padding: 1rem 1.1rem 1rem;
+      box-shadow: 0 16px 40px rgba(0,0,0,0.6);
+      position: relative;
+      overflow: hidden;
+    }
+    .card::before {
+      content: "";
+      position: absolute;
+      inset: -40%;
+      background:
+        radial-gradient(circle at top left, rgba(78,161,255,0.09), transparent 55%),
+        radial-gradient(circle at bottom right, rgba(166,77,255,0.06), transparent 55%);
+      pointer-events: none;
+      opacity: 0.7;
+    }
+    .card-inner { position: relative; z-index: 1; }
+    .card h2 {
+      font-size: 0.95rem;
+      text-transform: uppercase;
+      margin-bottom: 0.2rem;
+    }
+    .card-caption {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-bottom: 0.8rem;
+    }
+    .form-group { margin-bottom: 0.6rem; font-size: 0.85rem; }
+    .form-group label { display: block; margin-bottom: 0.2rem; }
+    .form-row {
+      display: flex;
+      gap: 0.4rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    input[type="number"] {
+      background: rgba(3,6,12,0.9);
+      border-radius: 6px;
+      border: 1px solid rgba(255,255,255,0.12);
+      color: var(--text-main);
+      padding: 0.2rem 0.4rem;
+      font-size: 0.8rem;
+      width: 4rem;
+      font-family: var(--mono);
+    }
+    input[type="number"]:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px rgba(78,161,255,0.5);
+    }
+    .hint {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-top: 0.25rem;
+    }
+    .btn {
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.15);
+      background: rgba(3,6,12,0.9);
+      color: var(--text-main);
+      padding: 0.25rem 0.9rem;
+      font-size: 0.8rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.25rem;
+      transition: border-color 0.12s ease, background 0.12s ease, transform 0.1s ease;
+    }
+    .btn:hover {
+      border-color: var(--accent);
+      background: rgba(78,161,255,0.22);
+      transform: translateY(-1px);
+    }
+    .btn:active { transform: translateY(0); }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      padding: 0.2rem 0.6rem;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.1);
+      background: rgba(0,0,0,0.3);
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      margin-bottom: 0.5rem;
+    }
+    .pill-dot {
+      width: 0.45rem;
+      height: 0.45rem;
+      border-radius: 999px;
+      background: var(--accent);
+    }
+    .slider-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.6rem;
+      margin-top: 0.5rem;
+      flex-wrap: wrap;
+    }
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      height: 4px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.16);
+      outline: none;
+      flex: 1;
+      min-width: 120px;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 9px rgba(78,161,255,0.9);
+      border: none;
+    }
+    input[type="range"]::-moz-range-thumb {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 9px rgba(78,161,255,0.9);
+      border: none;
+    }
+    input[type="range"]::-moz-range-track {
+      height: 4px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.16);
+    }
+    .value-pill {
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      color: var(--accent);
+      background: var(--accent-soft);
+      border-radius: 999px;
+      padding: 0.1rem 0.6rem;
+      border: 1px solid rgba(78,161,255,0.7);
+      white-space: nowrap;
+    }
+    .status {
+      margin-top: 0.5rem;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      font-family: var(--mono);
+      white-space: pre-wrap;
+    }
+    .right-column { display: grid; gap: 1rem; }
+    @media (min-width: 960px) {
+      .right-column {
+        grid-template-rows: minmax(0, 1.3fr) minmax(0, 0.8fr);
+      }
+    }
+    .viewport {
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: radial-gradient(circle at top, rgba(255,255,255,0.08), rgba(0,0,0,0.95));
+      padding: 0.4rem;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+    canvas {
+      display: block;
+      border-radius: 8px;
+      background: #05070a;
+      flex: 1;
+    }
+    .small-label {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+      margin-top: 0.25rem;
+    }
+    .mono { font-family: var(--mono); }
+    .highlight { color: #ffcc88; }
+  </style>
+</head>
+<body>
+  <div class="badge">Real 4D Map</div>
+  <h1>4D Lattice · Secret Coordinate</h1>
+  <p class="subtitle">
+    We build a true 4D grid of points <code>(x, y, z, w)</code>, assign each point a value,
+    and embed a secret at one specific 4D coordinate. The canvas shows a 4D→3D→2D projection:
+    rotate the view, change the w-slice, and try to locate the secret.
+  </p>
+
+  <main>
+    <!-- Controls -->
+    <section class="card">
+      <div class="card-inner">
+        <h2>1 · Secret & Grid</h2>
+        <div class="card-caption">
+          Define the secret value and its 4D coordinate. The field is rebuilt around it.
+        </div>
+
+        <div class="pill">
+          <span class="pill-dot"></span>
+          Grid size: <span class="mono">NX=8, NY=8, NZ=8, NW=5</span>
+        </div>
+
+        <div class="form-group">
+          <label for="secretValue">Secret value</label>
+          <input type="number" id="secretValue" step="1" value="1337">
+          <div class="hint">
+            This exact number will be stored only at one 4D coordinate <span class="mono">(x*, y*, z*, w*)</span>.
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Secret coordinates <span class="mono">(x*, y*, z*, w*)</span></label>
+          <div class="form-row">
+            <span class="mono">x*:</span><input type="number" id="secretX" min="0" max="7" value="2">
+            <span class="mono">y*:</span><input type="number" id="secretY" min="0" max="7" value="5">
+            <span class="mono">z*:</span><input type="number" id="secretZ" min="0" max="7" value="3">
+            <span class="mono">w*:</span><input type="number" id="secretW" min="0" max="4" value="2">
+          </div>
+          <div class="hint">
+            All indices are integers. <span class="mono">0 ≤ x,y,z ≤ 7</span>, <span class="mono">0 ≤ w ≤ 4</span>.
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-top:0.7rem;">
+          <button class="btn" id="embedButton">Embed / Rebuild Field</button>
+          <div class="hint">
+            Rebuilds the 4D field with a smooth base function and places the secret at the chosen coordinate.
+          </div>
+        </div>
+
+        <div class="status" id="statusText">
+          Ready. Initial 4D field has been created.
+        </div>
+      </div>
+    </section>
+
+    <!-- Visualization -->
+    <section class="right-column">
+      <div class="card">
+        <div class="card-inner">
+          <h2>2 · 4D Projection</h2>
+          <div class="card-caption">
+            4D lattice <code>(x,y,z,w)</code> projected as a 3D cloud, then to 2D. Drag to rotate, change w-slice, or tweak 4D rotation.
+          </div>
+
+          <div class="viewport" id="viewport4D">
+            <canvas id="projCanvas"></canvas>
+            <div class="small-label">
+              <span class="mono" id="hoverInfo">Hover a point to inspect (x,y,z,w) and its value.</span>
+              <span class="mono" id="secretInfo">Secret at (2, 5, 3, 2) = 1337</span>
+            </div>
+          </div>
+
+          <div class="slider-row" style="margin-top:0.6rem;">
+            <div style="flex:1;">
+              <label class="small-label" for="sliceWSlider">
+                Focused w-slice (highlight points with this w)
+              </label>
+              <input type="range" id="sliceWSlider" min="0" max="4" value="2">
+            </div>
+            <div style="flex:1;">
+              <label class="small-label" for="rot4Slider">
+                4D rotation involving <span class="mono">w</span>
+              </label>
+              <input type="range" id="rot4Slider" min="0" max="100" value="50">
+            </div>
+          </div>
+          <div class="small-label" style="margin-top:0.3rem;">
+            <span class="mono" id="sliceLabel">w-slice = 2</span>
+            <span class="mono" id="rot4Label">θ<sub>xw</sub> ≈ 0.55, θ<sub>yw</sub> ≈ 0.31</span>
+          </div>
+
+          <p class="hint" style="margin-top:0.5rem;">
+            The secret point is drawn with a bright outline. Points at the selected w-slice are bright; others are dim, but all are part of the full 4D lattice.
+          </p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-inner">
+          <h2>3 · Value on the Secret Path</h2>
+          <div class="card-caption">
+            Value of A(x*, y*, z*, w) as w runs from 0 to 4.
+          </div>
+
+          <div class="viewport" style="aspect-ratio: 12 / 5;">
+            <canvas id="curveCanvas"></canvas>
+          </div>
+          <div class="small-label">
+            <span class="mono" id="curveLabel">
+              (x*, y*, z*, w*) = (2, 5, 3, 2), secret = 1337
+            </span>
+            <span class="hint">
+              At w ≠ w* the same spatial point has a different value.
+            </span>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    // ============================================
+    // 1. Real 4D field (discrete 4 axes)
+    // ============================================
+    class Real4DField {
+      constructor(nx, ny, nz, nw) {
+        this.nx = nx;
+        this.ny = ny;
+        this.nz = nz;
+        this.nw = nw;
+        this.size = nx * ny * nz * nw;
+        this.data = new Float32Array(this.size);
+      }
+      index(x, y, z, w) {
+        return (((w * this.nz + z) * this.ny + y) * this.nx + x);
+      }
+      set(x, y, z, w, v) {
+        this.data[this.index(x, y, z, w)] = v;
+      }
+      get(x, y, z, w) {
+        return this.data[this.index(x, y, z, w)];
+      }
+      fillBase() {
+        // smooth-ish base function + noise
+        const { nx, ny, nz, nw } = this;
+        for (let w = 0; w < nw; w++) {
+          for (let z = 0; z < nz; z++) {
+            for (let y = 0; y < ny; y++) {
+              for (let x = 0; x < nx; x++) {
+                const fx = x / (nx - 1);
+                const fy = y / (ny - 1);
+                const fz = z / (nz - 1);
+                const fw = w / (nw - 1);
+                let v =
+                  Math.sin(fx * Math.PI * 2) +
+                  0.7 * Math.cos(fy * Math.PI * 1.5) +
+                  0.5 * Math.sin((fz + fw) * Math.PI);
+                v += 0.3 * fw;
+                v += (Math.random() - 0.5) * 0.4;
+                this.set(x, y, z, w, v);
+              }
+            }
+          }
+        }
+      }
+      embedSecret(x, y, z, w, secret) {
+        this.set(x, y, z, w, secret);
+      }
+    }
+
+    // color mapping (value -> rgb)
+    function valueToColor(v) {
+      const t = Math.tanh(v / 3); // compress
+      const u = (t + 1) / 2;      // 0..1
+      const r = Math.floor(40 + 215 * u);
+      const g = Math.floor(40 + 90 * u);
+      const b = Math.floor(80 + 190 * (1 - u));
+      return `rgb(${r}, ${g}, ${b})`;
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      // ============================================
+      // 2. Setup field + DOM
+      // ============================================
+      const NX = 8, NY = 8, NZ = 8, NW = 5;
+
+      const field = new Real4DField(NX, NY, NZ, NW);
+
+      const secretValueInput = document.getElementById("secretValue");
+      const secretXInput = document.getElementById("secretX");
+      const secretYInput = document.getElementById("secretY");
+      const secretZInput = document.getElementById("secretZ");
+      const secretWInput = document.getElementById("secretW");
+      const embedButton = document.getElementById("embedButton");
+      const statusText = document.getElementById("statusText");
+
+      const projCanvas = document.getElementById("projCanvas");
+      const projCtx = projCanvas.getContext("2d");
+      const viewport4D = document.getElementById("viewport4D");
+      const hoverInfo = document.getElementById("hoverInfo");
+      const secretInfo = document.getElementById("secretInfo");
+
+      const sliceWSlider = document.getElementById("sliceWSlider");
+      const rot4Slider = document.getElementById("rot4Slider");
+      const sliceLabel = document.getElementById("sliceLabel");
+      const rot4Label = document.getElementById("rot4Label");
+
+      const curveCanvas = document.getElementById("curveCanvas");
+      const curveCtx = curveCanvas.getContext("2d");
+      const curveLabel = document.getElementById("curveLabel");
+
+      // 4D coordinates for geometry (normalized to [-1,1])
+      const points4D = [];
+      for (let w = 0; w < NW; w++) {
+        for (let z = 0; z < NZ; z++) {
+          for (let y = 0; y < NY; y++) {
+            for (let x = 0; x < NX; x++) {
+              const xn = (x / (NX - 1)) * 2 - 1;
+              const yn = (y / (NY - 1)) * 2 - 1;
+              const zn = (z / (NZ - 1)) * 2 - 1;
+              const wn = (w / (NW - 1)) * 2 - 1;
+              points4D.push({ x, y, z, w, coord: [xn, yn, zn, wn] });
+            }
+          }
+        }
+      }
+
+      // Secret state
+      const secret = {
+        value: 1337,
+        x: 2,
+        y: 5,
+        z: 3,
+        w: 2
+      };
+
+      // Rotation state
+      let angleXW = Math.PI * 0.55 * 0.7;
+      let angleYW = Math.PI * 0.55 * 0.4;
+      let viewRotX = -0.6; // 3D pitch
+      let viewRotY = 0.8;  // 3D yaw
+
+      // Drag state
+      let dragging = false;
+      let lastX = 0;
+      let lastY = 0;
+
+      // Curve samples
+      const curveData = { w: [], values: [] };
+
+      // Resize canvases
+      function resizeCanvases() {
+        const rect = viewport4D.getBoundingClientRect();
+        projCanvas.width = rect.width - 8;
+        projCanvas.height = rect.height - 40;
+        const rect2 = curveCanvas.getBoundingClientRect();
+        curveCanvas.width = rect2.width || 480;
+        curveCanvas.height = rect2.height || 220;
+        drawProjection();
+        drawCurve();
+      }
+      resizeCanvases();
+      window.addEventListener("resize", resizeCanvases);
+
+      // ============================================
+      // 3. Rotation helpers (4D + 3D)
+      // ============================================
+      function rotate4D_XW(p, angle) {
+        const [x, y, z, w] = p;
+        const c = Math.cos(angle);
+        const s = Math.sin(angle);
+        const x2 = x * c + w * s;
+        const w2 = -x * s + w * c;
+        return [x2, y, z, w2];
+      }
+      function rotate4D_YW(p, angle) {
+        const [x, y, z, w] = p;
+        const c = Math.cos(angle);
+        const s = Math.sin(angle);
+        const y2 = y * c + w * s;
+        const w2 = -y * s + w * c;
+        return [x, y2, z, w2];
+      }
+      function rotate3D_X(p, angle) {
+        const [x, y, z] = p;
+        const c = Math.cos(angle);
+        const s = Math.sin(angle);
+        const y2 = y * c - z * s;
+        const z2 = y * s + z * c;
+        return [x, y2, z2];
+      }
+      function rotate3D_Y(p, angle) {
+        const [x, y, z] = p;
+        const c = Math.cos(angle);
+        const s = Math.sin(angle);
+        const x2 = x * c + z * s;
+        const z2 = -x * s + z * c;
+        return [x2, y, z2];
+      }
+      function projectTo2D(p3, width, height) {
+        const [x, y, z] = p3;
+        const scale = Math.min(width, height) * 0.42;
+        const cx = width / 2;
+        const cy = height / 2;
+        const depth = 4;
+        const factor = depth / (depth + z);
+        const sx = x * scale * factor + cx;
+        const sy = y * scale * factor + cy;
+        return [sx, sy, factor];
+      }
+
+      // ============================================
+      // 4. Build / rebuild field + curve
+      // ============================================
+      function rebuildFieldFromInputs() {
+        const val = parseFloat(secretValueInput.value);
+        const x = Math.floor(parseFloat(secretXInput.value));
+        const y = Math.floor(parseFloat(secretYInput.value));
+        const z = Math.floor(parseFloat(secretZInput.value));
+        const w = Math.floor(parseFloat(secretWInput.value));
+
+        if (!Number.isFinite(val)) {
+          statusText.textContent = "Error: secret value is not a valid number.";
+          return;
+        }
+        if ([x,y,z].some(v => !Number.isInteger(v) || v < 0 || v >= 8) ||
+            !Number.isInteger(w) || w < 0 || w >= 5) {
+          statusText.textContent = "Error: coordinates out of bounds.";
+          return;
+        }
+
+        secret.value = val;
+        secret.x = x;
+        secret.y = y;
+        secret.z = z;
+        secret.w = w;
+
+        field.fillBase();
+        field.embedSecret(x, y, z, w, val);
+
+        statusText.textContent =
+          `4D field rebuilt. Secret at (x*,y*,z*,w*) = (${x},${y},${z},${w}), value = ${val}`;
+
+        secretInfo.textContent =
+          `Secret at (${x}, ${y}, ${z}, ${w}) = ${val}`;
+
+        curveLabel.textContent =
+          `(x*, y*, z*, w*) = (${x}, ${y}, ${z}, ${w}), secret = ${val}`;
+
+        recomputeCurve();
+        drawProjection();
+        drawCurve();
+      }
+
+      function recomputeCurve() {
+        const wArr = [];
+        const vArr = [];
+        for (let w = 0; w < NW; w++) {
+          const v = field.get(secret.x, secret.y, secret.z, w);
+          wArr.push(w);
+          vArr.push(v);
+        }
+        curveData.w = wArr;
+        curveData.values = vArr;
+      }
+
+      // ============================================
+      // 5. Draw 4D projection
+      // ============================================
+      function drawProjection() {
+        const width = projCanvas.width;
+        const height = projCanvas.height;
+        projCtx.clearRect(0, 0, width, height);
+        projCtx.fillStyle = "#05070a";
+        projCtx.fillRect(0, 0, width, height);
+
+        const sliceW = parseInt(sliceWSlider.value, 10);
+
+        const projected = [];
+        for (const p of points4D) {
+          // 4D rotation
+          let v4 = p.coord;
+          v4 = rotate4D_XW(v4, angleXW);
+          v4 = rotate4D_YW(v4, angleYW);
+
+          // 4D perspective using w
+          const [xr, yr, zr, wr] = v4;
+          const k4 = 3;
+          const factor4 = k4 / (k4 - wr);
+          let p3 = [xr * factor4, yr * factor4, zr * factor4];
+
+          // 3D view rotations
+          p3 = rotate3D_X(p3, viewRotX);
+          p3 = rotate3D_Y(p3, viewRotY);
+
+          const [sx, sy, factor3] = projectTo2D(p3, width, height);
+
+          const v = field.get(p.x, p.y, p.z, p.w);
+          const isSecret = (p.x === secret.x && p.y === secret.y &&
+                            p.z === secret.z && p.w === secret.w);
+          const onSlice = (p.w === sliceW);
+
+          projected.push({
+            sx, sy,
+            depth: p3[2],
+            value: v,
+            w: p.w,
+            isSecret,
+            onSlice,
+          });
+        }
+
+        // Sort by depth so farther points are drawn first
+        projected.sort((a,b) => a.depth - b.depth);
+
+        for (const pt of projected) {
+          const baseAlpha = pt.onSlice ? 0.95 : 0.22;
+          const color = valueToColor(pt.value);
+          projCtx.globalAlpha = baseAlpha;
+          projCtx.fillStyle = color;
+          const r = pt.onSlice ? 3 : 2;
+          projCtx.beginPath();
+          projCtx.arc(pt.sx, pt.sy, r, 0, Math.PI * 2);
+          projCtx.fill();
+
+          // secret outline
+          if (pt.isSecret) {
+            projCtx.globalAlpha = 1;
+            projCtx.strokeStyle = "#ffcc88";
+            projCtx.lineWidth = 2;
+            projCtx.beginPath();
+            projCtx.arc(pt.sx, pt.sy, r + 2, 0, Math.PI * 2);
+            projCtx.stroke();
+          }
+        }
+
+        projCtx.globalAlpha = 1;
+        sliceLabel.textContent = `w-slice = ${sliceW}`;
+      }
+
+      // hover detection
+      projCanvas.addEventListener("mousemove", (e) => {
+        const rect = projCanvas.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+
+        const width = projCanvas.width;
+        const height = projCanvas.height;
+
+        let closest = null;
+        let minD2 = Infinity;
+
+        // re-project minimally to find nearest point
+        for (const p of points4D) {
+          let v4 = p.coord;
+          v4 = rotate4D_XW(v4, angleXW);
+          v4 = rotate4D_YW(v4, angleYW);
+          const [xr, yr, zr, wr] = v4;
+          const k4 = 3;
+          const factor4 = k4 / (k4 - wr);
+          let p3 = [xr * factor4, yr * factor4, zr * factor4];
+          p3 = rotate3D_X(p3, viewRotX);
+          p3 = rotate3D_Y(p3, viewRotY);
+          const [sx, sy] = projectTo2D(p3, width, height);
+          const dx = sx - mouseX;
+          const dy = sy - mouseY;
+          const d2 = dx*dx + dy*dy;
+          if (d2 < minD2) {
+            minD2 = d2;
+            closest = { p, sx, sy };
+          }
+        }
+
+        if (!closest || minD2 > 80) {
+          hoverInfo.textContent = "Hover a point to inspect (x,y,z,w) and its value.";
+          return;
+        }
+
+        const { p } = closest;
+        const v = field.get(p.x, p.y, p.z, p.w);
+        const tag = (p.x === secret.x && p.y === secret.y &&
+                     p.z === secret.z && p.w === secret.w) ? "  ← secret coord" : "";
+        hoverInfo.textContent =
+          `(x,y,z,w) = (${p.x}, ${p.y}, ${p.z}, ${p.w}), value ≈ ${v.toFixed(3)}${tag}`;
+      });
+
+      projCanvas.addEventListener("mouseleave", () => {
+        hoverInfo.textContent = "Hover a point to inspect (x,y,z,w) and its value.";
+      });
+
+      // drag rotation
+      viewport4D.addEventListener("mousedown", (e) => {
+        dragging = true;
+        lastX = e.clientX;
+        lastY = e.clientY;
+      });
+      window.addEventListener("mousemove", (e) => {
+        if (!dragging) return;
+        const dx = e.clientX - lastX;
+        const dy = e.clientY - lastY;
+        lastX = e.clientX;
+        lastY = e.clientY;
+        viewRotY += dx * 0.005;
+        viewRotX += dy * 0.005;
+        drawProjection();
+      });
+      window.addEventListener("mouseup", () => { dragging = false; });
+
+      viewport4D.addEventListener("touchstart", (e) => {
+        if (e.touches.length !== 1) return;
+        const t = e.touches[0];
+        dragging = true;
+        lastX = t.clientX;
+        lastY = t.clientY;
+      }, { passive: true });
+      window.addEventListener("touchmove", (e) => {
+        if (!dragging || e.touches.length !== 1) return;
+        const t = e.touches[0];
+        const dx = t.clientX - lastX;
+        const dy = t.clientY - lastY;
+        lastX = t.clientX;
+        lastY = t.clientY;
+        viewRotY += dx * 0.005;
+        viewRotX += dy * 0.005;
+        drawProjection();
+      }, { passive: true });
+      window.addEventListener("touchend", () => { dragging = false; });
+
+      // 4D rotation slider
+      function updateRot4FromSlider() {
+        const v = parseInt(rot4Slider.value, 10); // 0..100
+        const a = (v / 100) * Math.PI;           // 0..π
+        angleXW = a * 0.7;
+        angleYW = a * 0.4;
+        rot4Label.innerHTML =
+          `θ<sub>xw</sub> ≈ ${angleXW.toFixed(2)}, θ<sub>yw</sub> ≈ ${angleYW.toFixed(2)}`;
+        drawProjection();
+      }
+      rot4Slider.addEventListener("input", updateRot4FromSlider);
+      updateRot4FromSlider();
+
+      sliceWSlider.addEventListener("input", () => {
+        drawProjection();
+      });
+
+      // ============================================
+      // 6. Draw curve of value vs w at secret coord
+      // ============================================
+      function drawCurve() {
+        const ctx = curveCtx;
+        const width = curveCanvas.width;
+        const height = curveCanvas.height;
+        ctx.clearRect(0, 0, width, height);
+
+        const marginLeft = 45;
+        const marginRight = 10;
+        const marginTop = 15;
+        const marginBottom = 28;
+
+        const plotW = width - marginLeft - marginRight;
+        const plotH = height - marginTop - marginBottom;
+
+        ctx.fillStyle = "#05070a";
+        ctx.fillRect(0, 0, width, height);
+        ctx.fillStyle = "rgba(255,255,255,0.02)";
+        ctx.fillRect(marginLeft, marginTop, plotW, plotH);
+
+        const Warr = curveData.w;
+        const Varr = curveData.values;
+        if (!Warr.length) return;
+
+        let vMin = Math.min(...Varr);
+        let vMax = Math.max(...Varr);
+        const pad = (vMax - vMin) * 0.1 || 1;
+        vMin -= pad;
+        vMax += pad;
+
+        function mapX(w) {
+          const t = w / (NW - 1);
+          return marginLeft + t * plotW;
+        }
+        function mapY(v) {
+          const t = (v - vMin) / (vMax - vMin);
+          return marginTop + (1 - t) * plotH;
+        }
+
+        // grid lines
+        ctx.strokeStyle = "rgba(255,255,255,0.08)";
+        ctx.lineWidth = 1;
+        for (let w = 0; w < NW; w++) {
+          const x = mapX(w);
+          ctx.beginPath();
+          ctx.moveTo(x, marginTop);
+          ctx.lineTo(x, marginTop + plotH);
+          ctx.stroke();
+        }
+
+        // horizontal secret line
+        ctx.strokeStyle = "rgba(255, 200, 120, 0.7)";
+        ctx.setLineDash([4, 3]);
+        const ySecret = mapY(secret.value);
+        ctx.beginPath();
+        ctx.moveTo(marginLeft, ySecret);
+        ctx.lineTo(marginLeft + plotW, ySecret);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // axes
+        ctx.strokeStyle = "rgba(255,255,255,0.5)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(marginLeft, marginTop + plotH);
+        ctx.lineTo(marginLeft + plotW, marginTop + plotH);
+        ctx.moveTo(marginLeft, marginTop + plotH);
+        ctx.lineTo(marginLeft, marginTop);
+        ctx.stroke();
+
+        ctx.fillStyle = "rgba(255,255,255,0.8)";
+        ctx.font = "10px " + getComputedStyle(document.documentElement).getPropertyValue("--mono");
+        ctx.fillText("w", marginLeft + plotW + 4, marginTop + plotH + 2);
+
+        ctx.save();
+        ctx.translate(marginLeft - 28, marginTop + plotH / 2);
+        ctx.rotate(-Math.PI / 2);
+        ctx.fillText("A(x*, y*, z*, w)", 0, 0);
+        ctx.restore();
+
+        // x ticks
+        ctx.textAlign = "center";
+        ctx.textBaseline = "top";
+        for (let w = 0; w < NW; w++) {
+          const x = mapX(w);
+          ctx.fillText(String(w), x, marginTop + plotH + 4);
+        }
+
+        // y labels
+        ctx.textAlign = "right";
+        ctx.textBaseline = "middle";
+        ctx.fillText(vMin.toFixed(1), marginLeft - 4, mapY(vMin));
+        ctx.fillText(secret.value.toFixed(1), marginLeft - 4, ySecret);
+        ctx.fillText(vMax.toFixed(1), marginLeft - 4, mapY(vMax));
+
+        // curve
+        ctx.strokeStyle = "rgba(78,161,255,0.9)";
+        ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        for (let i = 0; i < Warr.length; i++) {
+          const x = mapX(Warr[i]);
+          const y = mapY(Varr[i]);
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+
+        // secret marker
+        const xs = mapX(secret.w);
+        const ys = mapY(secret.value);
+        ctx.strokeStyle = "rgba(120,255,160,0.9)";
+        ctx.setLineDash([3, 2]);
+        ctx.beginPath();
+        ctx.moveTo(xs, marginTop);
+        ctx.lineTo(xs, marginTop + plotH);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        ctx.fillStyle = "#ffcc88";
+        ctx.beginPath();
+        ctx.arc(xs, ys, 3.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // ============================================
+      // 7. Events
+      // ============================================
+      embedButton.addEventListener("click", () => {
+        rebuildFieldFromInputs();
+      });
+
+      // initial build
+      rebuildFieldFromInputs();
+    });
+  </script>
+</body>
+</html>
