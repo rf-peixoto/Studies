@@ -1,0 +1,1527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Multi-Attribute Utility Analysis - Dark</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg: #020617;
+      --bg-elevated: #0b1120;
+      --bg-elevated-soft: #020617;
+      --border: #1e293b;
+      --accent: #38bdf8;
+      --accent-soft: rgba(56, 189, 248, 0.12);
+      --accent-strong: #06b6d4;
+      --danger: #f97373;
+      --text: #e5e7eb;
+      --text-soft: #9ca3af;
+      --text-muted: #6b7280;
+      --radius: 10px;
+      --shadow: 0 16px 40px rgba(15, 23, 42, 0.9);
+    }
+
+    * {
+      box-sizing: border-box;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background: radial-gradient(circle at top, #0b1120 0, #020617 45%, #000 100%);
+      color: var(--text);
+    }
+
+    header {
+      padding: 18px 20px;
+      border-bottom: 1px solid #111827;
+      background: linear-gradient(135deg, rgba(56, 189, 248, 0.08), rgba(8, 47, 73, 0.95));
+      box-shadow: 0 12px 30px rgba(15, 23, 42, 0.7);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 1.4rem;
+      letter-spacing: 0.04em;
+    }
+
+    header p {
+      margin: 4px 0 0;
+      font-size: 0.9rem;
+      color: #cbd5f5;
+    }
+
+    main {
+      max-width: 1180px;
+      margin: 16px auto 24px;
+      padding: 0 16px 32px;
+    }
+
+    .card {
+      background: radial-gradient(circle at top left, rgba(148, 163, 184, 0.08), rgba(15, 23, 42, 0.98));
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      padding: 16px 18px 20px;
+      margin-bottom: 16px;
+    }
+
+    .card h2 {
+      margin: 0 0 8px;
+      font-size: 1.1rem;
+    }
+
+    .card p {
+      margin: 4px 0 10px;
+      font-size: 0.9rem;
+      color: var(--text-soft);
+    }
+
+    .stepper {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 12px 0 18px;
+      gap: 12px;
+    }
+
+    .step {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .step-line {
+      height: 2px;
+      flex: 1;
+      background: #0f172a;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .step-line-inner {
+      height: 100%;
+      width: 100%;
+      background: linear-gradient(90deg, rgba(56,189,248,0.7), rgba(94,234,212,0.7));
+      transform-origin: left;
+      transform: scaleX(0);
+      transition: transform 0.25s ease-out;
+    }
+
+    .step-circle {
+      width: 24px;
+      height: 24px;
+      border-radius: 999px;
+      border: 1px solid #1e293b;
+      background: #020617;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+
+    .step-label {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .step.active .step-circle {
+      border-color: var(--accent);
+      background: radial-gradient(circle at top, rgba(56,189,248,0.25), #020617);
+      color: var(--accent);
+      box-shadow: 0 0 0 1px rgba(56,189,248,0.35);
+    }
+
+    .step.completed .step-circle {
+      border-color: var(--accent-strong);
+      background: #022c42;
+      color: #a5f3fc;
+    }
+
+    .step.active .step-label {
+      color: #e5e7eb;
+    }
+
+    .step.completed .step-label {
+      color: #9ca3af;
+    }
+
+    .step.completed .step-line-inner {
+      transform: scaleX(1);
+    }
+
+    .grid-two {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.1fr);
+      gap: 16px;
+    }
+
+    @media (max-width: 960px) {
+      .grid-two {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+
+    .section-title small {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    hr {
+      border: none;
+      border-top: 1px solid #1e293b;
+      margin: 12px 0;
+    }
+
+    .form-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .field {
+      flex: 1 1 140px;
+      min-width: 0;
+    }
+
+    .field label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+      gap: 6px;
+    }
+
+    .field label span.hint {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+    }
+
+    input[type="text"],
+    input[type="number"],
+    select {
+      width: 100%;
+      padding: 6px 8px;
+      border-radius: 4px;
+      border: 1px solid #1f2937;
+      background: #020617;
+      color: var(--text);
+      font-size: 0.9rem;
+    }
+
+    input[type="text"]::placeholder,
+    input[type="number"]::placeholder {
+      color: #4b5563;
+    }
+
+    input[type="text"]:focus,
+    input[type="number"]:focus,
+    select:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px rgba(56,189,248,0.4);
+    }
+
+    button {
+      border-radius: 5px;
+      border: 1px solid transparent;
+      font-size: 0.9rem;
+      padding: 7px 13px;
+      cursor: pointer;
+      background: linear-gradient(135deg, #0ea5e9, #22d3ee);
+      color: #0f172a;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 500;
+      letter-spacing: 0.01em;
+      box-shadow: 0 8px 18px rgba(8, 47, 73, 0.75);
+      transition: transform 0.05s ease-out, box-shadow 0.1s ease-out, filter 0.1s;
+    }
+
+    button:hover:not(:disabled) {
+      filter: brightness(1.05);
+      box-shadow: 0 10px 22px rgba(8, 47, 73, 0.9);
+    }
+
+    button:active:not(:disabled) {
+      transform: translateY(1px);
+      box-shadow: 0 6px 14px rgba(8, 47, 73, 0.7);
+    }
+
+    button.secondary {
+      background: #020617;
+      color: var(--text-soft);
+      border-color: #374151;
+      box-shadow: 0 6px 16px rgba(15, 23, 42, 0.7);
+    }
+
+    button.secondary:hover:not(:disabled) {
+      filter: none;
+      border-color: #4b5563;
+    }
+
+    button.danger {
+      background: #111827;
+      color: var(--danger);
+      border-color: rgba(248,113,113,0.7);
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    .pill-row {
+      margin-top: 8px;
+      max-height: 180px;
+      overflow-y: auto;
+      border-radius: 6px;
+      border: 1px solid #111827;
+      padding: 8px;
+      background: radial-gradient(circle at top, rgba(15,23,42,0.95), #020617);
+    }
+
+    .pill-row-empty {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      text-align: center;
+      padding: 6px 0;
+    }
+
+    .attr-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+
+    .attr-name {
+      font-size: 0.86rem;
+    }
+
+    .attr-controls {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .attr-controls input[type="range"] {
+      flex: 1;
+    }
+
+    .attr-controls input[type="number"] {
+      width: 70px;
+    }
+
+    .attr-meta {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      background: #020617;
+      height: 3px;
+      border-radius: 999px;
+      cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 0 2px rgba(15,23,42,0.9);
+      border: 1px solid rgba(56,189,248,0.65);
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--accent);
+      border: 1px solid rgba(56,189,248,0.65);
+    }
+
+    .item-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 9px;
+      border-radius: 999px;
+      background: rgba(15,23,42,0.9);
+      border: 1px solid #1f2937;
+      font-size: 0.8rem;
+      margin: 4px 6px 4px 0;
+    }
+
+    .item-pill span.name {
+      color: var(--text);
+    }
+
+    .item-pill button {
+      padding: 0;
+      border: none;
+      background: transparent;
+      box-shadow: none;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+
+    .item-pill button:hover {
+      color: var(--danger);
+    }
+
+    .small-note {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 7px;
+      border-radius: 999px;
+      border: 1px solid #16a34a;
+      font-size: 0.72rem;
+      color: #bbf7d0;
+      background: rgba(22,163,74,0.15);
+      gap: 5px;
+    }
+
+    .badge.muted {
+      border-color: #4b5563;
+      background: rgba(15,23,42,0.9);
+      color: var(--text-muted);
+    }
+
+    .badge span.dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: #22c55e;
+    }
+
+    .muted {
+      color: var(--text-muted);
+      font-size: 0.8rem;
+    }
+
+    .actions-row {
+      margin-top: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .actions-left {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .matrix-wrapper {
+      border-radius: 8px;
+      border: 1px solid #111827;
+      background: radial-gradient(circle at top left, rgba(15,23,42,0.98), #020617);
+      max-height: 380px;
+      overflow: auto;
+      padding: 4px;
+    }
+
+    .matrix-empty {
+      padding: 18px 12px;
+      text-align: center;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.86rem;
+    }
+
+    th, td {
+      border: 1px solid #111827;
+      padding: 4px 6px;
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    th {
+      background: #020617;
+      position: sticky;
+      top: 0;
+      z-index: 2;
+    }
+
+    td:first-child, th:first-child {
+      text-align: left;
+      position: sticky;
+      left: 0;
+      z-index: 3;
+      background: #020617;
+    }
+
+    .matrix-input {
+      width: 70px;
+      padding: 3px 4px;
+      font-size: 0.8rem;
+      border-radius: 4px;
+      border: 1px solid #1f2937;
+      background: rgba(15,23,42,0.9);
+      color: var(--text);
+    }
+
+    .matrix-input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px rgba(56,189,248,0.4);
+    }
+
+    .highlight-row {
+      background: rgba(34,197,94,0.1);
+    }
+
+    .results-summary {
+      font-size: 0.85rem;
+      margin-top: 8px;
+      color: var(--text-soft);
+    }
+
+    .winner {
+      color: #22c55e;
+      font-weight: 600;
+    }
+
+    .charts-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+      gap: 14px;
+      margin-top: 10px;
+    }
+
+    @media (max-width: 960px) {
+      .charts-grid {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+
+    .chart-card {
+      border-radius: 8px;
+      border: 1px solid #111827;
+      background: radial-gradient(circle at top, rgba(15,23,42,1), #020617);
+      padding: 10px 12px;
+    }
+
+    .chart-card h3 {
+      margin: 0 0 4px;
+      font-size: 0.92rem;
+    }
+
+    .chart-card small {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+
+    .chart-wrapper {
+      position: relative;
+      width: 100%;
+      height: 260px;
+      margin-top: 6px;
+    }
+
+    .select-inline {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+
+    .select-inline select {
+      width: auto;
+      min-width: 120px;
+    }
+
+    .alert {
+      margin-top: 8px;
+      font-size: 0.8rem;
+      padding: 7px 9px;
+      border-radius: 6px;
+      border: 1px solid #854d0e;
+      background: rgba(120,53,15,0.35);
+      color: #fed7aa;
+    }
+
+    .advanced {
+      margin-top: 12px;
+      padding-top: 8px;
+      border-top: 1px dashed #1f2937;
+      font-size: 0.8rem;
+      color: var(--text-soft);
+    }
+
+    .advanced h4 {
+      font-size: 0.88rem;
+      margin: 0 0 4px;
+    }
+
+    .dom-list {
+      margin: 4px 0 0;
+      padding-left: 16px;
+    }
+
+    .dom-list li {
+      margin-bottom: 2px;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+  </style>
+</head>
+<body>
+<header>
+  <h1>Multi-Attribute Utility Analysis</h1>
+  <p>Dark-mode helper for building, scoring and analysing multi-criteria decisions.</p>
+</header>
+
+<main>
+  <div class="stepper">
+    <div class="step" data-step-indicator="1">
+      <div class="step-circle">1</div>
+      <div class="step-label">Model</div>
+      <div class="step-line"><div class="step-line-inner"></div></div>
+    </div>
+    <div class="step" data-step-indicator="2">
+      <div class="step-circle">2</div>
+      <div class="step-label">Scoring</div>
+      <div class="step-line"><div class="step-line-inner"></div></div>
+    </div>
+    <div class="step" data-step-indicator="3">
+      <div class="step-circle">3</div>
+      <div class="step-label">Results</div>
+      <div class="step-line"><div class="step-line-inner"></div></div>
+    </div>
+  </div>
+
+  <!-- STEP 1: MODEL -->
+  <section class="card" data-step="1">
+    <div class="grid-two">
+      <!-- Attributes -->
+      <div>
+        <div class="section-title">
+          <h2>1. Attributes &amp; weights</h2>
+          <small>Define criteria and their relative importance</small>
+        </div>
+        <p>Use any consistent raw scale for weights. They will be normalized automatically when computing utilities.</p>
+        <div class="form-row">
+          <div class="field">
+            <label for="attrName">
+              Attribute name
+              <span class="hint">e.g. Cost, Performance</span>
+            </label>
+            <input id="attrName" type="text" placeholder="Cost, Usability, Performance..." />
+          </div>
+          <div class="field">
+            <label for="attrWeightRaw">
+              Initial weight
+              <span class="hint">0–100</span>
+            </label>
+            <input id="attrWeightRaw" type="number" step="1" min="0" max="100" value="50" />
+          </div>
+          <div class="field" style="flex:0 0 auto; align-self:flex-end;">
+            <button id="addAttrBtn" type="button">+ Add attribute</button>
+          </div>
+        </div>
+        <div id="attributesList" class="pill-row">
+          <div class="pill-row-empty">No attributes defined yet.</div>
+        </div>
+        <div class="small-note">
+          <span class="badge">
+            <span class="dot"></span> Additive weighted-sum model
+          </span>
+        </div>
+      </div>
+
+      <!-- Items -->
+      <div>
+        <div class="section-title">
+          <h2>2. Items / alternatives</h2>
+          <small>Options you are comparing</small>
+        </div>
+        <p>Each item will be scored on every attribute in the next step.</p>
+        <div class="form-row">
+          <div class="field">
+            <label for="itemName">
+              Item name
+              <span class="hint">e.g. Option A</span>
+            </label>
+            <input id="itemName" type="text" placeholder="Option A, Provider X..." />
+          </div>
+          <div class="field" style="flex:0 0 auto; align-self:flex-end;">
+            <button id="addItemBtn" type="button">+ Add item</button>
+          </div>
+        </div>
+        <div id="itemsList" class="pill-row">
+          <div class="pill-row-empty">No items defined yet.</div>
+        </div>
+        <div class="small-note">
+          You can add or remove attributes and items at any time; the matrix and results will update accordingly.
+        </div>
+      </div>
+    </div>
+
+    <div class="actions-row">
+      <div class="actions-left">
+        <button id="step1NextBtn" type="button" disabled>Next: scoring</button>
+        <button id="resetBtn" type="button" class="secondary">Reset all</button>
+      </div>
+      <span class="muted">Need at least one attribute and one item to continue.</span>
+    </div>
+  </section>
+
+  <!-- STEP 2: MATRIX -->
+  <section class="card hidden" data-step="2">
+    <div class="section-title">
+      <h2>3. Decision matrix &amp; scoring</h2>
+      <small>Assign scores to each (item, attribute)</small>
+    </div>
+    <p>Use a benefit-oriented scale where higher is better. If an attribute is a cost, transform it beforehand or invert the interpretation yourself.</p>
+
+    <div class="form-row">
+      <div class="field" style="max-width: 220px;">
+        <label for="scoreScale">
+          Score scale
+          <span class="hint">for guidance &amp; heatmap</span>
+        </label>
+        <select id="scoreScale">
+          <option value="0-10">0 – 10</option>
+          <option value="1-5">1 – 5</option>
+          <option value="0-100">0 – 100</option>
+        </select>
+      </div>
+      <div class="field" style="flex:2 1 auto;">
+        <label>
+          Keyboard shortcuts
+          <span class="hint">navigation</span>
+        </label>
+        <div class="small-note">
+          Use ↑ ↓ ← → to move between cells, Enter to stay on the same, Tab as usual. Missing values are treated as 0.
+        </div>
+      </div>
+    </div>
+
+    <div id="matrixContainer" class="matrix-wrapper">
+      <div class="matrix-empty">Define at least one attribute and one item, then proceed from the previous step.</div>
+    </div>
+
+    <div class="actions-row">
+      <div class="actions-left">
+        <button id="step2BackBtn" type="button" class="secondary">Back: model</button>
+        <button id="computeBtn" type="button">Compute utilities &amp; view results</button>
+      </div>
+      <span class="muted">All scores can be edited later; just recompute.</span>
+    </div>
+  </section>
+
+  <!-- STEP 3: RESULTS -->
+  <section class="card hidden" data-step="3">
+    <div class="section-title">
+      <h2>4. Results &amp; analysis</h2>
+      <small>Utilities, contributions, and dominance</small>
+    </div>
+
+    <div class="grid-two">
+      <div>
+        <h3 style="margin:0 0 4px; font-size:0.96rem;">Normalized weights</h3>
+        <div id="weightsSummary" class="results-summary">
+          No attributes yet.
+        </div>
+
+        <div id="resultsTableContainer" style="margin-top: 8px;"></div>
+
+        <div id="dominanceContainer" class="advanced hidden">
+          <h4>Dominance analysis</h4>
+          <p class="muted">
+            An item is strictly dominated if there exists another item that is at least as good on every attribute and strictly better on at least one.
+          </p>
+          <ul id="dominanceList" class="dom-list"></ul>
+        </div>
+      </div>
+
+      <div>
+        <div id="resultsAlert" class="alert hidden"></div>
+
+        <div id="chartsSection" class="charts-grid hidden">
+          <div class="chart-card">
+            <h3>Total utility &amp; contributions</h3>
+            <small>Bar height = total utility; stacked colours = contributions from each attribute.</small>
+            <div class="chart-wrapper">
+              <canvas id="barChart"></canvas>
+            </div>
+          </div>
+          <div class="chart-card">
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+              <div>
+                <h3>Attribute profile (radar)</h3>
+                <small>Raw scores for a selected item (not weighted).</small>
+              </div>
+              <div class="select-inline">
+                <span>Item:</span>
+                <select id="radarItemSelect"></select>
+              </div>
+            </div>
+            <div class="chart-wrapper">
+              <canvas id="radarChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="actions-row" style="margin-top:14px;">
+      <div class="actions-left">
+        <button id="step3BackBtn" type="button" class="secondary">Back: scoring</button>
+        <button id="recomputeBtn" type="button">Recompute</button>
+      </div>
+      <span class="muted">Adjust weights or scores in previous steps and recompute to explore sensitivity.</span>
+    </div>
+  </section>
+</main>
+
+<script>
+  // ---- State ----
+  let attributes = []; // {id, name, weightRaw}
+  let items = [];      // {id, name}
+  let scores = {};     // key: `${itemId}_${attrId}` -> number
+
+  let attrCounter = 1;
+  let itemCounter = 1;
+
+  let currentStep = 1;
+  let scoreScale = { min: 0, max: 10 };
+
+  let barChart = null;
+  let radarChart = null;
+  let lastResults = null;
+  let lastNormalizedWeights = null;
+
+  // DOM shortcuts
+  const $ = (id) => document.getElementById(id);
+
+  const attrNameInput = $("attrName");
+  const attrWeightInput = $("attrWeightRaw");
+  const itemNameInput = $("itemName");
+  const attributesListDiv = $("attributesList");
+  const itemsListDiv = $("itemsList");
+  const matrixContainer = $("matrixContainer");
+  const weightsSummaryDiv = $("weightsSummary");
+  const resultsTableContainer = $("resultsTableContainer");
+  const dominanceContainer = $("dominanceContainer");
+  const dominanceList = $("dominanceList");
+  const chartsSection = $("chartsSection");
+  const barCanvas = $("barChart");
+  const radarCanvas = $("radarChart");
+  const radarItemSelect = $("radarItemSelect");
+  const resultsAlert = $("resultsAlert");
+
+  const step1NextBtn = $("step1NextBtn");
+  const step2BackBtn = $("step2BackBtn");
+  const step3BackBtn = $("step3BackBtn");
+  const addAttrBtn = $("addAttrBtn");
+  const addItemBtn = $("addItemBtn");
+  const computeBtn = $("computeBtn");
+  const recomputeBtn = $("recomputeBtn");
+  const resetBtn = $("resetBtn");
+  const scoreScaleSelect = $("scoreScale");
+
+  // ---- Step navigation ----
+  function updateStepView() {
+    const sections = document.querySelectorAll("[data-step]");
+    sections.forEach((sec) => {
+      const s = parseInt(sec.getAttribute("data-step"), 10);
+      sec.classList.toggle("hidden", s !== currentStep);
+    });
+
+    const indicators = document.querySelectorAll("[data-step-indicator]");
+    indicators.forEach((el) => {
+      const s = parseInt(el.getAttribute("data-step-indicator"), 10);
+      el.classList.remove("active", "completed");
+      const lineInner = el.querySelector(".step-line-inner");
+      if (s === currentStep) {
+        el.classList.add("active");
+      } else if (s < currentStep) {
+        el.classList.add("completed");
+      }
+      if (s < currentStep && lineInner) {
+        lineInner.style.transform = "scaleX(1)";
+      } else if (lineInner) {
+        lineInner.style.transform = "scaleX(0)";
+      }
+    });
+  }
+
+  function goToStep(step) {
+    currentStep = step;
+    updateStepView();
+    if (currentStep === 2) {
+      renderMatrix();
+    } else if (currentStep === 3) {
+      calculateUtilities();
+    }
+  }
+
+  // ---- Attributes ----
+  function addAttribute() {
+    const name = attrNameInput.value.trim();
+    let weightRaw = parseFloat(attrWeightInput.value);
+    if (!name) {
+      alert("Attribute name is required.");
+      return;
+    }
+    if (isNaN(weightRaw) || weightRaw < 0) {
+      alert("Attribute weight must be a number ≥ 0.");
+      return;
+    }
+    if (weightRaw > 100) weightRaw = 100;
+
+    attributes.push({ id: attrCounter++, name, weightRaw });
+    attrNameInput.value = "";
+    attrWeightInput.value = "50";
+
+    renderAttributes();
+    renderMatrix();
+    updateStep1NextState();
+    clearResults();
+  }
+
+  function removeAttribute(id) {
+    attributes = attributes.filter((a) => a.id !== id);
+    Object.keys(scores).forEach((key) => {
+      const [itemId, attrId] = key.split("_");
+      if (parseInt(attrId, 10) === id) delete scores[key];
+    });
+    renderAttributes();
+    renderMatrix();
+    updateStep1NextState();
+    clearResults();
+  }
+
+  function updateAttributeWeightFromSlider(attrId, sliderEl) {
+    const value = parseFloat(sliderEl.value);
+    const attr = attributes.find((a) => a.id === attrId);
+    if (!attr) return;
+    attr.weightRaw = isNaN(value) ? 0 : value;
+    const numInput = document.querySelector(`input[data-attr-weight-num="${attrId}"]`);
+    if (numInput) numInput.value = attr.weightRaw.toFixed(0);
+    clearResults();
+  }
+
+  function updateAttributeWeightFromNumber(attrId, numEl) {
+    let value = parseFloat(numEl.value);
+    if (isNaN(value) || value < 0) value = 0;
+    if (value > 100) value = 100;
+    const attr = attributes.find((a) => a.id === attrId);
+    if (!attr) return;
+    attr.weightRaw = value;
+    numEl.value = attr.weightRaw.toFixed(0);
+    const slider = document.querySelector(`input[data-attr-weight-slider="${attrId}"]`);
+    if (slider) slider.value = attr.weightRaw;
+    clearResults();
+  }
+
+  function renderAttributes() {
+    if (attributes.length === 0) {
+      attributesListDiv.innerHTML = '<div class="pill-row-empty">No attributes defined yet.</div>';
+      return;
+    }
+
+    let totalWeight = attributes.reduce((sum, a) => sum + (a.weightRaw || 0), 0);
+    if (totalWeight <= 0) totalWeight = 1;
+
+    let html = "";
+    attributes.forEach((a) => {
+      const norm = (a.weightRaw || 0) / totalWeight;
+      html += `
+        <div class="attr-row">
+          <div>
+            <div class="attr-name">${escapeHtml(a.name)}</div>
+            <div class="attr-meta">Normalized: ${(norm).toFixed(3)}</div>
+          </div>
+          <div class="attr-controls">
+            <input type="range" min="0" max="100" step="1"
+              value="${a.weightRaw || 0}"
+              data-attr-weight-slider="${a.id}"
+              oninput="updateAttributeWeightFromSlider(${a.id}, this)" />
+            <input type="number" min="0" max="100" step="1"
+              value="${(a.weightRaw || 0).toFixed(0)}"
+              data-attr-weight-num="${a.id}"
+              oninput="updateAttributeWeightFromNumber(${a.id}, this)" />
+          </div>
+          <div>
+            <button type="button" class="secondary" onclick="removeAttribute(${a.id})">×</button>
+          </div>
+        </div>
+      `;
+    });
+    attributesListDiv.innerHTML = html;
+  }
+
+  // ---- Items ----
+  function addItem() {
+    const name = itemNameInput.value.trim();
+    if (!name) {
+      alert("Item name is required.");
+      return;
+    }
+    items.push({ id: itemCounter++, name });
+    itemNameInput.value = "";
+    renderItems();
+    renderMatrix();
+    updateStep1NextState();
+    clearResults();
+  }
+
+  function removeItem(id) {
+    items = items.filter((it) => it.id !== id);
+    Object.keys(scores).forEach((key) => {
+      const [itemId] = key.split("_");
+      if (parseInt(itemId, 10) === id) delete scores[key];
+    });
+    renderItems();
+    renderMatrix();
+    updateStep1NextState();
+    clearResults();
+  }
+
+  function renderItems() {
+    if (items.length === 0) {
+      itemsListDiv.innerHTML = '<div class="pill-row-empty">No items defined yet.</div>';
+      return;
+    }
+    let html = "";
+    items.forEach((it) => {
+      html += `
+        <span class="item-pill">
+          <span class="name">${escapeHtml(it.name)}</span>
+          <button type="button" onclick="removeItem(${it.id})">×</button>
+        </span>
+      `;
+    });
+    itemsListDiv.innerHTML = html;
+  }
+
+  // ---- Matrix & scoring ----
+  function updateStep1NextState() {
+    const ok = attributes.length > 0 && items.length > 0;
+    step1NextBtn.disabled = !ok;
+  }
+
+  function renderMatrix() {
+    if (attributes.length === 0 || items.length === 0) {
+      matrixContainer.innerHTML =
+        '<div class="matrix-empty">You need at least one attribute and one item to score.</div>';
+      return;
+    }
+
+    let html = '<table><thead><tr><th>Item \\ Attribute</th>';
+    attributes.forEach((a, colIdx) => {
+      html += `<th>${escapeHtml(a.name)}</th>`;
+    });
+    html += '</tr></thead><tbody>';
+
+    items.forEach((it, rowIdx) => {
+      html += `<tr><td>${escapeHtml(it.name)}</td>`;
+      attributes.forEach((a, colIdx) => {
+        const key = `${it.id}_${a.id}`;
+        const val = scores[key] ?? "";
+        html += `
+          <td>
+            <input type="number"
+              class="matrix-input"
+              step="0.01"
+              data-item="${it.id}"
+              data-attr="${a.id}"
+              data-row="${rowIdx}"
+              data-col="${colIdx}"
+              value="${val}"
+              oninput="updateScore(this)"
+              onkeydown="handleMatrixKey(event, this)" />
+          </td>
+        `;
+      });
+      html += "</tr>";
+    });
+
+    html += "</tbody></table>";
+    matrixContainer.innerHTML = html;
+    applyHeatmap();
+  }
+
+  function updateScore(inputEl) {
+    const itemId = parseInt(inputEl.dataset.item, 10);
+    const attrId = parseInt(inputEl.dataset.attr, 10);
+    const key = `${itemId}_${attrId}`;
+    const val = parseFloat(inputEl.value);
+    if (isNaN(val)) {
+      delete scores[key];
+    } else {
+      scores[key] = val;
+    }
+    colorCell(inputEl);
+  }
+
+  function handleMatrixKey(ev, inputEl) {
+    const row = parseInt(inputEl.dataset.row, 10);
+    const col = parseInt(inputEl.dataset.col, 10);
+    let targetRow = row;
+    let targetCol = col;
+
+    switch (ev.key) {
+      case "ArrowUp":
+        ev.preventDefault();
+        targetRow = Math.max(0, row - 1);
+        break;
+      case "ArrowDown":
+        ev.preventDefault();
+        targetRow = Math.min(items.length - 1, row + 1);
+        break;
+      case "ArrowLeft":
+        ev.preventDefault();
+        targetCol = Math.max(0, col - 1);
+        break;
+      case "ArrowRight":
+        ev.preventDefault();
+        targetCol = Math.min(attributes.length - 1, col + 1);
+        break;
+      default:
+        return;
+    }
+
+    const next = matrixContainer.querySelector(
+      `input.matrix-input[data-row="${targetRow}"][data-col="${targetCol}"]`
+    );
+    if (next) next.focus();
+  }
+
+  function applyHeatmap() {
+    const inputs = matrixContainer.querySelectorAll("input.matrix-input");
+    inputs.forEach((inp) => colorCell(inp));
+  }
+
+  function colorCell(inputEl) {
+    const val = parseFloat(inputEl.value);
+    const td = inputEl.parentElement;
+    if (isNaN(val)) {
+      td.style.background = "transparent";
+      return;
+    }
+    const min = scoreScale.min;
+    const max = scoreScale.max;
+    const tRaw = (val - min) / (max - min || 1);
+    const t = Math.max(0, Math.min(1, tRaw));
+    const r = Math.round(220 - 140 * t);
+    const g = Math.round(60 + 150 * t);
+    const b = 80;
+    td.style.background = `rgba(${r},${g},${b},0.4)`;
+  }
+
+  function onScoreScaleChange() {
+    const v = scoreScaleSelect.value;
+    if (v === "1-5") scoreScale = { min: 1, max: 5 };
+    else if (v === "0-100") scoreScale = { min: 0, max: 100 };
+    else scoreScale = { min: 0, max: 10 };
+    applyHeatmap();
+  }
+
+  // ---- Utility calculations ----
+  function calculateUtilities() {
+    clearChartsOnly();
+
+    if (attributes.length === 0 || items.length === 0) {
+      resultsAlert.classList.remove("hidden");
+      resultsAlert.textContent = "You need at least one attribute and one item to compute utilities.";
+      resultsTableContainer.innerHTML = "";
+      weightsSummaryDiv.textContent = "No attributes defined.";
+      chartsSection.classList.add("hidden");
+      dominanceContainer.classList.add("hidden");
+      return;
+    }
+
+    const totalRaw = attributes.reduce((sum, a) => sum + (a.weightRaw || 0), 0);
+    if (totalRaw <= 0) {
+      resultsAlert.classList.remove("hidden");
+      resultsAlert.textContent = "The sum of raw weights must be greater than 0.";
+      resultsTableContainer.innerHTML = "";
+      weightsSummaryDiv.textContent = "All attribute weights are currently 0.";
+      chartsSection.classList.add("hidden");
+      dominanceContainer.classList.add("hidden");
+      return;
+    }
+
+    resultsAlert.classList.add("hidden");
+
+    const normalizedWeights = attributes.map((a) => (a.weightRaw || 0) / totalRaw);
+    lastNormalizedWeights = normalizedWeights;
+
+    const results = [];
+    items.forEach((item) => {
+      let total = 0;
+      attributes.forEach((attr, idx) => {
+        const key = `${item.id}_${attr.id}`;
+        const s = scores[key];
+        const scoreVal = typeof s === "number" && !isNaN(s) ? s : 0;
+        total += normalizedWeights[idx] * scoreVal;
+      });
+      results.push({ item, total });
+    });
+    lastResults = results;
+
+    renderWeightsSummary(normalizedWeights);
+    renderResultsTable(results);
+    runDominanceAnalysis();
+    updateCharts(results, normalizedWeights);
+  }
+
+  function renderWeightsSummary(normalizedWeights) {
+    if (attributes.length === 0) {
+      weightsSummaryDiv.textContent = "No attributes defined.";
+      return;
+    }
+    if (!normalizedWeights) {
+      const totalRaw = attributes.reduce((sum, a) => sum + (a.weightRaw || 0), 0);
+      if (totalRaw <= 0) {
+        weightsSummaryDiv.textContent = "All attribute weights are currently 0.";
+        return;
+      }
+      normalizedWeights = attributes.map((a) => (a.weightRaw || 0) / totalRaw);
+    }
+
+    let parts = attributes.map((a, idx) => {
+      const norm = normalizedWeights[idx];
+      return `${escapeHtml(a.name)}: w = ${(a.weightRaw || 0).toFixed(2)} → ${norm.toFixed(3)}`;
+    });
+
+    weightsSummaryDiv.innerHTML =
+      `Normalized weights (sum = 1):<br>${parts.join("<br>")}`;
+  }
+
+  function renderResultsTable(results) {
+    if (!results || results.length === 0) {
+      resultsTableContainer.innerHTML = "";
+      return;
+    }
+
+    const sorted = [...results].sort((a, b) => b.total - a.total);
+    const best = sorted[0];
+
+    let html = '<table><thead><tr><th>Item</th><th>Total utility</th></tr></thead><tbody>';
+    sorted.forEach((r) => {
+      html += `
+        <tr class="${r.item.id === best.item.id ? "highlight-row" : ""}">
+          <td>${escapeHtml(r.item.name)}</td>
+          <td>${r.total.toFixed(4)}</td>
+        </tr>
+      `;
+    });
+    html += "</tbody></table>";
+
+    let explanation = "";
+    if (best) {
+      explanation = `
+        <div class="results-summary">
+          <span class="winner">Best-scoring item</span> (under the current model): 
+          <strong>${escapeHtml(best.item.name)}</strong> with utility 
+          <strong>${best.total.toFixed(4)}</strong>.
+        </div>
+      `;
+    }
+
+    resultsTableContainer.innerHTML = html + explanation;
+  }
+
+  // ---- Dominance analysis ----
+  function runDominanceAnalysis() {
+    if (attributes.length === 0 || items.length === 0) {
+      dominanceContainer.classList.add("hidden");
+      return;
+    }
+
+    const dominated = []; // {dominatedName, dominators:[names]}
+    for (let i = 0; i < items.length; i++) {
+      const A = items[i];
+      let dominators = [];
+      for (let j = 0; j < items.length; j++) {
+        if (i === j) continue;
+        const B = items[j];
+
+        let allGE = true;
+        let strictlyBetter = false;
+        let pairHasAllScores = true;
+
+        for (let k = 0; k < attributes.length; k++) {
+          const attr = attributes[k];
+          const sAKey = `${A.id}_${attr.id}`;
+          const sBKey = `${B.id}_${attr.id}`;
+          const sA = scores[sAKey];
+          const sB = scores[sBKey];
+          if (typeof sA !== "number" || isNaN(sA) ||
+              typeof sB !== "number" || isNaN(sB)) {
+            pairHasAllScores = false;
+            break;
+          }
+          if (sB < sA) {
+            allGE = false;
+            break;
+          }
+          if (sB > sA) strictlyBetter = true;
+        }
+
+        if (pairHasAllScores && allGE && strictlyBetter) {
+          dominators.push(B.name);
+        }
+      }
+      if (dominators.length) {
+        dominated.push({ dominatedName: A.name, dominators });
+      }
+    }
+
+    if (dominated.length === 0) {
+      dominanceContainer.classList.add("hidden");
+      dominanceList.innerHTML = "";
+      return;
+    }
+
+    dominanceList.innerHTML = dominated
+      .map(d => `<li><strong>${escapeHtml(d.dominatedName)}</strong> is strictly dominated by ${escapeHtml(d.dominators.join(", "))}.</li>`)
+      .join("");
+    dominanceContainer.classList.remove("hidden");
+  }
+
+  // ---- Charts ----
+  function updateCharts(results, normalizedWeights) {
+    if (!results || results.length === 0) {
+      clearChartsOnly();
+      return;
+    }
+
+    const itemLabels = results.map((r) => r.item.name);
+
+    // Contribution data for stacked bar chart
+    const datasets = attributes.map((attr, attrIdx) => {
+      const data = results.map((r) => {
+        const key = `${r.item.id}_${attr.id}`;
+        const s = scores[key];
+        const scoreVal = typeof s === "number" && !isNaN(s) ? s : 0;
+        return scoreVal * normalizedWeights[attrIdx];
+      });
+      return {
+        label: attr.name,
+        data
+      };
+    });
+
+    // Bar chart
+    if (barChart) barChart.destroy();
+    const ctxBar = barCanvas.getContext("2d");
+    barChart = new Chart(ctxBar, {
+      type: "bar",
+      data: {
+        labels: itemLabels,
+        datasets
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          tooltip: {
+            callbacks: {
+              footer: (items) => {
+                const total = items.reduce((sum, i) => sum + i.parsed.y, 0);
+                return "Total utility: " + total.toFixed(4);
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            stacked: true
+          },
+          y: {
+            stacked: true,
+            beginAtZero: true
+          }
+        }
+      }
+    });
+
+    // Radar chart selector
+    radarItemSelect.innerHTML = "";
+    items.forEach((it, idx) => {
+      const opt = document.createElement("option");
+      opt.value = String(it.id);
+      opt.textContent = it.name;
+      radarItemSelect.appendChild(opt);
+    });
+    radarItemSelect.onchange = updateRadarChart;
+
+    updateRadarChart();
+
+    chartsSection.classList.remove("hidden");
+  }
+
+  function updateRadarChart() {
+    if (!items.length || !attributes.length) {
+      chartsSection.classList.add("hidden");
+      return;
+    }
+    const selectedId = parseInt(radarItemSelect.value || items[0].id, 10);
+    const item = items.find((it) => it.id === selectedId) || items[0];
+
+    const labels = attributes.map((a) => a.name);
+    const data = attributes.map((attr) => {
+      const key = `${item.id}_${attr.id}`;
+      const s = scores[key];
+      return typeof s === "number" && !isNaN(s) ? s : 0;
+    });
+
+    if (radarChart) radarChart.destroy();
+    const ctxRadar = radarCanvas.getContext("2d");
+    radarChart = new Chart(ctxRadar, {
+      type: "radar",
+      data: {
+        labels,
+        datasets: [
+          {
+            label: item.name,
+            data
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          r: {
+            beginAtZero: true
+          }
+        }
+      }
+    });
+  }
+
+  function clearChartsOnly() {
+    if (barChart) {
+      barChart.destroy();
+      barChart = null;
+    }
+    if (radarChart) {
+      radarChart.destroy();
+      radarChart = null;
+    }
+    chartsSection.classList.add("hidden");
+  }
+
+  function clearResults() {
+    lastResults = null;
+    lastNormalizedWeights = null;
+    resultsTableContainer.innerHTML = "";
+    weightsSummaryDiv.textContent = "Waiting for computation.";
+    resultsAlert.classList.add("hidden");
+    clearChartsOnly();
+    dominanceContainer.classList.add("hidden");
+  }
+
+  // ---- Reset ----
+  function resetAll() {
+    if (!confirm("Clear all attributes, items and scores?")) return;
+    attributes = [];
+    items = [];
+    scores = {};
+    attrCounter = 1;
+    itemCounter = 1;
+    attrNameInput.value = "";
+    attrWeightInput.value = "50";
+    itemNameInput.value = "";
+    renderAttributes();
+    renderItems();
+    renderMatrix();
+    updateStep1NextState();
+    clearResults();
+    goToStep(1);
+  }
+
+  // ---- Utilities ----
+  function escapeHtml(str) {
+    return String(str)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  // ---- Wiring ----
+  addAttrBtn.addEventListener("click", addAttribute);
+  addItemBtn.addEventListener("click", addItem);
+  resetBtn.addEventListener("click", resetAll);
+  step1NextBtn.addEventListener("click", () => goToStep(2));
+  step2BackBtn.addEventListener("click", () => goToStep(1));
+  step3BackBtn.addEventListener("click", () => goToStep(2));
+  computeBtn.addEventListener("click", () => goToStep(3));
+  recomputeBtn.addEventListener("click", calculateUtilities);
+  scoreScaleSelect.addEventListener("change", onScoreScaleChange);
+
+  // Expose some functions globally for inline handlers
+  window.removeAttribute = removeAttribute;
+  window.removeItem = removeItem;
+  window.updateAttributeWeightFromSlider = updateAttributeWeightFromSlider;
+  window.updateAttributeWeightFromNumber = updateAttributeWeightFromNumber;
+  window.updateScore = updateScore;
+  window.handleMatrixKey = handleMatrixKey;
+
+  // Initial render
+  renderAttributes();
+  renderItems();
+  renderMatrix();
+  updateStep1NextState();
+  updateStepView();
+</script>
+</body>
+</html>
