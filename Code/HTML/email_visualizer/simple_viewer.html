@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EML File Analyzer</title>
+    <style>
+        :root {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-tertiary: #2d3748;
+            --text-primary: #f8fafc;
+            --text-secondary: #cbd5e1;
+            --border: #475569;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --neutral: #64748b;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.5;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        h1 {
+            color: var(--text-primary);
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 1rem;
+        }
+
+        .upload-section {
+            background: var(--bg-secondary);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .file-input-wrapper {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        input[type="file"] {
+            flex: 1;
+            padding: 12px;
+            background: var(--bg-tertiary);
+            border: 2px dashed var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            cursor: pointer;
+        }
+
+        input[type="file"]:hover {
+            border-color: var(--warning);
+        }
+
+        .btn {
+            padding: 12px 24px;
+            background: var(--warning);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.3s;
+        }
+
+        .btn:hover {
+            background: #e68a00;
+        }
+
+        .btn-success {
+            background: var(--success);
+        }
+
+        .btn-success:hover {
+            background: #0da271;
+        }
+
+        .content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 900px) {
+            .content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .panel {
+            background: var(--bg-secondary);
+            border-radius: 10px;
+            padding: 20px;
+            min-height: 400px;
+        }
+
+        h2 {
+            color: var(--text-primary);
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--border);
+        }
+
+        .email-preview {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .email-meta {
+            background: var(--bg-tertiary);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .meta-item {
+            margin-bottom: 8px;
+            display: flex;
+        }
+
+        .meta-label {
+            font-weight: 600;
+            color: var(--warning);
+            min-width: 80px;
+        }
+
+        .meta-value {
+            color: var(--text-primary);
+            flex: 1;
+            word-break: break-word;
+        }
+
+        .email-body-container {
+            flex: 1;
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .email-body-header {
+            background: #374151;
+            padding: 10px 15px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .email-body {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: white;
+            color: black;
+        }
+
+        .email-iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: white;
+        }
+
+        .auth-results {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .auth-item {
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            padding: 20px;
+            border-left: 5px solid var(--neutral);
+        }
+
+        .auth-item.pass {
+            border-left-color: var(--success);
+        }
+
+        .auth-item.fail {
+            border-left-color: var(--danger);
+        }
+
+        .auth-item.warning {
+            border-left-color: var(--warning);
+        }
+
+        .auth-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .auth-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 15px;
+            background: var(--neutral);
+        }
+
+        .auth-icon.pass {
+            background: var(--success);
+        }
+
+        .auth-icon.fail {
+            background: var(--danger);
+        }
+
+        .auth-icon.warning {
+            background: var(--warning);
+        }
+
+        .auth-name {
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .auth-status {
+            margin-left: auto;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .status-pass {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success);
+        }
+
+        .status-fail {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--danger);
+        }
+
+        .status-warning {
+            background: rgba(245, 158, 11, 0.2);
+            color: var(--warning);
+        }
+
+        .status-neutral {
+            background: rgba(100, 116, 139, 0.2);
+            color: var(--neutral);
+        }
+
+        .auth-description {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+
+        .email-tabs {
+            display: flex;
+            margin-bottom: 10px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .tab-btn {
+            padding: 10px 20px;
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .tab-btn.active {
+            color: var(--warning);
+            border-bottom-color: var(--warning);
+        }
+
+        .tab-content {
+            display: none;
+            height: 100%;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .email-text {
+            white-space: pre-wrap;
+            font-family: monospace;
+            line-height: 1.4;
+        }
+
+        .link-warning {
+            color: var(--danger);
+            font-weight: 600;
+        }
+
+        .attachment-item {
+            background: var(--bg-tertiary);
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+            border-left: 3px solid var(--warning);
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border);
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .alert {
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            display: none;
+        }
+
+        .alert-warning {
+            background: rgba(245, 158, 11, 0.2);
+            border-left: 4px solid var(--warning);
+            color: var(--warning);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>EML File Analyzer</h1>
+            <p class="subtitle">Upload EML files to view content and check authentication (SPF, DKIM, DMARC)</p>
+        </header>
+
+        <div class="upload-section">
+            <div class="file-input-wrapper">
+                <input type="file" id="fileInput" accept=".eml">
+                <button class="btn btn-success" id="analyzeBtn">Analyze Email</button>
+                <button class="btn" id="sampleBtn">Load Sample</button>
+            </div>
+            <div class="alert alert-warning" id="warningAlert"></div>
+        </div>
+
+        <div class="content">
+            <div class="panel email-preview">
+                <h2>Email Preview</h2>
+                <div class="email-meta">
+                    <div class="meta-item">
+                        <span class="meta-label">From:</span>
+                        <span class="meta-value" id="fromValue">-</span>
+                    </div>
+                    <div class="meta-item">
+                        <span class="meta-label">To:</span>
+                        <span class="meta-value" id="toValue">-</span>
+                    </div>
+                    <div class="meta-item">
+                        <span class="meta-label">Subject:</span>
+                        <span class="meta-value" id="subjectValue">-</span>
+                    </div>
+                    <div class="meta-item">
+                        <span class="meta-label">Date:</span>
+                        <span class="meta-value" id="dateValue">-</span>
+                    </div>
+                </div>
+
+                <div class="email-tabs">
+                    <button class="tab-btn active" data-tab="rendered">Rendered</button>
+                    <button class="tab-btn" data-tab="text">Text</button>
+                    <button class="tab-btn" data-tab="html">HTML Source</button>
+                </div>
+
+                <div class="email-body-container">
+                    <div class="email-body-header">
+                        <span id="renderStatus">Email content will appear here</span>
+                    </div>
+                    
+                    <div id="renderedTab" class="tab-content active">
+                        <iframe class="email-iframe" id="emailFrame" sandbox="allow-same-origin"></iframe>
+                    </div>
+                    
+                    <div id="textTab" class="tab-content">
+                        <div class="email-body email-text" id="textContent">
+                            Plain text content will appear here.
+                        </div>
+                    </div>
+                    
+                    <div id="htmlTab" class="tab-content">
+                        <div class="email-body email-text" id="htmlContent">
+                            HTML source will appear here.
+                        </div>
+                    </div>
+                </div>
+
+                <div id="attachmentsContainer" style="display: none;">
+                    <h3 style="margin-top: 15px;">Attachments</h3>
+                    <div id="attachmentsList"></div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h2>Authentication Results</h2>
+                <div class="auth-results">
+                    <div class="auth-item" id="spfCard">
+                        <div class="auth-header">
+                            <div class="auth-icon" id="spfIcon">SPF</div>
+                            <div class="auth-name">Sender Policy Framework</div>
+                            <div class="auth-status status-neutral" id="spfStatus">Not Checked</div>
+                        </div>
+                        <div class="auth-description" id="spfDescription">
+                            Verifies that the sending server is authorized by the domain owner.
+                        </div>
+                    </div>
+
+                    <div class="auth-item" id="dkimCard">
+                        <div class="auth-header">
+                            <div class="auth-icon" id="dkimIcon">DKIM</div>
+                            <div class="auth-name">DomainKeys Identified Mail</div>
+                            <div class="auth-status status-neutral" id="dkimStatus">Not Checked</div>
+                        </div>
+                        <div class="auth-description" id="dkimDescription">
+                            Uses digital signatures to verify email integrity and sender.
+                        </div>
+                    </div>
+
+                    <div class="auth-item" id="dmarcCard">
+                        <div class="auth-header">
+                            <div class="auth-icon" id="dmarcIcon">DMARC</div>
+                            <div class="auth-name">Domain-based Message Authentication</div>
+                            <div class="auth-status status-neutral" id="dmarcStatus">Not Checked</div>
+                        </div>
+                        <div class="auth-description" id="dmarcDescription">
+                            Policy framework that builds on SPF and DKIM.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>EML File Analyzer - For email security analysis</p>
+        </footer>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const fileInput = document.getElementById('fileInput');
+            const analyzeBtn = document.getElementById('analyzeBtn');
+            const sampleBtn = document.getElementById('sampleBtn');
+            const warningAlert = document.getElementById('warningAlert');
+            
+            // Email content elements
+            const fromValue = document.getElementById('fromValue');
+            const toValue = document.getElementById('toValue');
+            const subjectValue = document.getElementById('subjectValue');
+            const dateValue = document.getElementById('dateValue');
+            const emailFrame = document.getElementById('emailFrame');
+            const textContent = document.getElementById('textContent');
+            const htmlContent = document.getElementById('htmlContent');
+            const renderStatus = document.getElementById('renderStatus');
+            
+            // Tab functionality
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const tabId = this.getAttribute('data-tab');
+                    
+                    // Update active tab button
+                    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // Show selected tab content
+                    document.querySelectorAll('.tab-content').forEach(content => {
+                        content.classList.remove('active');
+                    });
+                    document.getElementById(tabId + 'Tab').classList.add('active');
+                });
+            });
+            
+            // Sample EML for testing
+            const sampleEML = `From: "Security Team" <security@example-bank.com>
+To: "John Doe" <john.doe@customer.com>
+Subject: Urgent: Account Verification Required
+Date: Mon, 15 Jan 2024 10:30:00 +0000
+Return-Path: <bounces@phish-example.net>
+Received-SPF: fail (example.com: domain of phish-example.net does not designate 192.168.1.100 as permitted sender)
+Authentication-Results: mx.example.com;
+ spf=fail smtp.mailfrom=phish-example.net;
+ dkim=fail (signature verification failed) header.d=phish-example.net;
+ dmarc=fail (p=quarantine sp=quarantine dis=none) header.from=example-bank.com
+DKIM-Signature: v=1; a=rsa-sha256; d=phish-example.net; s=selector1;
+ c=relaxed/relaxed; q=dns/txt; i=@phish-example.net;
+ h=From:To:Subject:Date; bh=MWIwZjM5MzQ4YjA5; b=FakeSignatureHere
+MIME-Version: 1.0
+Content-Type: multipart/alternative; boundary="boundary123"
+
+--boundary123
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: quoted-printable
+
+Dear Customer,
+
+We detected suspicious activity on your account. Please verify your identity =
+by clicking the link below:
+
+http://phish-example.net/verify?id=3D12345
+
+If you don't verify within 24 hours, your account will be suspended.
+
+Thank you,
+Security Team
+Example Bank
+
+--boundary123
+Content-Type: text/html; charset=UTF-8
+Content-Transfer-Encoding: quoted-printable
+
+<!DOCTYPE html>
+<html>
+<head><title>Account Verification</title></head>
+<body>
+<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;=
+">
+<h2 style="color: #dc2626;">Security Alert</h2>
+<p>Dear Customer,</p>
+<p>We detected <b>suspicious activity</b> on your account. Please verify you=
+r identity immediately:</p>
+<p><a href="http://phish-example.net/verify?id=3D12345" style="background: =
+#dc2626; color: white; padding: 12px 24px; text-decoration: none; border-rad=
+ius: 5px;">Verify Account</a></p>
+<p>If you don't verify within 24 hours, your account will be suspended.</p>
+<p>Thank you,<br><b>Security Team</b><br>Example Bank</p>
+</div>
+</body>
+</html>
+
+--boundary123--`;
+
+            // Parse uploaded EML file
+            analyzeBtn.addEventListener('click', function() {
+                const file = fileInput.files[0];
+                if (!file) {
+                    alert('Please select an EML file first.');
+                    return;
+                }
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    processEML(e.target.result);
+                };
+                reader.readAsText(file);
+            });
+            
+            // Load sample EML
+            sampleBtn.addEventListener('click', function() {
+                processEML(sampleEML);
+            });
+            
+            // Main processing function
+            function processEML(emlContent) {
+                resetUI();
+                
+                // Parse headers and body
+                const { headers, body, html, text } = parseEML(emlContent);
+                
+                // Display email metadata
+                displayHeaders(headers);
+                
+                // Display email content
+                displayEmailContent(html, text);
+                
+                // Check authentication
+                checkAuthentication(headers);
+                
+                // Show warning if authentication fails
+                showWarnings(headers);
+            }
+            
+            // Parse EML content
+            function parseEML(emlContent) {
+                const lines = emlContent.split('\n');
+                const headers = {};
+                let body = '';
+                let inHeaders = true;
+                let currentHeader = '';
+                
+                // Parse headers
+                for (let i = 0; i < lines.length; i++) {
+                    const line = lines[i];
+                    
+                    // Empty line marks end of headers
+                    if (line.trim() === '' && inHeaders) {
+                        inHeaders = false;
+                        continue;
+                    }
+                    
+                    if (inHeaders) {
+                        // Header continuation (starts with space)
+                        if (line.match(/^\s/) && currentHeader) {
+                            headers[currentHeader] += ' ' + line.trim();
+                        } else {
+                            const colonIndex = line.indexOf(':');
+                            if (colonIndex > -1) {
+                                currentHeader = line.substring(0, colonIndex).trim();
+                                headers[currentHeader] = line.substring(colonIndex + 1).trim();
+                            }
+                        }
+                    } else {
+                        // Body
+                        body += line + '\n';
+                    }
+                }
+                
+                // Parse body for HTML and text parts
+                let html = '';
+                let text = '';
+                
+                // Check if multipart
+                const contentType = headers['Content-Type'] || '';
+                if (contentType.includes('multipart/alternative')) {
+                    const parts = extractMultipartParts(body, contentType);
+                    
+                    // Find HTML and text parts
+                    for (const part of parts) {
+                        if (part.headers['Content-Type'] && part.headers['Content-Type'].includes('text/html')) {
+                            html = decodeContent(part.body, part.headers['Content-Transfer-Encoding']);
+                        } else if (part.headers['Content-Type'] && part.headers['Content-Type'].includes('text/plain')) {
+                            text = decodeContent(part.body, part.headers['Content-Transfer-Encoding']);
+                        }
+                    }
+                } else if (contentType.includes('text/html')) {
+                    html = decodeContent(body, headers['Content-Transfer-Encoding']);
+                    text = html.replace(/<[^>]+>/g, ''); // Simple HTML to text conversion
+                } else if (contentType.includes('text/plain')) {
+                    text = decodeContent(body, headers['Content-Transfer-Encoding']);
+                    html = `<pre>${escapeHTML(text)}</pre>`;
+                } else {
+                    // Default: show as plain text
+                    text = body;
+                    html = `<pre>${escapeHTML(body)}</pre>`;
+                }
+                
+                return { headers, body, html, text };
+            }
+            
+            // Extract parts from multipart email
+            function extractMultipartParts(body, contentType) {
+                const parts = [];
+                const boundaryMatch = contentType.match(/boundary="?([^"\s;]+)"?/);
+                
+                if (!boundaryMatch) return parts;
+                
+                const boundary = boundaryMatch[1];
+                const partSections = body.split(`--${boundary}`);
+                
+                for (const section of partSections) {
+                    if (section.trim() === '' || section.includes(`--${boundary}--`)) continue;
+                    
+                    const lines = section.split('\n');
+                    const part = { headers: {}, body: '' };
+                    let inPartHeaders = true;
+                    
+                    for (const line of lines) {
+                        if (line.trim() === '' && inPartHeaders) {
+                            inPartHeaders = false;
+                            continue;
+                        }
+                        
+                        if (inPartHeaders) {
+                            const colonIndex = line.indexOf(':');
+                            if (colonIndex > -1) {
+                                const headerName = line.substring(0, colonIndex).trim();
+                                part.headers[headerName] = line.substring(colonIndex + 1).trim();
+                            }
+                        } else {
+                            part.body += line + '\n';
+                        }
+                    }
+                    
+                    parts.push(part);
+                }
+                
+                return parts;
+            }
+            
+            // Decode content based on transfer encoding
+            function decodeContent(content, encoding) {
+                if (!encoding) return content.trim();
+                
+                encoding = encoding.toLowerCase();
+                
+                if (encoding.includes('quoted-printable')) {
+                    return decodeQuotedPrintable(content);
+                } else if (encoding.includes('base64')) {
+                    try {
+                        return atob(content.replace(/\s/g, ''));
+                    } catch (e) {
+                        return content;
+                    }
+                }
+                
+                return content;
+            }
+            
+            // Decode quoted-printable
+            function decodeQuotedPrintable(text) {
+                return text.replace(/=([0-9A-F]{2})/g, function(match, hex) {
+                    return String.fromCharCode(parseInt(hex, 16));
+                }).replace(/=\r?\n/g, '');
+            }
+            
+            // Display email headers
+            function displayHeaders(headers) {
+                fromValue.textContent = headers.From || '-';
+                toValue.textContent = headers.To || '-';
+                subjectValue.textContent = headers.Subject || '-';
+                dateValue.textContent = headers.Date || '-';
+                
+                // Highlight suspicious subjects
+                const subject = (headers.Subject || '').toLowerCase();
+                if (subject.includes('urgent') || subject.includes('verify') || 
+                    subject.includes('alert') || subject.includes('suspended')) {
+                    subjectValue.innerHTML = `<span class="link-warning">${escapeHTML(headers.Subject)}</span>`;
+                }
+            }
+            
+            // Display email content in all tabs
+            function displayEmailContent(html, text) {
+                // Rendered tab (iframe)
+                const safeHTML = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+                emailFrame.srcdoc = `
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <meta charset="UTF-8">
+                        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                        <style>
+                            body { 
+                                font-family: Arial, sans-serif; 
+                                padding: 20px;
+                                line-height: 1.6;
+                                max-width: 800px;
+                                margin: 0 auto;
+                            }
+                            a { 
+                                color: #dc2626;
+                                font-weight: bold;
+                            }
+                        </style>
+                    </head>
+                    <body>${safeHTML}</body>
+                    </html>
+                `;
+                
+                // Text tab
+                textContent.textContent = text || 'No plain text content available.';
+                
+                // HTML source tab
+                htmlContent.textContent = html || 'No HTML content available.';
+                
+                renderStatus.textContent = 'Email loaded successfully';
+            }
+            
+            // Check SPF, DKIM, DMARC
+            function checkAuthentication(headers) {
+                // SPF Check
+                const spfResult = checkSPF(headers);
+                updateAuthDisplay('spf', spfResult.status, spfResult.message);
+                
+                // DKIM Check
+                const dkimResult = checkDKIM(headers);
+                updateAuthDisplay('dkim', dkimResult.status, dkimResult.message);
+                
+                // DMARC Check
+                const dmarcResult = checkDMARC(headers);
+                updateAuthDisplay('dmarc', dmarcResult.status, dmarcResult.message);
+            }
+            
+            // SPF Validation
+            function checkSPF(headers) {
+                const receivedSPF = headers['Received-SPF'] || '';
+                const authResults = headers['Authentication-Results'] || '';
+                
+                if (receivedSPF.includes('pass') || authResults.includes('spf=pass')) {
+                    return { status: 'pass', message: 'SPF check passed. Sender is authorized.' };
+                } else if (receivedSPF.includes('fail') || authResults.includes('spf=fail')) {
+                    return { status: 'fail', message: 'SPF check failed. Sender may be spoofed.' };
+                } else if (receivedSPF.includes('neutral') || receivedSPF.includes('softfail')) {
+                    return { status: 'warning', message: 'SPF neutral or softfail. Sender authorization unclear.' };
+                } else if (receivedSPF.includes('none')) {
+                    return { status: 'warning', message: 'No SPF record found for sender domain.' };
+                }
+                
+                return { status: 'neutral', message: 'SPF not checked or no results found.' };
+            }
+            
+            // DKIM Validation
+            function checkDKIM(headers) {
+                const dkimSig = headers['DKIM-Signature'] || '';
+                const authResults = headers['Authentication-Results'] || '';
+                
+                if (!dkimSig) {
+                    return { status: 'fail', message: 'No DKIM signature found in email headers.' };
+                }
+                
+                if (authResults.includes('dkim=pass')) {
+                    return { status: 'pass', message: 'DKIM signature verified successfully.' };
+                } else if (authResults.includes('dkim=fail')) {
+                    return { status: 'fail', message: 'DKIM signature verification failed.' };
+                } else if (dkimSig) {
+                    return { status: 'warning', message: 'DKIM signature present but not verified.' };
+                }
+                
+                return { status: 'neutral', message: 'DKIM not checked or no results found.' };
+            }
+            
+            // DMARC Validation
+            function checkDMARC(headers) {
+                const authResults = headers['Authentication-Results'] || '';
+                
+                if (authResults.includes('dmarc=pass')) {
+                    return { status: 'pass', message: 'DMARC alignment check passed.' };
+                } else if (authResults.includes('dmarc=fail')) {
+                    return { status: 'fail', message: 'DMARC alignment check failed. Email may be spoofed.' };
+                } else if (authResults.includes('dmarc=neutral')) {
+                    return { status: 'warning', message: 'DMARC neutral. No policy applied.' };
+                }
+                
+                return { status: 'neutral', message: 'DMARC not checked or no results found.' };
+            }
+            
+            // Update authentication display
+            function updateAuthDisplay(type, status, message) {
+                const card = document.getElementById(`${type}Card`);
+                const icon = document.getElementById(`${type}Icon`);
+                const statusElem = document.getElementById(`${type}Status`);
+                const description = document.getElementById(`${type}Description`);
+                
+                // Remove all classes
+                card.className = 'auth-item';
+                icon.className = 'auth-icon';
+                statusElem.className = 'auth-status status-neutral';
+                
+                // Add appropriate classes
+                card.classList.add(status);
+                icon.classList.add(status);
+                statusElem.classList.add(`status-${status}`);
+                
+                // Update text
+                statusElem.textContent = status.charAt(0).toUpperCase() + status.slice(1);
+                description.textContent = message;
+            }
+            
+            // Show warnings for failed authentication
+            function showWarnings(headers) {
+                const authResults = headers['Authentication-Results'] || '';
+                const warnings = [];
+                
+                if (authResults.includes('spf=fail') || authResults.includes('dkim=fail') || 
+                    authResults.includes('dmarc=fail')) {
+                    warnings.push('Email authentication failed. This may be a phishing attempt.');
+                }
+                
+                const from = headers.From || '';
+                const returnPath = headers['Return-Path'] || '';
+                
+                if (returnPath && from && !returnPath.includes(from.split('@')[1])) {
+                    warnings.push('Return-Path domain differs from From address domain.');
+                }
+                
+                if (warnings.length > 0) {
+                    warningAlert.textContent = warnings.join(' ');
+                    warningAlert.style.display = 'block';
+                }
+            }
+            
+            // Reset UI
+            function resetUI() {
+                warningAlert.style.display = 'none';
+                
+                // Reset email content
+                fromValue.textContent = '-';
+                toValue.textContent = '-';
+                subjectValue.textContent = '-';
+                dateValue.textContent = '-';
+                
+                emailFrame.srcdoc = '';
+                textContent.textContent = 'Email content will appear here.';
+                htmlContent.textContent = 'HTML source will appear here.';
+                renderStatus.textContent = 'Email content will appear here';
+                
+                // Reset authentication
+                updateAuthDisplay('spf', 'neutral', 'Verifies that the sending server is authorized by the domain owner.');
+                updateAuthDisplay('dkim', 'neutral', 'Uses digital signatures to verify email integrity and sender.');
+                updateAuthDisplay('dmarc', 'neutral', 'Policy framework that builds on SPF and DKIM.');
+                
+                // Reset tabs to rendered view
+                document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+                document.querySelector('[data-tab="rendered"]').classList.add('active');
+                document.getElementById('renderedTab').classList.add('active');
+            }
+            
+            // Escape HTML special characters
+            function escapeHTML(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+        });
+    </script>
+</body>
+</html>

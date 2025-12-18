@@ -1,0 +1,1117 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>EML Phishing Analyzer (No Dependencies)</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; }
+    header { padding: 12px 16px; border-bottom: 1px solid rgba(127,127,127,.25); display:flex; gap:12px; align-items:center;}
+    header h1 { margin:0; font-size:16px; font-weight:650; }
+    header .hint { font-size:12px; opacity:.75; }
+    main { display:grid; grid-template-columns: 380px 1fr; min-height: calc(100vh - 54px); }
+    aside { padding:12px; border-right: 1px solid rgba(127,127,127,.25); overflow:auto; }
+    section { padding:12px; overflow:auto; }
+    .card { border:1px solid rgba(127,127,127,.25); border-radius:12px; padding:12px; margin-bottom:12px; }
+    .row { display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+    .btn { border:1px solid rgba(127,127,127,.35); border-radius:10px; padding:8px 10px; cursor:pointer; background:transparent; }
+    .btn:hover { filter: brightness(1.05); }
+    .btn.primary { border-color: rgba(80,140,255,.7); }
+    .pill { display:inline-flex; align-items:center; gap:6px; border:1px solid rgba(127,127,127,.35); padding:3px 8px; border-radius:999px; font-size:12px; }
+    .pill.pass { border-color: rgba(0,180,120,.55); }
+    .pill.fail { border-color: rgba(255,80,80,.7); }
+    .pill.warn { border-color: rgba(255,190,60,.7); }
+    .pill.info { opacity:.8; }
+    .kv { display:grid; grid-template-columns: 120px 1fr; gap: 6px 10px; font-size:13px; }
+    .kv div:nth-child(odd){ opacity:.75; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; font-size:12px; }
+    .small { font-size:12px; opacity:.85; }
+    .muted { opacity:.75; }
+    .drop { border: 2px dashed rgba(127,127,127,.4); border-radius:12px; padding:14px; text-align:center; }
+    .drop.drag { border-color: rgba(80,140,255,.9); }
+    details summary { cursor:pointer; }
+    iframe { width:100%; height: 520px; border:1px solid rgba(127,127,127,.25); border-radius:12px; background: white; }
+    .grid2 { display:grid; grid-template-columns: 1fr 1fr; gap:12px; }
+    .table { width:100%; border-collapse: collapse; font-size:12px; }
+    .table th, .table td { border-bottom: 1px solid rgba(127,127,127,.2); padding:6px 6px; text-align:left; vertical-align:top; }
+    .hl { background: rgba(255,190,60,.15); border-radius:8px; padding:2px 6px; display:inline-block; }
+    .danger { background: rgba(255,80,80,.12); border-radius:8px; padding:2px 6px; display:inline-block; }
+    .ok { background: rgba(0,180,120,.12); border-radius:8px; padding:2px 6px; display:inline-block; }
+    .codebox { white-space:pre-wrap; word-break:break-word; }
+  </style>
+</head>
+<body>
+<header>
+  <h1>EML Phishing Analyzer (No Dependencies)</h1>
+  <div class="hint">Static · client-side parsing · DKIM verify (rsa-sha256 common cases) · SPF/DMARC record + Auth-Results</div>
+</header>
+
+<main>
+  <aside>
+    <div class="card">
+      <div id="drop" class="drop">
+        <div style="font-weight:650;">Drop .eml here</div>
+        <div class="small">or choose a file. Nothing is uploaded.</div>
+        <div style="margin-top:10px;">
+          <input id="file" type="file" accept=".eml,message/rfc822"/>
+        </div>
+      </div>
+      <div class="row" style="margin-top:10px;">
+        <button class="btn" id="btnClear">Clear</button>
+        <button class="btn primary" id="btnRunChecks" disabled>Run checks</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="row" style="justify-content:space-between;">
+        <div style="font-weight:650;">Executive triage</div>
+        <span class="pill info" id="status">No file loaded</span>
+      </div>
+      <div id="triage" class="kv" style="margin-top:10px;">
+        <div>From</div><div class="muted">—</div>
+        <div>Reply-To</div><div class="muted">—</div>
+        <div>Return-Path</div><div class="muted">—</div>
+        <div>Subject</div><div class="muted">—</div>
+        <div>Date</div><div class="muted">—</div>
+      </div>
+      <div style="margin-top:10px;" class="small muted">
+        Triage focus: From/Return-Path/DKIM d= misalignment, suspicious Reply-To, and origin hops.
+      </div>
+    </div>
+
+    <div class="card">
+      <div style="font-weight:650; margin-bottom:8px;">Auth & alignment</div>
+      <div class="row" id="badges" style="margin-bottom:8px;"></div>
+      <div id="alignment" class="small muted">Load an email and run checks.</div>
+    </div>
+
+    <div class="card">
+      <div style="font-weight:650; margin-bottom:8px;">Origin highlight</div>
+      <div id="origin" class="small muted">Load an email to extract Received chain.</div>
+    </div>
+  </aside>
+
+  <section>
+    <div class="grid2">
+      <div class="card">
+        <div class="row" style="justify-content:space-between;">
+          <div style="font-weight:650;">Email view</div>
+          <div class="row">
+            <button class="btn" id="btnShowHtml" disabled>HTML</button>
+            <button class="btn" id="btnShowText" disabled>Plain</button>
+          </div>
+        </div>
+        <div style="margin-top:10px;">
+          <!-- sandbox without allow-scripts prevents execution even if HTML contains script -->
+          <iframe id="viewer" sandbox="allow-popups allow-popups-to-escape-sandbox"></iframe>
+        </div>
+        <div id="attachments" class="small muted" style="margin-top:10px;"></div>
+      </div>
+
+      <div class="card">
+        <div style="font-weight:650; margin-bottom:8px;">Key headers (structured)</div>
+        <div id="keyHeaders" class="kv"></div>
+
+        <details style="margin-top:12px;">
+          <summary><span style="font-weight:650;">Raw headers</span> <span class="small muted">(unfolded)</span></summary>
+          <pre id="rawHeaders" class="mono codebox" style="margin-top:10px;"></pre>
+        </details>
+
+        <details style="margin-top:12px;">
+          <summary><span style="font-weight:650;">Authentication headers</span></summary>
+          <pre id="authHeaders" class="mono codebox" style="margin-top:10px;"></pre>
+        </details>
+      </div>
+    </div>
+
+    <div class="card">
+      <div style="font-weight:650; margin-bottom:8px;">Received hop chain</div>
+      <div class="small muted" style="margin-bottom:8px;">
+        Earliest hop (closest to sender) is typically the <b>bottom</b> Received header. Highlight indicates plausible origin.
+      </div>
+      <div style="overflow:auto;">
+        <table class="table" id="receivedTable">
+          <thead>
+            <tr>
+              <th>#</th><th>From</th><th>By</th><th>With</th><th>Date</th><th>IPs</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div style="font-weight:650; margin-bottom:8px;">DNS lookups & crypto results</div>
+      <div class="small muted" style="margin-bottom:10px;">
+        Uses DNS-over-HTTPS (Cloudflare) from the browser. Disable network if you require offline-only operation.
+      </div>
+      <div id="dnsResults" class="mono codebox"></div>
+    </div>
+  </section>
+</main>
+
+<script>
+(() => {
+  "use strict";
+
+  // -------------------------
+  // DOM helpers
+  // -------------------------
+  const $ = (id) => document.getElementById(id);
+
+  function setStatus(text, kind="info") {
+    const el = $("status");
+    el.textContent = text;
+    el.className = "pill " + kind;
+  }
+
+  function setBadges(items) {
+    const el = $("badges");
+    el.innerHTML = "";
+    for (const it of items) {
+      const span = document.createElement("span");
+      span.className = `pill ${it.kind}`;
+      span.textContent = it.label;
+      el.appendChild(span);
+    }
+  }
+
+  function safeText(s, max=4000) {
+    s = (s == null) ? "" : String(s);
+    return s.length > max ? s.slice(0, max) + "…(truncated)" : s;
+  }
+
+  // -------------------------
+  // Encoding / hashing
+  // -------------------------
+  const te = new TextEncoder();
+  const td = new TextDecoder("utf-8", { fatal: false });
+
+  function normalizeCRLF(s) {
+    // DKIM and RFC5322 are CRLF-based. Convert lone LF to CRLF.
+    if (s.includes("\r\n")) return s;
+    return s.replace(/\n/g, "\r\n");
+  }
+
+  async function sha256Hex(bytes) {
+    const h = await crypto.subtle.digest("SHA-256", bytes);
+    const u = new Uint8Array(h);
+    return [...u].map(b => b.toString(16).padStart(2,"0")).join("");
+  }
+
+  async function sha256Bytes(bytes) {
+    const h = await crypto.subtle.digest("SHA-256", bytes);
+    return new Uint8Array(h);
+  }
+
+  function b64ToBytes(b64) {
+    const cleaned = (b64 || "").replace(/\s+/g, "");
+    const bin = atob(cleaned);
+    const out = new Uint8Array(bin.length);
+    for (let i=0;i<bin.length;i++) out[i] = bin.charCodeAt(i);
+    return out;
+  }
+
+  function bytesToB64(bytes) {
+    let bin = "";
+    for (const b of bytes) bin += String.fromCharCode(b);
+    return btoa(bin);
+  }
+
+  // -------------------------
+  // Header parsing (RFC 5322-ish)
+  // -------------------------
+  function splitHeadersBody(raw) {
+    raw = normalizeCRLF(raw);
+    const idx = raw.indexOf("\r\n\r\n");
+    if (idx === -1) return { headerBlock: raw, bodyBlock: "" };
+    return { headerBlock: raw.slice(0, idx), bodyBlock: raw.slice(idx + 4) };
+  }
+
+  function unfoldHeaders(headerBlock) {
+    // Replace CRLF WSP with single space
+    return headerBlock.replace(/\r\n[ \t]+/g, " ");
+  }
+
+  function parseHeaderLines(unfoldedHeaderBlock) {
+    const lines = unfoldedHeaderBlock.split("\r\n").filter(Boolean);
+    const list = [];
+    const map = new Map();
+    for (const line of lines) {
+      const i = line.indexOf(":");
+      if (i <= 0) continue;
+      const name = line.slice(0, i).trim();
+      const value = line.slice(i + 1).trim();
+      list.push({ name, value });
+      const k = name.toLowerCase();
+      if (!map.has(k)) map.set(k, []);
+      map.get(k).push(value);
+    }
+    return { list, map, unfolded: unfoldedHeaderBlock };
+  }
+
+  function getOne(map, name) {
+    const arr = map.get(String(name).toLowerCase());
+    return arr ? arr[arr.length - 1] : "";
+  }
+
+  function getAll(map, name) {
+    return map.get(String(name).toLowerCase()) || [];
+  }
+
+  // Basic addr/domain extraction
+  function extractDomainFromAddress(v) {
+    if (!v) return "";
+    const m = v.match(/<([^>]+)>/);
+    const addr = (m ? m[1] : v).trim();
+    const m2 = addr.match(/([A-Z0-9._%+-]+)@([A-Z0-9.-]+\.[A-Z]{2,})/i);
+    return m2 ? m2[2].toLowerCase() : "";
+  }
+
+  // -------------------------
+  // MIME parsing (enough for phishing analysis)
+  // - Handles multipart boundaries
+  // - Decodes base64 and quoted-printable
+  // - Extracts text/plain, text/html, attachments
+  // -------------------------
+  function parseContentType(ct) {
+    // returns { mime, params }
+    const out = { mime: "", params: {} };
+    if (!ct) return out;
+    const parts = ct.split(";").map(x => x.trim()).filter(Boolean);
+    out.mime = (parts.shift() || "").toLowerCase();
+    for (const p of parts) {
+      const eq = p.indexOf("=");
+      if (eq === -1) continue;
+      const k = p.slice(0, eq).trim().toLowerCase();
+      let v = p.slice(eq + 1).trim();
+      if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) v = v.slice(1, -1);
+      out.params[k] = v;
+    }
+    return out;
+  }
+
+  function parseContentDisposition(cd) {
+    const out = { type: "", params: {} };
+    if (!cd) return out;
+    const parts = cd.split(";").map(x => x.trim()).filter(Boolean);
+    out.type = (parts.shift() || "").toLowerCase();
+    for (const p of parts) {
+      const eq = p.indexOf("=");
+      if (eq === -1) continue;
+      const k = p.slice(0, eq).trim().toLowerCase();
+      let v = p.slice(eq + 1).trim();
+      if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) v = v.slice(1, -1);
+      out.params[k] = v;
+    }
+    return out;
+  }
+
+  function decodeQuotedPrintable(qp) {
+    // RFC2045-ish, handles soft line breaks =\r\n
+    qp = qp.replace(/=\r\n/g, "");
+    return qp.replace(/=([0-9A-Fa-f]{2})/g, (_, hx) => String.fromCharCode(parseInt(hx, 16)));
+  }
+
+  function decodeBody(body, encoding, charset) {
+    encoding = (encoding || "").toLowerCase();
+    charset = (charset || "utf-8").toLowerCase();
+
+    let bytes;
+    if (encoding === "base64") {
+      // remove whitespace
+      const b = b64ToBytes(body);
+      bytes = b;
+    } else if (encoding === "quoted-printable") {
+      const s = decodeQuotedPrintable(body);
+      bytes = te.encode(s);
+    } else {
+      // 7bit/8bit/binary/unknown -> treat as raw text bytes
+      bytes = te.encode(body);
+    }
+
+    // charset decoding: use TextDecoder when possible, fallback to utf-8
+    try {
+      return new TextDecoder(charset, { fatal: false }).decode(bytes);
+    } catch {
+      return td.decode(bytes);
+    }
+  }
+
+  function findHeaderEnd(raw) {
+    const i = raw.indexOf("\r\n\r\n");
+    return i === -1 ? -1 : i;
+  }
+
+  function parseMimeEntity(rawEntity) {
+    // Returns { headers, bodyRaw, contentType, cte, disposition }
+    rawEntity = normalizeCRLF(rawEntity);
+    const i = findHeaderEnd(rawEntity);
+    let headerBlock = "", bodyBlock = "";
+    if (i === -1) {
+      headerBlock = rawEntity;
+      bodyBlock = "";
+    } else {
+      headerBlock = rawEntity.slice(0, i);
+      bodyBlock = rawEntity.slice(i + 4);
+    }
+    const headers = parseHeaderLines(unfoldHeaders(headerBlock));
+    const ct = parseContentType(getOne(headers.map, "Content-Type") || "text/plain; charset=utf-8");
+    const cte = getOne(headers.map, "Content-Transfer-Encoding");
+    const cd = parseContentDisposition(getOne(headers.map, "Content-Disposition"));
+    return { headers, bodyRaw: bodyBlock, contentType: ct, cte, disposition: cd };
+  }
+
+  function splitMultipart(body, boundary) {
+    // body excludes entity headers; boundary is raw token (no quotes)
+    // Multipart format: --boundary CRLF ... --boundary-- CRLF
+    const b = boundary;
+    if (!b) return [];
+    const marker = "--" + b;
+    const endMarker = "--" + b + "--";
+
+    // Work line-based to reduce false splits
+    const lines = normalizeCRLF(body).split("\r\n");
+    const parts = [];
+    let buf = [];
+    let inPart = false;
+
+    for (const line of lines) {
+      if (line === marker) {
+        if (inPart && buf.length) parts.push(buf.join("\r\n"));
+        buf = [];
+        inPart = true;
+        continue;
+      }
+      if (line === endMarker) {
+        if (inPart && buf.length) parts.push(buf.join("\r\n"));
+        buf = [];
+        inPart = false;
+        break;
+      }
+      if (inPart) buf.push(line);
+    }
+
+    return parts;
+  }
+
+  async function parseEmailToView(raw) {
+    // Return: { headers, text, html, attachments: [{filename,mime,size,sha256Hex}] }
+    raw = normalizeCRLF(raw);
+
+    const top = parseMimeEntity(raw);
+
+    const result = {
+      headers: top.headers,
+      text: "",
+      html: "",
+      attachments: []
+    };
+
+    // Recursively walk MIME tree
+    async function walk(entityRaw) {
+      const ent = parseMimeEntity(entityRaw);
+      const mime = ent.contentType.mime || "text/plain";
+      const params = ent.contentType.params || {};
+      const boundary = params["boundary"] || "";
+      const charset = params["charset"] || "utf-8";
+      const cte = ent.cte || "";
+      const cd = ent.disposition || { type:"", params:{} };
+      const filename =
+        cd.params["filename"] ||
+        (ent.contentType.params && (ent.contentType.params["name"] || "")) ||
+        "";
+
+      if (mime.startsWith("multipart/")) {
+        const parts = splitMultipart(ent.bodyRaw, boundary);
+        for (const p of parts) await walk(p);
+        return;
+      }
+
+      // Decode leaf
+      const decoded = decodeBody(ent.bodyRaw, cte, charset);
+
+      const isAttachment =
+        (cd.type === "attachment") ||
+        (!!filename && cd.type !== "inline" && cd.type !== "") ||
+        (mime === "application/octet-stream" && !!filename);
+
+      if (isAttachment) {
+        // get raw bytes for hashing/size
+        let bytes;
+        const enc = (cte || "").toLowerCase();
+        if (enc === "base64") bytes = b64ToBytes(ent.bodyRaw);
+        else if (enc === "quoted-printable") bytes = te.encode(decodeQuotedPrintable(ent.bodyRaw));
+        else bytes = te.encode(ent.bodyRaw);
+
+        const hash = await sha256Hex(bytes);
+        result.attachments.push({
+          filename: filename || "(no filename)",
+          mime: mime || "application/octet-stream",
+          size: bytes.byteLength,
+          sha256: hash
+        });
+        return;
+      }
+
+      if (mime === "text/plain" && !result.text) result.text = decoded;
+      if (mime === "text/html" && !result.html) result.html = decoded;
+    }
+
+    await walk(raw);
+
+    // If no text and have html, derive a crude text fallback (strip tags)
+    if (!result.text && result.html) {
+      const tmp = document.createElement("div");
+      tmp.innerHTML = sanitizeHtmlForDisplay(result.html);
+      result.text = tmp.textContent || "";
+    }
+
+    return result;
+  }
+
+  // -------------------------
+  // Minimal HTML sanitization (no dependencies)
+  // - iframe sandbox already blocks scripts; still remove active content and dangerous URLs
+  // -------------------------
+  function sanitizeHtmlForDisplay(html) {
+    // Parse, remove disallowed tags/attrs, rewrite links
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(String(html || ""), "text/html");
+
+    const forbiddenTags = new Set([
+      "script","style","meta","link","base","form","input","button","textarea",
+      "object","embed","applet","iframe","frame","frameset","video","audio","source","track",
+      "svg","math" // frequently abused for script-like behavior; remove for safety
+    ]);
+
+    const walker = doc.createTreeWalker(doc.body || doc, NodeFilter.SHOW_ELEMENT);
+    const toRemove = [];
+
+    while (walker.nextNode()) {
+      const el = walker.currentNode;
+      const tag = el.tagName ? el.tagName.toLowerCase() : "";
+      if (forbiddenTags.has(tag)) { toRemove.push(el); continue; }
+
+      // Remove on* handlers and javascript: URLs
+      for (const attr of [...el.attributes]) {
+        const name = attr.name.toLowerCase();
+        const val = (attr.value || "").trim();
+        if (name.startsWith("on")) { el.removeAttribute(attr.name); continue; }
+        if ((name === "href" || name === "src") && /^javascript:/i.test(val)) { el.removeAttribute(attr.name); continue; }
+        if ((name === "href" || name === "src") && /^data:/i.test(val) && tag !== "img") { el.removeAttribute(attr.name); continue; }
+      }
+
+      // Force links to open safely
+      if (tag === "a") {
+        el.setAttribute("target", "_blank");
+        el.setAttribute("rel", "noopener noreferrer");
+      }
+
+      // Block remote images by default (phishing tracking). Keep as broken unless user explicitly wants.
+      if (tag === "img") {
+        const src = (el.getAttribute("src") || "").trim();
+        if (/^https?:\/\//i.test(src)) {
+          // Replace with placeholder to avoid beaconing
+          el.setAttribute("data-remote-src", src);
+          el.removeAttribute("src");
+          el.setAttribute("alt", (el.getAttribute("alt") || "") + " [remote image blocked]");
+        }
+      }
+    }
+
+    for (const el of toRemove) el.remove();
+
+    return (doc.body ? doc.body.innerHTML : doc.documentElement.innerHTML) || "";
+  }
+
+  function setViewerHtml(html) {
+    const cleanBody = sanitizeHtmlForDisplay(html || "");
+    const wrapped = `<!doctype html>
+<html><head><meta charset="utf-8"></head>
+<body>${cleanBody}</body></html>`;
+    $("viewer").srcdoc = wrapped;
+  }
+
+  function setViewerText(text) {
+    const esc = String(text || "").replace(/[&<>]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;" }[c]));
+    $("viewer").srcdoc = `<!doctype html><html><head><meta charset="utf-8"></head>
+<body><pre style="white-space:pre-wrap; font-family: ui-monospace, Menlo, Consolas, monospace; font-size:12px;">${esc}</pre></body></html>`;
+  }
+
+  // -------------------------
+  // Received parsing + origin heuristic
+  // -------------------------
+  function parseIPs(s) {
+    const ips = new Set();
+    const ipv4 = s.match(/\b(?:(?:25[0-5]|2[0-4]\d|1?\d?\d)\.){3}(?:25[0-5]|2[0-4]\d|1?\d?\d)\b/g) || [];
+    const ipv6 = s.match(/\b(?:[A-F0-9]{0,4}:){2,7}[A-F0-9]{0,4}\b/ig) || [];
+    for (const ip of ipv4) ips.add(ip);
+    for (const ip of ipv6) if (ip.includes(":")) ips.add(ip);
+    return [...ips];
+  }
+
+  function parseReceivedHeaders(receivedValues) {
+    const hops = [];
+    for (const v of receivedValues) {
+      const from = (v.match(/\bfrom\b\s+(.+?)\s+\bby\b/i)?.[1] || "").trim();
+      const by = (v.match(/\bby\b\s+(.+?)(\s+\bwith\b|\s*;|$)/i)?.[1] || "").trim();
+      const withp = (v.match(/\bwith\b\s+(.+?)(\s*;|$)/i)?.[1] || "").trim();
+      const date = (v.split(";").slice(1).join(";").trim()) || "";
+      const ips = parseIPs(v);
+      hops.push({ raw: v, from, by, withp, date, ips });
+    }
+    return hops;
+  }
+
+  function isPrivateV4(ip) {
+    const p = ip.split(".").map(Number);
+    if (p.length !== 4 || p.some(n => Number.isNaN(n))) return false;
+    if (p[0] === 10) return true;
+    if (p[0] === 172 && p[1] >= 16 && p[1] <= 31) return true;
+    if (p[0] === 192 && p[1] === 168) return true;
+    if (p[0] === 127) return true;
+    return false;
+  }
+
+  function isReservedV4(ip) {
+    return ip.startsWith("0.") || ip.startsWith("169.254.");
+  }
+
+  function guessOrigin(hops) {
+    // earliest is bottom; choose first public IPv4 found scanning bottom->top
+    for (let i = hops.length - 1; i >= 0; i--) {
+      const ips = hops[i].ips || [];
+      const pub = ips.find(ip => ip.includes(".") && !isPrivateV4(ip) && !isReservedV4(ip));
+      if (pub) return { index: i, ip: pub, hop: hops[i] };
+    }
+    return null;
+  }
+
+  // -------------------------
+  // DNS-over-HTTPS (TXT)
+  // -------------------------
+  async function dohTXT(name) {
+    const url = "https://cloudflare-dns.com/dns-query?name=" + encodeURIComponent(name) + "&type=TXT";
+    const r = await fetch(url, { headers: { "accept": "application/dns-json" } });
+    if (!r.ok) throw new Error(`DoH failed for ${name}: HTTP ${r.status}`);
+    const j = await r.json();
+    const answers = (j.Answer || []).filter(a => a.type === 16).map(a => a.data);
+
+    // TXT may appear as multiple quoted segments; normalize.
+    const cleaned = answers.map(a => String(a)
+      .replace(/^"|"$/g, "")
+      .replace(/"\s*"/g, ""));
+    return cleaned;
+  }
+
+  function pickSPF(txt) { return txt.find(t => /^v=spf1\b/i.test(t)) || ""; }
+  function pickDMARC(txt) { return txt.find(t => /^v=dmarc1\b/i.test(t)) || ""; }
+
+  // -------------------------
+  // DKIM verification (rsa-sha256)
+  // -------------------------
+  function parseTagValueList(s) {
+    const out = {};
+    for (const part of String(s || "").split(";")) {
+      const p = part.trim();
+      if (!p) continue;
+      const eq = p.indexOf("=");
+      if (eq === -1) continue;
+      const k = p.slice(0, eq).trim();
+      const v = p.slice(eq + 1).trim();
+      out[k] = v;
+    }
+    return out;
+  }
+
+  function canonicalizeBody(body, mode) {
+    body = normalizeCRLF(body);
+
+    if (mode === "simple") {
+      body = body.replace(/(\r\n)*$/, "\r\n");
+      return body;
+    }
+
+    // relaxed
+    const lines = body.split("\r\n");
+    const canon = lines.map(line => line.replace(/[ \t]+/g, " ").replace(/[ \t]+$/g, ""));
+    while (canon.length && canon[canon.length - 1] === "") canon.pop();
+    return canon.join("\r\n") + "\r\n";
+  }
+
+  function canonicalizeHeaderField(name, value, mode) {
+    if (mode === "simple") return `${name}:${value}\r\n`;
+    const n = String(name || "").toLowerCase().trim();
+    const v = String(value || "").replace(/[ \t]+/g, " ").trim();
+    return `${n}:${v}\r\n`;
+  }
+
+  function findHeaderIndices(headerList, fieldLower) {
+    const out = [];
+    for (let i=0;i<headerList.length;i++) {
+      if (headerList[i].name.toLowerCase() === fieldLower) out.push(i);
+    }
+    return out;
+  }
+
+  function stripBFromDkimValue(v) {
+    // Replace b=... with b=
+    return String(v || "").replace(/\bb=([^;]*)/i, "b=");
+  }
+
+  async function dkimVerify(rawEmail, headerParsed) {
+    const dkimHeaders = getAll(headerParsed.map, "DKIM-Signature");
+    if (!dkimHeaders.length) {
+      return { ok:false, level:"warn", reason:"No DKIM-Signature header found." };
+    }
+
+    // Use last DKIM-Signature (common)
+    const dkimValue = dkimHeaders[dkimHeaders.length - 1];
+    const tags = parseTagValueList(dkimValue);
+
+    const a = (tags["a"] || "").toLowerCase();
+    const c = (tags["c"] || "relaxed/relaxed").toLowerCase();
+    const d = (tags["d"] || "").toLowerCase();
+    const s = (tags["s"] || "").toLowerCase();
+    const h = (tags["h"] || "");
+    const bh = (tags["bh"] || "");
+    const b = (tags["b"] || "");
+
+    if (a !== "rsa-sha256") return { ok:false, level:"warn", reason:`Unsupported DKIM algorithm: ${a || "(missing)"} (supports rsa-sha256 only).` };
+    if (!d || !s || !bh || !b) return { ok:false, level:"fail", reason:"Malformed DKIM-Signature (missing d=, s=, bh=, or b=)." };
+
+    const [hc, bc] = c.split("/");
+    const headerCanon = hc || "relaxed";
+    const bodyCanon = bc || "relaxed";
+
+    const { bodyBlock } = splitHeadersBody(rawEmail);
+    const bodyCanonText = canonicalizeBody(bodyBlock, bodyCanon);
+    const bodyHash = await sha256Bytes(te.encode(bodyCanonText));
+    const bodyHashB64 = bytesToB64(bodyHash);
+
+    if (bodyHashB64 !== bh.replace(/\s+/g, "")) {
+      return {
+        ok:false, level:"fail",
+        reason:"DKIM body hash (bh=) mismatch. Body likely modified or line endings differ.",
+        details: { expected_bh: bh, computed_bh: bodyHashB64 }
+      };
+    }
+
+    // Fetch DKIM key record
+    const keyName = `${s}._domainkey.${d}`;
+    let txt;
+    try { txt = await dohTXT(keyName); }
+    catch (e) { return { ok:false, level:"fail", reason:`Could not resolve DKIM key via DoH for ${keyName}.`, error:String(e), keyName }; }
+
+    const keyRecord = txt.find(t => /\bv=DKIM1\b/i.test(t) || /\bp=/.test(t)) || "";
+    if (!keyRecord) return { ok:false, level:"fail", reason:`No DKIM key TXT record found at ${keyName}.`, keyName };
+
+    const keyTags = parseTagValueList(keyRecord);
+    const p = (keyTags["p"] || "").replace(/\s+/g, "");
+    if (!p) return { ok:false, level:"fail", reason:`DKIM key at ${keyName} is empty/revoked (p=).`, keyName };
+
+    // Build signing input
+    const hList = h.split(":").map(x => x.trim().toLowerCase()).filter(Boolean);
+    const usedCount = new Map();
+    const signingParts = [];
+
+    for (const field of hList) {
+      const idxs = findHeaderIndices(headerParsed.list, field);
+      if (!idxs.length) continue;
+      const used = usedCount.get(field) || 0;
+      const pick = idxs[idxs.length - 1 - used];
+      if (pick === undefined) continue;
+      usedCount.set(field, used + 1);
+      const { name, value } = headerParsed.list[pick];
+      signingParts.push(canonicalizeHeaderField(name, value, headerCanon));
+    }
+
+    signingParts.push(canonicalizeHeaderField("DKIM-Signature", stripBFromDkimValue(dkimValue), headerCanon));
+    const signingData = te.encode(signingParts.join(""));
+
+    // Import key: DKIM p= is typically DER SubjectPublicKeyInfo for RSA
+    let cryptoKey;
+    try {
+      cryptoKey = await crypto.subtle.importKey(
+        "spki",
+        b64ToBytes(p).buffer,
+        { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+        false,
+        ["verify"]
+      );
+    } catch (e) {
+      return { ok:false, level:"fail", reason:"Failed to import DKIM public key (SPKI) into WebCrypto.", error:String(e), keyName };
+    }
+
+    let verified = false;
+    try {
+      verified = await crypto.subtle.verify(
+        "RSASSA-PKCS1-v1_5",
+        cryptoKey,
+        b64ToBytes(b),
+        signingData
+      );
+    } catch (e) {
+      return { ok:false, level:"fail", reason:"WebCrypto verification failed.", error:String(e), keyName };
+    }
+
+    return verified
+      ? { ok:true, level:"pass", reason:`DKIM signature verified (d=${d}, s=${s}, c=${c}).`, keyName }
+      : { ok:false, level:"fail", reason:`DKIM signature did not verify (d=${d}, s=${s}, c=${c}).`, keyName };
+  }
+
+  // -------------------------
+  // Authentication-Results parsing (lightweight)
+  // -------------------------
+  function parseAuthResults(arValue) {
+    // Extract tokens like spf=pass, dkim=pass, dmarc=fail
+    const out = {};
+    if (!arValue) return out;
+    const spf = /\bspf=(pass|fail|softfail|neutral|none|temperror|permerror)\b/i.exec(arValue)?.[1];
+    const dkim = /\bdkim=(pass|fail|neutral|none|temperror|permerror)\b/i.exec(arValue)?.[1];
+    const dmarc = /\bdmarc=(pass|fail|bestguesspass|none|temperror|permerror)\b/i.exec(arValue)?.[1];
+    if (spf) out.spf = spf.toLowerCase();
+    if (dkim) out.dkim = dkim.toLowerCase();
+    if (dmarc) out.dmarc = dmarc.toLowerCase();
+    return out;
+  }
+
+  // -------------------------
+  // UI rendering
+  // -------------------------
+  function renderTriage(headers) {
+    const t = $("triage");
+    const from = getOne(headers.map, "From");
+    const replyTo = getOne(headers.map, "Reply-To");
+    const returnPath = getOne(headers.map, "Return-Path");
+    const subject = getOne(headers.map, "Subject");
+    const date = getOne(headers.map, "Date");
+    const vals = [from, replyTo, returnPath, subject, date];
+
+    [...t.querySelectorAll("div:nth-child(2n)")].forEach((d, i) => {
+      d.textContent = vals[i] || "—";
+      d.className = vals[i] ? "" : "muted";
+    });
+  }
+
+  function renderKeyHeaders(headers) {
+    const keys = [
+      "From","Reply-To","To","Cc","Subject","Date","Message-ID",
+      "Return-Path","Sender","MIME-Version","Content-Type","User-Agent","X-Mailer"
+    ];
+    const el = $("keyHeaders");
+    el.innerHTML = "";
+    for (const k of keys) {
+      const v = getOne(headers.map, k);
+      const a = document.createElement("div"); a.textContent = k;
+      const b = document.createElement("div"); b.textContent = v || "—";
+      if (!v) b.classList.add("muted");
+      el.appendChild(a); el.appendChild(b);
+    }
+  }
+
+  function renderAuthHeaders(headers) {
+    const names = ["Authentication-Results","ARC-Authentication-Results","Received-SPF","DKIM-Signature"];
+    const parts = [];
+    for (const n of names) {
+      const all = getAll(headers.map, n);
+      if (!all.length) continue;
+      parts.push(`${n}:`);
+      for (const v of all) parts.push(`  ${v}`);
+      parts.push("");
+    }
+    $("authHeaders").textContent = parts.join("\n") || "—";
+  }
+
+  function renderRawHeaders(headers) {
+    $("rawHeaders").textContent = headers.unfolded || "—";
+  }
+
+  function renderReceived(headers) {
+    const received = getAll(headers.map, "Received");
+    const hops = parseReceivedHeaders(received);
+    const tbody = $("receivedTable").querySelector("tbody");
+    tbody.innerHTML = "";
+
+    const origin = guessOrigin(hops);
+
+    hops.forEach((hop, i) => {
+      const tr = document.createElement("tr");
+      const isOrigin = origin && origin.index === i;
+      tr.innerHTML = `
+        <td>${i+1}</td>
+        <td>${isOrigin ? `<span class="hl">${safeText(hop.from || "—", 120)}</span>` : safeText(hop.from || "—", 120)}</td>
+        <td>${safeText(hop.by || "—", 120)}</td>
+        <td>${safeText(hop.withp || "—", 60)}</td>
+        <td>${safeText(hop.date || "—", 120)}</td>
+        <td class="mono">${(hop.ips || []).join(", ") || "—"}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    if (!received.length) {
+      $("origin").innerHTML = `<span class="danger">No Received headers found</span> (possible truncation or copy/paste).`;
+      return;
+    }
+
+    if (origin) {
+      $("origin").innerHTML =
+        `Likely origin candidate: <span class="hl">${origin.ip}</span><br>` +
+        `<span class="small muted">Heuristic: earliest hop containing a public IPv4 address.</span>`;
+    } else {
+      $("origin").textContent = "No clear public origin IPv4 found (only private/reserved IPs or missing data).";
+    }
+  }
+
+  async function renderAttachments(attList) {
+    if (!attList.length) {
+      $("attachments").textContent = "Attachments: none detected.";
+      return;
+    }
+    const lines = ["Attachments:"];
+    for (const a of attList) {
+      lines.push(`- ${a.filename} (${a.mime}, ${a.size} bytes) SHA-256=${a.sha256}`);
+    }
+    $("attachments").textContent = lines.join("\n");
+  }
+
+  function alignmentSummary(headers, dkimRes, spfTxt, dmarcTxt, authParsed) {
+    const from = getOne(headers.map, "From");
+    const returnPath = getOne(headers.map, "Return-Path");
+    const replyTo = getOne(headers.map, "Reply-To");
+    const fromDom = extractDomainFromAddress(from);
+    const rpDom = extractDomainFromAddress(returnPath);
+    const rtDom = extractDomainFromAddress(replyTo);
+
+    const dkimSig = (getAll(headers.map, "DKIM-Signature").slice(-1)[0]) || "";
+    const dkimTags = dkimSig ? parseTagValueList(dkimSig) : {};
+    const dkimDom = (dkimTags["d"] || "").toLowerCase();
+
+    const lines = [];
+    const flags = [];
+
+    if (fromDom) lines.push(`From domain: ${fromDom}`);
+    if (rpDom) lines.push(`Return-Path domain: ${rpDom}`);
+    if (dkimDom) lines.push(`DKIM d=: ${dkimDom}`);
+    if (rtDom) lines.push(`Reply-To domain: ${rtDom}`);
+
+    if (fromDom && rpDom && fromDom !== rpDom) flags.push("From ≠ Return-Path (often phishing; also occurs with legitimate third-party senders).");
+    if (fromDom && dkimDom && fromDom !== dkimDom) flags.push("From ≠ DKIM d= (possible non-alignment).");
+    if (replyTo && fromDom && rtDom && fromDom !== rtDom) flags.push("Reply-To differs from From (classic credential-harvest pattern).");
+
+    if (spfTxt && fromDom) lines.push(`SPF record present for ${fromDom}: ${spfTxt}`);
+    else if (fromDom) lines.push(`SPF record: not found (TXT v=spf1) for ${fromDom} (this may be misconfigured or delegated elsewhere).`);
+
+    if (dmarcTxt && fromDom) lines.push(`DMARC record present for ${fromDom}: ${dmarcTxt}`);
+    else if (fromDom) lines.push(`DMARC record: not found at _dmarc.${fromDom} (common in weaker domains).`);
+
+    const badgeItems = [];
+    if (dkimRes) badgeItems.push({ label: `DKIM ${dkimRes.ok ? "PASS" : dkimRes.level.toUpperCase()}`, kind: dkimRes.ok ? "pass" : (dkimRes.level === "warn" ? "warn" : "fail") });
+    else badgeItems.push({ label:"DKIM UNKNOWN", kind:"warn" });
+
+    if (authParsed.spf) badgeItems.push({ label:`AR SPF ${authParsed.spf.toUpperCase()}`, kind: authParsed.spf==="pass" ? "pass" : (authParsed.spf==="none" ? "warn":"fail") });
+    if (authParsed.dkim) badgeItems.push({ label:`AR DKIM ${authParsed.dkim.toUpperCase()}`, kind: authParsed.dkim==="pass" ? "pass" : (authParsed.dkim==="none" ? "warn":"fail") });
+    if (authParsed.dmarc) badgeItems.push({ label:`AR DMARC ${authParsed.dmarc.toUpperCase()}`, kind: (authParsed.dmarc.includes("pass")) ? "pass" : (authParsed.dmarc==="none" ? "warn":"fail") });
+
+    setBadges(badgeItems);
+
+    let html = `<div class="mono codebox">${safeText(lines.join("\n"), 10000)}</div>`;
+    if (flags.length) {
+      html += `<div style="margin-top:8px;"><span class="danger">Suspicion indicators</span><ul class="small">` +
+        flags.map(f => `<li>${f}</li>`).join("") +
+        `</ul></div>`;
+    } else {
+      html += `<div style="margin-top:8px;"><span class="ok">No obvious alignment red flags</span> (still validate hop chain, URLs, and content).</div>`;
+    }
+    $("alignment").innerHTML = html;
+  }
+
+  // -------------------------
+  // Application state
+  // -------------------------
+  let state = {
+    raw: "",
+    headers: null,
+    view: null
+  };
+
+  // -------------------------
+  // Load EML
+  // -------------------------
+  async function loadEMLFile(file) {
+    setStatus("Loading…", "info");
+    $("dnsResults").textContent = "";
+    setBadges([]);
+    $("alignment").textContent = "Loading…";
+
+    const buf = await file.arrayBuffer();
+    const raw = normalizeCRLF(td.decode(buf));
+    state.raw = raw;
+
+    const { headerBlock } = splitHeadersBody(raw);
+    const headers = parseHeaderLines(unfoldHeaders(headerBlock));
+    state.headers = headers;
+
+    const view = await parseEmailToView(raw);
+    state.view = view;
+
+    renderTriage(headers);
+    renderKeyHeaders(headers);
+    renderAuthHeaders(headers);
+    renderRawHeaders(headers);
+    renderReceived(headers);
+
+    // Render body
+    $("btnShowHtml").disabled = !view.html;
+    $("btnShowText").disabled = !view.text;
+    $("btnRunChecks").disabled = false;
+
+    if (view.html) setViewerHtml(view.html);
+    else setViewerText(view.text || "(no body)");
+
+    await renderAttachments(view.attachments);
+
+    setStatus("Loaded · Not checked", "warn");
+    $("alignment").textContent = "Press “Run checks” for SPF/DKIM/DMARC and alignment heuristics.";
+  }
+
+  // -------------------------
+  // Checks (SPF/DMARC/DKIM)
+  // -------------------------
+  async function runChecks() {
+    if (!state.raw || !state.headers) return;
+
+    setStatus("Running checks…", "info");
+    $("dnsResults").textContent = "";
+
+    const headers = state.headers;
+    const logs = [];
+
+    // Prefer Authentication-Results if present
+    const ar = getOne(headers.map, "Authentication-Results") || "";
+    const arcAr = getOne(headers.map, "ARC-Authentication-Results") || "";
+    const authParsed = parseAuthResults(ar || arcAr);
+
+    if (ar) logs.push("[Authentication-Results]\n" + ar + "\n");
+    else if (arcAr) logs.push("[ARC-Authentication-Results]\n" + arcAr + "\n");
+    else logs.push("[Authentication-Results]\n(none found)\n");
+
+    // DNS lookups
+    const fromDom = extractDomainFromAddress(getOne(headers.map, "From"));
+    let spfTxt = "", dmarcTxt = "";
+
+    if (fromDom) {
+      try {
+        const txt = await dohTXT(fromDom);
+        spfTxt = pickSPF(txt);
+        logs.push(`[TXT] ${fromDom}`);
+        for (const t of txt) logs.push("  " + t);
+        logs.push("");
+      } catch (e) {
+        logs.push(`[TXT] ${fromDom} — ERROR: ${String(e)}\n`);
+      }
+
+      try {
+        const dname = `_dmarc.${fromDom}`;
+        const txt = await dohTXT(dname);
+        dmarcTxt = pickDMARC(txt);
+        logs.push(`[TXT] ${dname}`);
+        for (const t of txt) logs.push("  " + t);
+        logs.push("");
+      } catch (e) {
+        logs.push(`[TXT] _dmarc.${fromDom} — ERROR: ${String(e)}\n`);
+      }
+    } else {
+      logs.push("No From domain detected; cannot query SPF/DMARC.\n");
+    }
+
+    // DKIM verify (and DKIM key record display)
+    let dkimRes = null;
+    try {
+      dkimRes = await dkimVerify(state.raw, headers);
+      logs.push("[DKIM]");
+      logs.push("  " + dkimRes.reason);
+      if (dkimRes.keyName) logs.push("  key: " + dkimRes.keyName);
+      if (dkimRes.details) logs.push("  details: " + JSON.stringify(dkimRes.details));
+      if (dkimRes.error) logs.push("  error: " + dkimRes.error);
+      logs.push("");
+      // show DKIM TXT
+      if (dkimRes.keyName) {
+        try {
+          const txt = await dohTXT(dkimRes.keyName);
+          logs.push(`[TXT] ${dkimRes.keyName}`);
+          for (const t of txt) logs.push("  " + t);
+          logs.push("");
+        } catch (e) {
+          logs.push(`[TXT] ${dkimRes.keyName} — ERROR: ${String(e)}\n`);
+        }
+      }
+    } catch (e) {
+      dkimRes = { ok:false, level:"fail", reason:"Unhandled DKIM verification error.", error:String(e) };
+      logs.push("[DKIM] ERROR: " + String(e) + "\n");
+    }
+
+    $("dnsResults").textContent = logs.join("\n");
+
+    alignmentSummary(headers, dkimRes, spfTxt, dmarcTxt, authParsed);
+
+    if (dkimRes && dkimRes.ok) setStatus("Checked · DKIM verified", "pass");
+    else setStatus("Checked · Review results", "warn");
+  }
+
+  // -------------------------
+  // Buttons / events
+  // -------------------------
+  $("btnRunChecks").addEventListener("click", runChecks);
+
+  $("btnClear").addEventListener("click", () => {
+    state = { raw:"", headers:null, view:null };
+    $("keyHeaders").innerHTML = "";
+    $("rawHeaders").textContent = "";
+    $("authHeaders").textContent = "";
+    $("receivedTable").querySelector("tbody").innerHTML = "";
+    $("dnsResults").textContent = "";
+    $("attachments").textContent = "";
+    $("alignment").textContent = "Load an email and run checks.";
+    $("origin").textContent = "Load an email to extract Received chain.";
+    $("triage").querySelectorAll("div:nth-child(2n)").forEach(d => { d.textContent="—"; d.className="muted"; });
+    setViewerText("");
+    setBadges([]);
+    $("btnRunChecks").disabled = true;
+    $("btnShowHtml").disabled = true;
+    $("btnShowText").disabled = true;
+    $("file").value = "";
+    setStatus("No file loaded", "info");
+  });
+
+  $("btnShowHtml").addEventListener("click", () => {
+    if (state.view && state.view.html) setViewerHtml(state.view.html);
+  });
+  $("btnShowText").addEventListener("click", () => {
+    if (state.view && state.view.text) setViewerText(state.view.text);
+  });
+
+  $("file").addEventListener("change", async (e) => {
+    const f = e.target.files && e.target.files[0];
+    if (f) await loadEMLFile(f);
+  });
+
+  const drop = $("drop");
+  drop.addEventListener("dragover", (e) => { e.preventDefault(); drop.classList.add("drag"); });
+  drop.addEventListener("dragleave", () => drop.classList.remove("drag"));
+  drop.addEventListener("drop", async (e) => {
+    e.preventDefault();
+    drop.classList.remove("drag");
+    const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if (f) await loadEMLFile(f);
+  });
+
+  // Initial
+  setStatus("No file loaded", "info");
+})();
+</script>
+</body>
+</html>

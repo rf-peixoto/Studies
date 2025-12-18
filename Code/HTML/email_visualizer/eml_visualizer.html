@@ -1,0 +1,1579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phishing Email Analyzer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        :root {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-tertiary: #334155;
+            --accent: #3b82f6;
+            --accent-success: #10b981;
+            --accent-warning: #f59e0b;
+            --accent-danger: #ef4444;
+            --text-primary: #f8fafc;
+            --text-secondary: #cbd5e1;
+            --border: #475569;
+        }
+
+        body {
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        header {
+            text-align: center;
+            padding: 20px 0;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 10px;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            color: var(--accent);
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+
+        .upload-section {
+            background-color: var(--bg-secondary);
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            margin-bottom: 10px;
+        }
+
+        .upload-label {
+            display: block;
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .file-input-wrapper {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .file-input {
+            flex-grow: 1;
+            padding: 12px 15px;
+            background-color: var(--bg-tertiary);
+            border: 2px dashed var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            cursor: pointer;
+        }
+
+        .file-input:hover {
+            border-color: var(--accent);
+        }
+
+        .btn {
+            padding: 12px 25px;
+            background-color: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1rem;
+        }
+
+        .btn:hover {
+            background-color: #2563eb;
+            transform: translateY(-2px);
+        }
+
+        .btn-parse {
+            background-color: var(--accent-success);
+        }
+
+        .btn-parse:hover {
+            background-color: #0da271;
+        }
+
+        .content-wrapper {
+            display: grid;
+            grid-template-columns: 1.2fr 0.8fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 1200px) {
+            .content-wrapper {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .panel {
+            background-color: var(--bg-secondary);
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            height: fit-content;
+        }
+
+        .panel h2 {
+            color: var(--accent);
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border);
+            font-size: 1.5rem;
+        }
+
+        .email-viewer {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .email-header-info {
+            background-color: var(--bg-tertiary);
+            border-radius: 8px;
+            padding: 20px;
+        }
+
+        .header-row {
+            display: flex;
+            margin-bottom: 12px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .header-label {
+            font-weight: 600;
+            color: var(--accent);
+            min-width: 120px;
+        }
+
+        .header-value {
+            flex-grow: 1;
+            color: var(--text-primary);
+            word-break: break-all;
+        }
+
+        .email-render-area {
+            background-color: var(--bg-tertiary);
+            border-radius: 8px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .email-render-container {
+            background-color: white;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            min-height: 500px;
+            max-height: 700px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .email-render-toolbar {
+            background-color: #f1f5f9;
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            border-bottom: 1px solid #cbd5e1;
+        }
+
+        .email-render-toolbar span {
+            color: #334155;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .email-iframe-container {
+            flex-grow: 1;
+            overflow: hidden;
+        }
+
+        .email-iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background-color: white;
+        }
+
+        .email-body-text {
+            padding: 20px;
+            background-color: white;
+            color: black;
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .email-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 15px;
+        }
+
+        .email-tab {
+            padding: 10px 20px;
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-weight: 500;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .email-tab.active {
+            color: var(--accent);
+            border-bottom-color: var(--accent);
+            background-color: rgba(59, 130, 246, 0.1);
+        }
+
+        .email-tab:hover:not(.active) {
+            color: var(--text-primary);
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        .attachments {
+            background-color: var(--bg-tertiary);
+            border-radius: 8px;
+            padding: 20px;
+        }
+
+        .attachments h3 {
+            margin-bottom: 15px;
+            color: var(--accent);
+        }
+
+        .attachments-list {
+            list-style-type: none;
+        }
+
+        .attachments-list li {
+            padding: 10px;
+            background-color: rgba(0, 0, 0, 0.2);
+            border-radius: 5px;
+            margin-bottom: 10px;
+            border-left: 4px solid var(--accent-warning);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .attachment-name {
+            font-weight: 500;
+        }
+
+        .attachment-size {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .analysis-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .security-results {
+            background-color: var(--bg-tertiary);
+            border-radius: 8px;
+            padding: 20px;
+        }
+
+        .security-item {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            background-color: rgba(0, 0, 0, 0.2);
+        }
+
+        .security-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        .security-info {
+            flex-grow: 1;
+        }
+
+        .security-name {
+            font-weight: 600;
+            margin-bottom: 5px;
+            font-size: 1.1rem;
+        }
+
+        .security-description {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .security-status {
+            font-weight: bold;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            min-width: 100px;
+            text-align: center;
+        }
+
+        .status-pass {
+            background-color: rgba(16, 185, 129, 0.2);
+            color: var(--accent-success);
+            border: 1px solid rgba(16, 185, 129, 0.5);
+        }
+
+        .status-fail {
+            background-color: rgba(239, 68, 68, 0.2);
+            color: var(--accent-danger);
+            border: 1px solid rgba(239, 68, 68, 0.5);
+        }
+
+        .status-warning {
+            background-color: rgba(245, 158, 11, 0.2);
+            color: var(--accent-warning);
+            border: 1px solid rgba(245, 158, 11, 0.5);
+        }
+
+        .status-neutral {
+            background-color: rgba(148, 163, 184, 0.2);
+            color: var(--text-secondary);
+            border: 1px solid rgba(148, 163, 184, 0.5);
+        }
+
+        .email-origin {
+            background-color: var(--bg-tertiary);
+            border-radius: 8px;
+            padding: 20px;
+        }
+
+        .origin-details {
+            margin-top: 15px;
+        }
+
+        .origin-item {
+            margin-bottom: 10px;
+            padding: 10px;
+            background-color: rgba(0, 0, 0, 0.2);
+            border-radius: 5px;
+            display: flex;
+            flex-wrap: wrap;
+        }
+
+        .origin-label {
+            font-weight: 600;
+            color: var(--accent);
+            margin-right: 10px;
+            min-width: 140px;
+        }
+
+        .origin-value {
+            flex-grow: 1;
+            word-break: break-all;
+        }
+
+        .raw-headers {
+            background-color: var(--bg-tertiary);
+            border-radius: 8px;
+            padding: 20px;
+        }
+
+        .headers-content {
+            max-height: 400px;
+            overflow-y: auto;
+            padding: 15px;
+            background-color: rgba(0, 0, 0, 0.2);
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            word-break: break-all;
+            border: 1px solid var(--border);
+        }
+
+        .suspicious-highlight {
+            background-color: rgba(239, 68, 68, 0.3);
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-weight: 600;
+        }
+
+        .info-highlight {
+            background-color: rgba(59, 130, 246, 0.3);
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-weight: 600;
+        }
+
+        .warning {
+            color: var(--accent-warning);
+            font-weight: 600;
+            margin: 10px 0;
+            padding: 10px;
+            background-color: rgba(245, 158, 11, 0.1);
+            border-radius: 5px;
+            border-left: 4px solid var(--accent-warning);
+        }
+
+        .suspicious-flag {
+            display: inline-block;
+            background-color: var(--accent-danger);
+            color: white;
+            font-size: 0.8rem;
+            padding: 2px 8px;
+            border-radius: 10px;
+            margin-left: 8px;
+            font-weight: 500;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border);
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .email-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 0.9rem;
+            background-color: var(--bg-tertiary);
+        }
+
+        .btn-small:hover {
+            background-color: var(--accent);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Phishing Email Analyzer</h1>
+            <p class="subtitle">Upload EML files to analyze headers, content, and authentication (SPF, DKIM, DMARC)</p>
+        </header>
+
+        <section class="upload-section">
+            <label class="upload-label">Select an EML file to analyze:</label>
+            <div class="file-input-wrapper">
+                <input type="file" id="fileInput" class="file-input" accept=".eml">
+                <button id="parseBtn" class="btn btn-parse">Analyze Email</button>
+                <button id="sampleBtn" class="btn">Load Sample Email</button>
+                <button id="resetBtn" class="btn">Reset</button>
+            </div>
+            <div class="warning" id="warningMessage" style="display:none;">
+                ⚠ Warning: This email contains suspicious elements. Check authentication results and origin analysis for details.
+            </div>
+        </section>
+
+        <div class="content-wrapper">
+            <div class="panel email-viewer">
+                <h2>Email Content</h2>
+                
+                <div class="email-header-info">
+                    <div class="header-row">
+                        <div class="header-label">From:</div>
+                        <div class="header-value" id="fromValue">-</div>
+                    </div>
+                    <div class="header-row">
+                        <div class="header-label">To:</div>
+                        <div class="header-value" id="toValue">-</div>
+                    </div>
+                    <div class="header-row">
+                        <div class="header-label">Subject:</div>
+                        <div class="header-value" id="subjectValue">-</div>
+                    </div>
+                    <div class="header-row">
+                        <div class="header-label">Date:</div>
+                        <div class="header-value" id="dateValue">-</div>
+                    </div>
+                </div>
+
+                <div class="email-render-area">
+                    <div class="email-tabs">
+                        <button class="email-tab active" data-tab="html">Rendered Email</button>
+                        <button class="email-tab" data-tab="text">Plain Text</button>
+                        <button class="email-tab" data-tab="source">HTML Source</button>
+                    </div>
+                    
+                    <div class="email-render-container">
+                        <div class="email-render-toolbar">
+                            <span id="renderInfo">Email preview will appear here</span>
+                            <div class="email-actions">
+                                <button class="btn btn-small" id="viewLinksBtn" style="display:none;">View All Links</button>
+                                <button class="btn btn-small" id="toggleSafetyBtn" style="display:none;">Toggle Safety</button>
+                            </div>
+                        </div>
+                        
+                        <div class="email-iframe-container" id="htmlTab" style="display: block;">
+                            <iframe class="email-iframe" id="emailIframe" sandbox="allow-same-origin"></iframe>
+                        </div>
+                        
+                        <div class="email-body-text" id="textTab" style="display: none;">
+                            Plain text content will appear here.
+                        </div>
+                        
+                        <div class="email-body-text" id="sourceTab" style="display: none; font-family: monospace; font-size: 0.9rem;">
+                            HTML source code will appear here.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="attachments">
+                    <h3>Attachments</h3>
+                    <ul class="attachments-list" id="attachmentsList">
+                        <li>
+                            <span class="attachment-name">No attachments found</span>
+                            <span class="attachment-size">-</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="panel analysis-panel">
+                <div class="security-results">
+                    <h2>Email Authentication</h2>
+                    
+                    <div class="security-item">
+                        <div class="security-icon" style="background-color: rgba(16, 185, 129, 0.2);">SPF</div>
+                        <div class="security-info">
+                            <div class="security-name">SPF (Sender Policy Framework)</div>
+                            <div class="security-description" id="spfDescription">Verifies sender's IP address is authorized by domain</div>
+                        </div>
+                        <div class="security-status status-neutral" id="spfStatus">Not Checked</div>
+                    </div>
+                    
+                    <div class="security-item">
+                        <div class="security-icon" style="background-color: rgba(59, 130, 246, 0.2);">DKIM</div>
+                        <div class="security-info">
+                            <div class="security-name">DKIM (DomainKeys Identified Mail)</div>
+                            <div class="security-description" id="dkimDescription">Validates email content integrity and sender domain</div>
+                        </div>
+                        <div class="security-status status-neutral" id="dkimStatus">Not Checked</div>
+                    </div>
+                    
+                    <div class="security-item">
+                        <div class="security-icon" style="background-color: rgba(245, 158, 11, 0.2);">DMARC</div>
+                        <div class="security-info">
+                            <div class="security-name">DMARC (Domain-based Message Authentication)</div>
+                            <div class="security-description" id="dmarcDescription">Policy framework for SPF and DKIM alignment</div>
+                        </div>
+                        <div class="security-status status-neutral" id="dmarcStatus">Not Checked</div>
+                    </div>
+                </div>
+
+                <div class="email-origin">
+                    <h2>Origin Analysis</h2>
+                    <div class="origin-details" id="originDetails">
+                        <div class="origin-item">
+                            <span class="origin-label">Sender Domain:</span>
+                            <span class="origin-value" id="senderDomain">-</span>
+                        </div>
+                        <div class="origin-item">
+                            <span class="origin-label">Return-Path:</span>
+                            <span class="origin-value" id="returnPath">-</span>
+                        </div>
+                        <div class="origin-item">
+                            <span class="origin-label">Received From:</span>
+                            <span class="origin-value" id="receivedFrom">-</span>
+                        </div>
+                        <div class="origin-item">
+                            <span class="origin-label">IP Addresses:</span>
+                            <span class="origin-value" id="ipAddresses">-</span>
+                        </div>
+                        <div class="origin-item">
+                            <span class="origin-label">Mail Client:</span>
+                            <span class="origin-value" id="mailClient">-</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="raw-headers">
+                    <h2>Raw Headers</h2>
+                    <div class="headers-content" id="rawHeaders">
+                        No email headers to display.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer class="footer">
+            <p>Phishing Email Analyzer &copy; 2023 | Use for email security analysis only</p>
+        </footer>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const fileInput = document.getElementById('fileInput');
+            const parseBtn = document.getElementById('parseBtn');
+            const sampleBtn = document.getElementById('sampleBtn');
+            const resetBtn = document.getElementById('resetBtn');
+            const warningMessage = document.getElementById('warningMessage');
+            const viewLinksBtn = document.getElementById('viewLinksBtn');
+            const toggleSafetyBtn = document.getElementById('toggleSafetyBtn');
+            const emailTabs = document.querySelectorAll('.email-tab');
+            
+            // Email content display elements
+            const fromValue = document.getElementById('fromValue');
+            const toValue = document.getElementById('toValue');
+            const subjectValue = document.getElementById('subjectValue');
+            const dateValue = document.getElementById('dateValue');
+            const renderInfo = document.getElementById('renderInfo');
+            
+            // Email render tabs
+            const htmlTab = document.getElementById('htmlTab');
+            const textTab = document.getElementById('textTab');
+            const sourceTab = document.getElementById('sourceTab');
+            const emailIframe = document.getElementById('emailIframe');
+            
+            // Attachments list
+            const attachmentsList = document.getElementById('attachmentsList');
+            
+            // Security status elements
+            const spfStatus = document.getElementById('spfStatus');
+            const spfDescription = document.getElementById('spfDescription');
+            const dkimStatus = document.getElementById('dkimStatus');
+            const dkimDescription = document.getElementById('dkimDescription');
+            const dmarcStatus = document.getElementById('dmarcStatus');
+            const dmarcDescription = document.getElementById('dmarcDescription');
+            
+            // Origin analysis elements
+            const senderDomain = document.getElementById('senderDomain');
+            const returnPath = document.getElementById('returnPath');
+            const receivedFrom = document.getElementById('receivedFrom');
+            const ipAddresses = document.getElementById('ipAddresses');
+            const mailClient = document.getElementById('mailClient');
+            
+            // Raw headers
+            const rawHeaders = document.getElementById('rawHeaders');
+            
+            // Sample phishing email for demonstration
+            const sampleEmail = `From: "Security Alert" <security@example-bank.com>
+To: "John Doe" <john.doe@example.com>
+Subject: Urgent: Your Account Requires Verification
+Date: Wed, 15 Nov 2023 14:30:00 +0000
+Return-Path: <bounces@phishing-example.net>
+Reply-To: <no-reply@example-bank-support.com>
+Received: from mail.phishing-example.net (192.168.1.100)
+ by mx.example.com with SMTP;
+ Wed, 15 Nov 2023 14:31:05 +0000
+Received-SPF: fail (example.com: domain of phishing-example.net does not designate 192.168.1.100 as permitted sender)
+Authentication-Results: mx.example.com;
+ dkim=fail (signature verification failed);
+ dmarc=fail (p=quarantine sp=quarantine dis=none)
+DKIM-Signature: v=1; a=rsa-sha256; d=phishing-example.net; s=selector1;
+ c=relaxed/relaxed; q=dns/txt; i=@phishing-example.net;
+ h=From:To:Subject:Date; bh=ABCD1234; b=DEFG5678
+Message-ID: <1234567890@phishing-example.net>
+X-Mailer: Microsoft Outlook 16.0
+MIME-Version: 1.0
+Content-Type: multipart/alternative; boundary="boundary123"
+
+--boundary123
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+
+Dear Customer,
+
+We have detected suspicious activity on your bank account. To secure your =
+account, please verify your identity immediately.
+
+Click here to verify: http://phishing-example.net/verify?id=3D12345
+
+If you don't verify within 24 hours, your account will be suspended.
+
+Thank you,
+Security Team
+Example Bank
+
+--boundary123
+Content-Type: text/html; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv=3D"Content-Type" content=3D"text/html; charset=3Dutf-8">
+<title>Urgent: Your Account Requires Verification</title>
+<style>
+  body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+  .container { max-width: 600px; margin: 0 auto; padding: 20px; border: 1p=
+x solid #ddd; border-radius: 5px; }
+  .header { background-color: #d32f2f; color: white; padding: 15px; text-a=
+lign: center; border-radius: 5px 5px 0 0; }
+  .content { padding: 20px; }
+  .button { background-color: #d32f2f; color: white; padding: 12px 24px; t=
+ext-decoration: none; border-radius: 4px; display: inline-block; margin: 1=
+5px 0; }
+  .footer { margin-top: 20px; padding-top: 15px; border-top: 1px solid #ee=
+e; font-size: 12px; color: #777; }
+</style>
+</head>
+<body>
+<div class=3D"container">
+  <div class=3D"header">
+    <h2>Security Alert</h2>
+  </div>
+  <div class=3D"content">
+    <p>Dear Customer,</p>
+    <p>We have detected <strong>suspicious activity</strong> on your bank a=
+ccount. Our system flagged unusual login attempts from a new device in a di=
+fferent location.</p>
+    <p>To secure your account and prevent unauthorized access, please verif=
+y your identity immediately by clicking the button below:</p>
+    <p style=3D"text-align: center;">
+      <a href=3D"http://phishing-example.net/verify?id=3D12345" class=3D"b=
+utton">Verify Your Account Now</a>
+    </p>
+    <p><strong>Important:</strong> If you don't verify your identity within=
+ 24 hours, your account will be temporarily suspended for security reasons.=
+</p>
+    <p>This is an automated security message. Please do not reply to this e=
+mail.</p>
+    <p>Thank you,<br>
+    <strong>Security Team</strong><br>
+    Example Bank<br>
+    <a href=3D"http://www.example-bank.com">www.example-bank.com</a></p>
+  </div>
+  <div class=3D"footer">
+    <p>=C2=A9 2023 Example Bank. All rights reserved.<br>
+    This is an automated message, please do not reply.</p>
+  </div>
+</div>
+</body>
+</html>
+
+--boundary123--`;
+
+            // Tab switching
+            emailTabs.forEach(tab => {
+                tab.addEventListener('click', function() {
+                    // Remove active class from all tabs
+                    emailTabs.forEach(t => t.classList.remove('active'));
+                    
+                    // Add active class to clicked tab
+                    this.classList.add('active');
+                    
+                    // Get tab type
+                    const tabType = this.getAttribute('data-tab');
+                    
+                    // Hide all tabs
+                    htmlTab.style.display = 'none';
+                    textTab.style.display = 'none';
+                    sourceTab.style.display = 'none';
+                    
+                    // Show selected tab
+                    if (tabType === 'html') {
+                        htmlTab.style.display = 'block';
+                    } else if (tabType === 'text') {
+                        textTab.style.display = 'block';
+                    } else if (tabType === 'source') {
+                        sourceTab.style.display = 'block';
+                    }
+                });
+            });
+            
+            // Parse EML file
+            parseBtn.addEventListener('click', function() {
+                const file = fileInput.files[0];
+                if (!file) {
+                    alert('Please select an EML file first.');
+                    return;
+                }
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const emlContent = e.target.result;
+                    parseEmail(emlContent);
+                };
+                reader.readAsText(file);
+            });
+            
+            // Load sample email
+            sampleBtn.addEventListener('click', function() {
+                parseEmail(sampleEmail);
+            });
+            
+            // Reset the application
+            resetBtn.addEventListener('click', function() {
+                resetApplication();
+            });
+            
+            // Main parsing function
+            function parseEmail(emlContent) {
+                // Reset UI
+                warningMessage.style.display = 'none';
+                viewLinksBtn.style.display = 'none';
+                toggleSafetyBtn.style.display = 'none';
+                
+                // Parse headers and body
+                const { headers, body, parts } = parseEmailContent(emlContent);
+                
+                // Display email headers
+                displayEmailHeaders(headers);
+                
+                // Display email body in all formats
+                displayEmailBody(headers, body, parts);
+                
+                // Display attachments
+                displayAttachments(headers, parts);
+                
+                // Analyze email authentication
+                analyzeEmailAuthentication(headers);
+                
+                // Analyze email origin
+                analyzeEmailOrigin(headers);
+                
+                // Display raw headers
+                displayRawHeaders(headers);
+            }
+            
+            // Parse email content into headers and body parts
+            function parseEmailContent(emlContent) {
+                const lines = emlContent.split('\n');
+                const headers = {};
+                let body = '';
+                let parts = [];
+                let currentPart = { headers: {}, body: '' };
+                let inHeaders = true;
+                let currentHeader = '';
+                let boundary = null;
+                
+                // Find boundary if multipart
+                for (const line of lines) {
+                    if (line.toLowerCase().includes('content-type: multipart')) {
+                        const boundaryMatch = line.match(/boundary="([^"]+)"/) || line.match(/boundary=([^\s;]+)/);
+                        if (boundaryMatch) {
+                            boundary = boundaryMatch[1].replace(/"/g, '');
+                        }
+                        break;
+                    }
+                }
+                
+                if (boundary) {
+                    // Parse multipart email
+                    let inPart = false;
+                    let partHeaders = {};
+                    let partBody = '';
+                    let inPartHeaders = false;
+                    
+                    for (let i = 0; i < lines.length; i++) {
+                        const line = lines[i];
+                        
+                        // Parse main headers (before first boundary)
+                        if (line.includes(`--${boundary}`) && !inPart) {
+                            // Start of first part
+                            inPart = true;
+                            inPartHeaders = true;
+                            partHeaders = {};
+                            partBody = '';
+                            continue;
+                        }
+                        
+                        if (!inPart) {
+                            // Parse main headers
+                            if (line.trim() === '' && inHeaders) {
+                                inHeaders = false;
+                                continue;
+                            }
+                            
+                            if (inHeaders) {
+                                if (line.match(/^\s/)) {
+                                    // Continuation of previous header
+                                    headers[currentHeader] += ' ' + line.trim();
+                                } else {
+                                    const colonIndex = line.indexOf(':');
+                                    if (colonIndex > -1) {
+                                        currentHeader = line.substring(0, colonIndex).trim();
+                                        const value = line.substring(colonIndex + 1).trim();
+                                        headers[currentHeader] = value;
+                                    }
+                                }
+                            }
+                        } else {
+                            // We're inside a part
+                            if (line.includes(`--${boundary}`) && (line.includes(`--${boundary}--`) || lines[i+1]?.includes(`--${boundary}`))) {
+                                // End of current part
+                                parts.push({
+                                    headers: partHeaders,
+                                    body: partBody
+                                });
+                                
+                                if (line.includes(`--${boundary}--`)) {
+                                    // End of all parts
+                                    break;
+                                } else {
+                                    // Start of next part
+                                    inPartHeaders = true;
+                                    partHeaders = {};
+                                    partBody = '';
+                                    continue;
+                                }
+                            }
+                            
+                            if (inPartHeaders) {
+                                if (line.trim() === '') {
+                                    inPartHeaders = false;
+                                    continue;
+                                }
+                                
+                                const colonIndex = line.indexOf(':');
+                                if (colonIndex > -1) {
+                                    const headerName = line.substring(0, colonIndex).trim();
+                                    const headerValue = line.substring(colonIndex + 1).trim();
+                                    partHeaders[headerName] = headerValue;
+                                }
+                            } else {
+                                // Part body
+                                partBody += line + '\n';
+                            }
+                        }
+                    }
+                } else {
+                    // Parse simple email (not multipart)
+                    let inHeaders = true;
+                    
+                    for (let i = 0; i < lines.length; i++) {
+                        const line = lines[i];
+                        
+                        if (line.trim() === '' && inHeaders) {
+                            inHeaders = false;
+                            continue;
+                        }
+                        
+                        if (inHeaders) {
+                            if (line.match(/^\s/)) {
+                                // Continuation of previous header
+                                headers[currentHeader] += ' ' + line.trim();
+                            } else {
+                                const colonIndex = line.indexOf(':');
+                                if (colonIndex > -1) {
+                                    currentHeader = line.substring(0, colonIndex).trim();
+                                    const value = line.substring(colonIndex + 1).trim();
+                                    headers[currentHeader] = value;
+                                }
+                            }
+                        } else {
+                            // Body
+                            body += line + '\n';
+                        }
+                    }
+                    
+                    parts.push({
+                        headers: { 'Content-Type': headers['Content-Type'] || 'text/plain' },
+                        body: body
+                    });
+                }
+                
+                return { headers, body, parts };
+            }
+            
+            // Display email headers in the UI
+            function displayEmailHeaders(headers) {
+                const from = headers.From || 'Unknown';
+                const to = headers.To || 'Unknown';
+                const subject = headers.Subject || 'No Subject';
+                const date = headers.Date || 'Unknown';
+                
+                fromValue.textContent = from;
+                toValue.textContent = to;
+                subjectValue.textContent = subject;
+                dateValue.textContent = date;
+                
+                // Highlight suspicious senders
+                if (from) {
+                    const fromLower = from.toLowerCase();
+                    if (fromLower.includes('urgent') || fromLower.includes('alert') || 
+                        fromLower.includes('security') || fromLower.includes('verify')) {
+                        fromValue.innerHTML = highlightSuspicious(from);
+                    }
+                }
+                
+                // Highlight suspicious subjects
+                if (subject) {
+                    const subjectLower = subject.toLowerCase();
+                    const suspiciousKeywords = ['urgent', 'verify', 'alert', 'suspended', 
+                                               'action required', 'security', 'important', 'immediate'];
+                    for (const keyword of suspiciousKeywords) {
+                        if (subjectLower.includes(keyword)) {
+                            subjectValue.innerHTML = highlightSuspicious(subject);
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            // Display email body in all formats
+            function displayEmailBody(headers, body, parts) {
+                let htmlContent = '';
+                let textContent = '';
+                let sourceContent = '';
+                
+                // Find HTML and text parts
+                for (const part of parts) {
+                    const contentType = part.headers['Content-Type'] || '';
+                    const contentTransfer = part.headers['Content-Transfer-Encoding'] || '';
+                    
+                    // Decode quoted-printable if needed
+                    let partBody = part.body;
+                    if (contentTransfer.toLowerCase().includes('quoted-printable')) {
+                        partBody = decodeQuotedPrintable(partBody);
+                    }
+                    
+                    if (contentType.toLowerCase().includes('text/html')) {
+                        htmlContent = partBody;
+                        sourceContent = escapeHTML(partBody);
+                    } else if (contentType.toLowerCase().includes('text/plain')) {
+                        textContent = partBody;
+                    }
+                }
+                
+                // If no HTML found but we have text, use that for HTML display too
+                if (!htmlContent && textContent) {
+                    htmlContent = textContent.replace(/\n/g, '<br>');
+                    sourceContent = escapeHTML(textContent);
+                }
+                
+                // Update the HTML tab (iframe)
+                if (htmlContent) {
+                    // Sanitize HTML for safe display
+                    const safeHtml = sanitizeHTML(htmlContent);
+                    emailIframe.srcdoc = safeHtml;
+                    renderInfo.textContent = "Email rendered in secure sandbox. External resources are blocked.";
+                    viewLinksBtn.style.display = 'inline-block';
+                    toggleSafetyBtn.style.display = 'inline-block';
+                    
+                    // Set up link viewer
+                    viewLinksBtn.onclick = function() {
+                        const links = extractLinks(htmlContent);
+                        if (links.length > 0) {
+                            alert(`Links found in email:\n\n${links.join('\n')}`);
+                        } else {
+                            alert('No links found in this email.');
+                        }
+                    };
+                    
+                    // Set up safety toggle
+                    let safeMode = true;
+                    toggleSafetyBtn.onclick = function() {
+                        safeMode = !safeMode;
+                        if (safeMode) {
+                            emailIframe.srcdoc = sanitizeHTML(htmlContent);
+                            toggleSafetyBtn.textContent = "Toggle Safety";
+                            renderInfo.textContent = "Email rendered in secure sandbox. External resources are blocked.";
+                        } else {
+                            emailIframe.srcdoc = htmlContent;
+                            toggleSafetyBtn.textContent = "Restore Safety";
+                            renderInfo.textContent = "WARNING: Email rendered with external resources enabled. Use with caution!";
+                        }
+                    };
+                } else {
+                    emailIframe.srcdoc = '<html><body style="padding: 20px; font-family: Arial;"><p>No HTML content available in this email.</p></body></html>';
+                    renderInfo.textContent = "No HTML content available in this email.";
+                }
+                
+                // Update the plain text tab
+                if (textContent) {
+                    // Highlight suspicious content in plain text
+                    let highlightedText = escapeHTML(textContent);
+                    const suspiciousPatterns = [
+                        { pattern: /(http|https):\/\/[^\s]+/g, class: 'suspicious-highlight' },
+                        { pattern: /(click here|verify now|login|password|account|suspend|urgent|immediate|action required)/gi, class: 'info-highlight' }
+                    ];
+                    
+                    suspiciousPatterns.forEach(patternInfo => {
+                        highlightedText = highlightedText.replace(patternInfo.pattern, 
+                            `<span class="${patternInfo.class}">$&</span>`);
+                    });
+                    
+                    textTab.innerHTML = `<pre style="font-family: inherit; white-space: pre-wrap;">${highlightedText}</pre>`;
+                } else {
+                    textTab.innerHTML = '<p>No plain text content available in this email.</p>';
+                }
+                
+                // Update the source tab
+                if (sourceContent) {
+                    sourceTab.innerHTML = `<pre style="font-family: monospace; overflow: auto;">${escapeHTML(sourceContent)}</pre>`;
+                } else {
+                    sourceTab.innerHTML = '<p>No HTML source code available.</p>';
+                }
+            }
+            
+            // Display attachments
+            function displayAttachments(headers, parts) {
+                const attachments = [];
+                
+                // Check for attachments in parts
+                for (const part of parts) {
+                    const contentType = part.headers['Content-Type'] || '';
+                    const contentDisposition = part.headers['Content-Disposition'] || '';
+                    
+                    if (contentDisposition.toLowerCase().includes('attachment') || 
+                        (contentType.toLowerCase().includes('application/') && 
+                         !contentType.toLowerCase().includes('text/'))) {
+                        
+                        const filenameMatch = contentDisposition.match(/filename="([^"]+)"/) || 
+                                              contentDisposition.match(/filename=([^\s;]+)/) ||
+                                              contentType.match(/name="([^"]+)"/) ||
+                                              contentType.match(/name=([^\s;]+)/);
+                        
+                        const filename = filenameMatch ? filenameMatch[1].replace(/"/g, '') : 'Unknown';
+                        const size = part.body.length;
+                        
+                        attachments.push({
+                            filename,
+                            size,
+                            type: contentType.split(';')[0],
+                            suspicious: isSuspiciousAttachment(filename, contentType)
+                        });
+                    }
+                }
+                
+                // Update UI
+                attachmentsList.innerHTML = '';
+                
+                if (attachments.length === 0) {
+                    const li = document.createElement('li');
+                    li.innerHTML = `
+                        <span class="attachment-name">No attachments found</span>
+                        <span class="attachment-size">-</span>
+                    `;
+                    attachmentsList.appendChild(li);
+                } else {
+                    attachments.forEach(attachment => {
+                        const li = document.createElement('li');
+                        
+                        if (attachment.suspicious) {
+                            li.style.borderLeftColor = 'var(--accent-danger)';
+                            li.innerHTML = `
+                                <span class="attachment-name">
+                                    ${escapeHTML(attachment.filename)} 
+                                    <span class="suspicious-flag">SUSPICIOUS</span>
+                                </span>
+                                <span class="attachment-size">${formatFileSize(attachment.size)}</span>
+                            `;
+                        } else {
+                            li.innerHTML = `
+                                <span class="attachment-name">${escapeHTML(attachment.filename)}</span>
+                                <span class="attachment-size">${formatFileSize(attachment.size)}</span>
+                            `;
+                        }
+                        
+                        attachmentsList.appendChild(li);
+                    });
+                }
+            }
+            
+            // Analyze email authentication (SPF, DKIM, DMARC)
+            function analyzeEmailAuthentication(headers) {
+                // SPF Analysis
+                const receivedSPF = headers['Received-SPF'] || '';
+                const authResults = headers['Authentication-Results'] || '';
+                
+                let spfResult = 'neutral';
+                let spfDetails = 'No SPF record found or not checked';
+                
+                if (receivedSPF.includes('pass') || authResults.includes('spf=pass')) {
+                    spfResult = 'pass';
+                    spfDetails = 'SPF check passed - sender IP is authorized';
+                } else if (receivedSPF.includes('fail') || authResults.includes('spf=fail')) {
+                    spfResult = 'fail';
+                    spfDetails = 'SPF check failed - sender IP is not authorized by domain';
+                } else if (receivedSPF.includes('softfail')) {
+                    spfResult = 'warning';
+                    spfDetails = 'SPF softfail - domain does not explicitly authorize this sender';
+                } else if (receivedSPF.includes('neutral')) {
+                    spfResult = 'neutral';
+                    spfDetails = 'SPF neutral - domain explicitly states no assertion';
+                }
+                
+                updateSecurityStatus('spfStatus', spfResult, spfDetails);
+                spfDescription.textContent = spfDetails;
+                
+                // DKIM Analysis
+                const dkimSignature = headers['DKIM-Signature'] || '';
+                let dkimResult = 'neutral';
+                let dkimDetails = 'No DKIM signature found';
+                
+                if (authResults.includes('dkim=pass')) {
+                    dkimResult = 'pass';
+                    dkimDetails = 'DKIM signature verified';
+                } else if (authResults.includes('dkim=fail')) {
+                    dkimResult = 'fail';
+                    dkimDetails = 'DKIM signature verification failed';
+                } else if (dkimSignature) {
+                    dkimResult = 'warning';
+                    dkimDetails = 'DKIM signature present but not verified';
+                }
+                
+                updateSecurityStatus('dkimStatus', dkimResult, dkimDetails);
+                dkimDescription.textContent = dkimDetails;
+                
+                // DMARC Analysis
+                let dmarcResult = 'neutral';
+                let dmarcDetails = 'DMARC record not found or not checked';
+                
+                if (authResults.includes('dmarc=pass')) {
+                    dmarcResult = 'pass';
+                    dmarcDetails = 'DMARC check passed - email alignment verified';
+                } else if (authResults.includes('dmarc=fail')) {
+                    dmarcResult = 'fail';
+                    dmarcDetails = 'DMARC check failed - email may be spoofed';
+                } else if (authResults.includes('dmarc=neutral')) {
+                    dmarcResult = 'neutral';
+                    dmarcDetails = 'DMARC neutral - no policy applied';
+                }
+                
+                updateSecurityStatus('dmarcStatus', dmarcResult, dmarcDetails);
+                dmarcDescription.textContent = dmarcDetails;
+                
+                // Show warning if any checks failed
+                if (spfResult === 'fail' || dkimResult === 'fail' || dmarcResult === 'fail') {
+                    warningMessage.style.display = 'block';
+                }
+            }
+            
+            // Update security status display
+            function updateSecurityStatus(elementId, status, tooltip) {
+                const element = document.getElementById(elementId);
+                element.textContent = status.charAt(0).toUpperCase() + status.slice(1);
+                element.title = tooltip;
+                
+                // Remove all status classes
+                element.classList.remove('status-pass', 'status-fail', 'status-warning', 'status-neutral');
+                
+                // Add appropriate class
+                if (status === 'pass') {
+                    element.classList.add('status-pass');
+                } else if (status === 'fail') {
+                    element.classList.add('status-fail');
+                } else if (status === 'warning') {
+                    element.classList.add('status-warning');
+                } else {
+                    element.classList.add('status-neutral');
+                }
+            }
+            
+            // Analyze email origin
+            function analyzeEmailOrigin(headers) {
+                // Extract sender domain
+                const from = headers.From || '';
+                let domain = 'Unknown';
+                const domainMatch = from.match(/@([\w.-]+)/);
+                if (domainMatch) {
+                    domain = domainMatch[1];
+                    
+                    // Check for suspicious domains
+                    const suspiciousDomains = ['phishing', 'fake', 'example-bank', 'security-alert', 'verify-account'];
+                    const isSuspicious = suspiciousDomains.some(d => domain.toLowerCase().includes(d));
+                    
+                    if (isSuspicious) {
+                        senderDomain.innerHTML = `${domain} <span class="suspicious-flag">SUSPICIOUS</span>`;
+                    } else {
+                        senderDomain.textContent = domain;
+                    }
+                } else {
+                    senderDomain.textContent = domain;
+                }
+                
+                // Return-Path
+                const returnPathValue = headers['Return-Path'] || 'Not specified';
+                if (returnPathValue.includes('@')) {
+                    const rpDomain = returnPathValue.match(/@([\w.-]+)/);
+                    if (rpDomain && rpDomain[1] !== domain) {
+                        returnPath.innerHTML = `${returnPathValue} <span class="suspicious-flag">MISMATCH</span>`;
+                    } else {
+                        returnPath.textContent = returnPathValue;
+                    }
+                } else {
+                    returnPath.textContent = returnPathValue;
+                }
+                
+                // Received headers
+                const received = headers.Received || '';
+                if (received) {
+                    // Extract first received from
+                    const fromMatch = received.match(/from\s+([^\s(]+)/);
+                    if (fromMatch) {
+                        receivedFrom.textContent = fromMatch[1];
+                    } else {
+                        receivedFrom.textContent = received.substring(0, 100) + (received.length > 100 ? '...' : '');
+                    }
+                } else {
+                    receivedFrom.textContent = 'Not available';
+                }
+                
+                // Extract IP addresses from headers
+                const ipAddressesList = [];
+                const ipRegex = /\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b/g;
+                
+                for (const [key, value] of Object.entries(headers)) {
+                    const matches = value.match(ipRegex);
+                    if (matches) {
+                        ipAddressesList.push(...matches);
+                    }
+                }
+                
+                // Remove duplicates
+                const uniqueIPs = [...new Set(ipAddressesList)];
+                ipAddresses.textContent = uniqueIPs.length > 0 ? uniqueIPs.join(', ') : 'No IP addresses found';
+                
+                // Mail client detection
+                const mailClientValue = headers['X-Mailer'] || headers['User-Agent'] || 'Unknown';
+                mailClient.textContent = mailClientValue;
+            }
+            
+            // Display raw headers
+            function displayRawHeaders(headers) {
+                let headersText = '';
+                for (const [key, value] of Object.entries(headers)) {
+                    headersText += `${key}: ${value}\n`;
+                }
+                
+                // Highlight authentication headers
+                let highlightedHeaders = escapeHTML(headersText);
+                const authHeaders = ['Received-SPF', 'Authentication-Results', 'DKIM-Signature', 'DMARC', 'ARC-Authentication-Results'];
+                
+                authHeaders.forEach(header => {
+                    const regex = new RegExp(`(${header}:.*)`, 'gi');
+                    highlightedHeaders = highlightedHeaders.replace(regex, 
+                        `<span class="info-highlight">$1</span>`);
+                });
+                
+                // Highlight suspicious headers
+                const suspiciousHeaders = ['Reply-To', 'Return-Path', 'Message-ID', 'X-Mailer'];
+                suspiciousHeaders.forEach(header => {
+                    const regex = new RegExp(`(${header}:.*)`, 'gi');
+                    highlightedHeaders = highlightedHeaders.replace(regex, 
+                        `<span style="background-color: rgba(239, 68, 68, 0.2); padding: 2px 4px; border-radius: 3px;">$1</span>`);
+                });
+                
+                rawHeaders.innerHTML = highlightedHeaders;
+            }
+            
+            // Helper function to escape HTML
+            function escapeHTML(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+            
+            // Helper function to highlight suspicious text
+            function highlightSuspicious(text) {
+                return `<span class="suspicious-highlight">${escapeHTML(text)}</span>`;
+            }
+            
+            // Decode quoted-printable encoding
+            function decodeQuotedPrintable(text) {
+                return text.replace(/=([0-9A-F]{2})/g, function(match, hex) {
+                    return String.fromCharCode(parseInt(hex, 16));
+                }).replace(/=\r?\n/g, '');
+            }
+            
+            // Sanitize HTML for safe display
+            function sanitizeHTML(html) {
+                // Create a template element to parse HTML
+                const template = document.createElement('template');
+                template.innerHTML = html;
+                
+                // Remove potentially dangerous elements and attributes
+                const dangerousTags = ['script', 'iframe', 'object', 'embed', 'link'];
+                dangerousTags.forEach(tag => {
+                    const elements = template.content.querySelectorAll(tag);
+                    elements.forEach(el => el.remove());
+                });
+                
+                // Remove dangerous attributes
+                const allElements = template.content.querySelectorAll('*');
+                allElements.forEach(el => {
+                    // Remove event handlers and dangerous attributes
+                    const attrs = el.getAttributeNames();
+                    attrs.forEach(attr => {
+                        if (attr.startsWith('on') || 
+                            attr.includes('javascript:') || 
+                            attr === 'src' || attr === 'href') {
+                            
+                            const value = el.getAttribute(attr);
+                            // Check for javascript: links
+                            if (value && value.toLowerCase().startsWith('javascript:')) {
+                                el.removeAttribute(attr);
+                            }
+                        }
+                    });
+                    
+                    // Convert http links to text
+                    if (el.tagName === 'A') {
+                        const href = el.getAttribute('href');
+                        if (href && (href.startsWith('http://') || href.startsWith('https://'))) {
+                            el.setAttribute('target', '_blank');
+                            el.setAttribute('rel', 'noopener noreferrer');
+                            el.style.color = '#d32f2f';
+                            el.style.fontWeight = 'bold';
+                        }
+                    }
+                });
+                
+                // Add warning for external links
+                const warningStyle = `
+                    <style>
+                        a[href^="http://"]::after, a[href^="https://"]::after {
+                            content: " ⚠";
+                            color: #f59e0b;
+                            font-weight: bold;
+                        }
+                        body { 
+                            font-family: Arial, sans-serif; 
+                            padding: 20px;
+                            max-width: 800px;
+                            margin: 0 auto;
+                        }
+                    </style>
+                `;
+                
+                return warningStyle + template.innerHTML;
+            }
+            
+            // Extract links from HTML
+            function extractLinks(html) {
+                const linkRegex = /href=["'](https?:\/\/[^"']+)["']/gi;
+                const links = [];
+                let match;
+                
+                while ((match = linkRegex.exec(html)) !== null) {
+                    links.push(match[1]);
+                }
+                
+                return [...new Set(links)]; // Remove duplicates
+            }
+            
+            // Check if attachment is suspicious
+            function isSuspiciousAttachment(filename, contentType) {
+                const suspiciousExtensions = ['.exe', '.scr', '.bat', '.cmd', '.ps1', '.js', '.vbs', '.jar', '.hta'];
+                const suspiciousTypes = ['application/x-msdownload', 'application/x-msdos-program', 
+                                        'application/x-javascript', 'application/hta'];
+                
+                const ext = filename.toLowerCase().substring(filename.lastIndexOf('.'));
+                const type = contentType.toLowerCase().split(';')[0];
+                
+                return suspiciousExtensions.includes(ext) || suspiciousTypes.includes(type);
+            }
+            
+            // Format file size
+            function formatFileSize(bytes) {
+                if (bytes === 0) return '0 Bytes';
+                const k = 1024;
+                const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            }
+            
+            // Reset application
+            function resetApplication() {
+                // Clear file input
+                fileInput.value = '';
+                
+                // Reset email viewer
+                fromValue.textContent = '-';
+                toValue.textContent = '-';
+                subjectValue.textContent = '-';
+                dateValue.textContent = '-';
+                
+                // Reset email render
+                emailIframe.srcdoc = '<html><body style="padding: 20px; font-family: Arial;"><p>Email content will appear here after analysis.</p></body></html>';
+                renderInfo.textContent = 'Email preview will appear here';
+                viewLinksBtn.style.display = 'none';
+                toggleSafetyBtn.style.display = 'none';
+                
+                // Reset tabs
+                textTab.innerHTML = 'Plain text content will appear here.';
+                sourceTab.innerHTML = 'HTML source code will appear here.';
+                
+                // Reset attachments
+                attachmentsList.innerHTML = `
+                    <li>
+                        <span class="attachment-name">No attachments found</span>
+                        <span class="attachment-size">-</span>
+                    </li>
+                `;
+                
+                // Reset security analysis
+                updateSecurityStatus('spfStatus', 'neutral', '');
+                spfDescription.textContent = 'Verifies sender\'s IP address is authorized by domain';
+                
+                updateSecurityStatus('dkimStatus', 'neutral', '');
+                dkimDescription.textContent = 'Validates email content integrity and sender domain';
+                
+                updateSecurityStatus('dmarcStatus', 'neutral', '');
+                dmarcDescription.textContent = 'Policy framework for SPF and DKIM alignment';
+                
+                // Reset origin analysis
+                senderDomain.textContent = '-';
+                returnPath.textContent = '-';
+                receivedFrom.textContent = '-';
+                ipAddresses.textContent = '-';
+                mailClient.textContent = '-';
+                
+                // Reset raw headers
+                rawHeaders.textContent = 'No email headers to display.';
+                
+                // Hide warning
+                warningMessage.style.display = 'none';
+                
+                // Reset tabs to HTML view
+                emailTabs.forEach(t => t.classList.remove('active'));
+                emailTabs[0].classList.add('active');
+                htmlTab.style.display = 'block';
+                textTab.style.display = 'none';
+                sourceTab.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
