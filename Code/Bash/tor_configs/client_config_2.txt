@@ -1,6 +1,5 @@
 # /etc/tor/torrc.d/custom.conf
 
-
 ## ---- Client basics ----
 SocksPort 9050
 RunAsDaemon 1
@@ -10,11 +9,11 @@ AvoidDiskWrites 1
 CookieAuthentication 1
 
 ## ---- Exclusions ----
-# Exclude relays in Germany and France
+# Exclude any relays geolocated in Germany, France, and the United States
 ExcludeNodes {de},{fr},{us}
 
-# Optionally exclude specific relays by fingerprint (recommended):
-# ExcludeNodes {de},{fr},$0123456789ABCDEF0123456789ABCDEF01234567,$89ABCDEF...
-
-# Force Tor to obey ExcludeNodes strictly (may reduce connectivity)
+# Enforce the exclusions strictly (may reduce connectivity / increase failures)
 StrictNodes 1
+
+# Optionally, exclude specific relays by fingerprint (recommended):
+# ExcludeNodes {de},{fr},{us},$0123456789ABCDEF0123456789ABCDEF01234567,$89ABCDEF...
