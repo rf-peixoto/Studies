@@ -1,0 +1,31 @@
+## ---- Relay identity ----
+Nickname YourRelayName
+ContactInfo your-email-or-contact-page
+
+## ---- Relay ports ----
+ORPort 9001
+# If you are behind NAT, you may need:
+# ORPort 9001 NoListen
+# ORPort [public_ipv4]:9001
+# ORPort [public_ipv6]:9001
+
+## ---- Relay mode ----
+SocksPort 0
+ExitRelay 0
+
+## ---- Bandwidth management ----
+# Pick values you can sustain continuously.
+RelayBandwidthRate 20 MBytes
+RelayBandwidthBurst 40 MBytes
+
+## ---- Accounting (optional; helps cap monthly transfer) ----
+# AccountingStart month 1 00:00
+# AccountingMax 2 TBytes
+
+## ---- Directory service ----
+# If you have a stable IP and want to be discoverable as a directory cache:
+DirPort 9030
+# Otherwise, you can omit DirPort entirely.
+
+## ---- Logging ----
+Log notice file /var/log/tor/notices.log
