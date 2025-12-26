@@ -1,0 +1,23 @@
+## ---- Identity ----
+Nickname YourExitName
+ContactInfo your-email-or-contact-page
+
+## ---- Ports ----
+ORPort 9001
+SocksPort 0
+
+## ---- Exit mode ----
+ExitRelay 1
+
+## ---- Exit policy (restrictive example) ----
+# Allow only common web ports; reject everything else.
+ExitPolicy accept *:80
+ExitPolicy accept *:443
+ExitPolicy reject *:*
+
+## ---- Bandwidth ----
+RelayBandwidthRate 20 MBytes
+RelayBandwidthBurst 40 MBytes
+
+## ---- Logging ----
+Log notice file /var/log/tor/notices.log
