@@ -1,0 +1,1230 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>CTI Investigation Organizer</title>
+  <meta name="description" content="Static, minimal CTI organizer covering ILC, Admiralty, Paul–Elder, Diamond Model, Kill Chain, and ACH." />
+  <style>
+    :root{
+      --bg:#0b0f14;
+      --panel:#0f1620;
+      --line:#1f2a3a;
+      --text:#e8eef6;
+      --muted:#a3adbb;
+      --faint:#667488;
+      --accent:#6dd3ff;
+      --warn:#ffcf66;
+      --danger:#ff6d6d;
+      --radius:14px;
+      --font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, "Noto Sans", sans-serif;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:var(--font);
+      background:var(--bg);
+      color:var(--text);
+      line-height:1.5;
+    }
+    a{color:var(--accent); text-decoration:none}
+    a:hover{text-decoration:underline}
+    .wrap{
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 18px 14px 60px;
+    }
+    header{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:12px;
+      margin-bottom: 14px;
+    }
+    .title h1{
+      margin:0;
+      font-size:16px;
+      letter-spacing:.2px;
+    }
+    .title p{
+      margin:6px 0 0 0;
+      color:var(--muted);
+      font-size:13px;
+      max-width: 80ch;
+    }
+    .topActions{display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end}
+    button{
+      appearance:none;
+      border:1px solid var(--line);
+      background:transparent;
+      color:var(--text);
+      padding:8px 10px;
+      border-radius: 12px;
+      font-size:12px;
+      cursor:pointer;
+    }
+    button:hover{background: rgba(255,255,255,.04)}
+    button.primary{border-color: rgba(109,211,255,.35)}
+    button.danger{border-color: rgba(255,109,109,.35); color: #ffd6d6}
+    .grid2{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:10px;
+    }
+    @media (max-width: 820px){
+      .grid2{grid-template-columns:1fr}
+      header{flex-direction:column}
+      .topActions{justify-content:flex-start}
+    }
+    .card{
+      border:1px solid var(--line);
+      background: var(--panel);
+      border-radius: var(--radius);
+      padding:12px;
+    }
+    .card h2{
+      margin:0 0 10px 0;
+      font-size:13px;
+      color: var(--muted);
+      letter-spacing:.2px;
+      text-transform: uppercase;
+      font-weight:650;
+    }
+    .row{display:flex; gap:10px; flex-wrap:wrap}
+    .field{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      margin: 10px 0;
+    }
+    label{
+      font-size:12px;
+      color: var(--muted);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+    }
+    .hint{font-size:11px; color: var(--faint)}
+    input[type="text"], input[type="date"], textarea, select{
+      width:100%;
+      padding:9px 10px;
+      border-radius:12px;
+      border:1px solid var(--line);
+      background: transparent;
+      color: var(--text);
+      outline:none;
+      font-size: 13px;
+    }
+    textarea{min-height:86px; resize:vertical}
+    details{
+      border:1px solid var(--line);
+      background: var(--panel);
+      border-radius: var(--radius);
+      overflow:hidden;
+      margin-top: 10px;
+    }
+    summary{
+      cursor:pointer;
+      padding: 12px;
+      list-style:none;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      user-select:none;
+    }
+    summary::-webkit-details-marker{display:none}
+    .sum{
+      min-width:0;
+    }
+    .sum .t{
+      font-weight:700;
+      font-size: 13.5px;
+    }
+    .sum .d{
+      margin-top:2px;
+      font-size:12px;
+      color: var(--muted);
+      white-space: nowrap;
+      overflow:hidden;
+      text-overflow: ellipsis;
+    }
+    .pct{
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--muted);
+      padding: 2px 8px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      flex: 0 0 auto;
+    }
+    .content{
+      padding: 0 12px 12px 12px;
+      border-top: 1px solid var(--line);
+    }
+    .check{
+      display:flex;
+      gap:10px;
+      align-items:flex-start;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(255,255,255,.05);
+    }
+    .check:last-child{border-bottom:none}
+    input[type="checkbox"]{
+      width:18px;
+      height:18px;
+      margin-top:2px;
+      accent-color: var(--accent);
+    }
+    .ct{
+      flex:1 1 auto;
+      min-width:0;
+    }
+    .ct .it{
+      font-size:13px;
+      font-weight:650;
+    }
+    .ct .id{
+      margin-top:2px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .tag{
+      display:inline-flex;
+      gap:6px;
+      align-items:center;
+      margin-left:8px;
+      font-size:11px;
+      color: var(--warn);
+      border:1px solid rgba(255,207,102,.35);
+      border-radius:999px;
+      padding:2px 8px;
+    }
+    .mini{
+      font-size:12px;
+      color: var(--muted);
+    }
+    .list{
+      margin:10px 0 0 0;
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+    }
+    .item{
+      border:1px solid var(--line);
+      border-radius: 12px;
+      padding:10px;
+      background: rgba(255,255,255,.02);
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      align-items:flex-start;
+    }
+    .item .left{
+      min-width:0;
+    }
+    .item .left .a{
+      font-weight:650;
+      font-size:13px;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .item .left .b{
+      font-size:12px;
+      color: var(--muted);
+      margin-top:2px;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .item .btns{display:flex; gap:8px; flex:0 0 auto}
+    .mutedBox{
+      border:1px dashed rgba(255,255,255,.18);
+      border-radius: 12px;
+      padding: 10px;
+      color: var(--muted);
+      font-size: 12px;
+      margin: 10px 0;
+    }
+    .dangerBox{
+      border:1px dashed rgba(255,109,109,.35);
+      border-radius: 12px;
+      padding: 10px;
+      color: #ffd6d6;
+      font-size: 12px;
+      margin: 10px 0;
+    }
+    .kpis{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-top: 10px;
+    }
+    .kpi{
+      border:1px solid var(--line);
+      border-radius: 12px;
+      padding: 10px;
+      background: rgba(255,255,255,.02);
+      flex: 1 1 180px;
+    }
+    .kpi .n{font-family:var(--mono); font-size: 13px}
+    .kpi .t{font-size: 12px; color: var(--muted); margin-top:2px}
+    .footerNote{
+      margin-top: 14px;
+      color: var(--faint);
+      font-size: 11px;
+    }
+    .hidden{display:none !important}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="title">
+        <h1>CTI Investigation Organizer</h1>
+        <p>
+          A static, minimal worksheet to reduce bias: Intelligence Life Cycle, Admiralty, Paul–Elder prompts, Diamond Model,
+          Cyber Kill Chain, and ACH. This page does not generate conclusions; it forces explicit rationale and uncertainty.
+        </p>
+      </div>
+      <div class="topActions">
+        <button class="primary" id="btnSave">Save</button>
+        <button id="btnExport">Export JSON</button>
+        <button id="btnImport">Import JSON</button>
+        <button id="btnPrint">Print</button>
+        <button class="danger" id="btnReset">Reset</button>
+      </div>
+    </header>
+
+    <div class="grid2">
+      <div class="card">
+        <h2>Case</h2>
+        <div class="field">
+          <label for="caseTitle">Case title</label>
+          <input id="caseTitle" type="text" placeholder="Example: Suspected credential theft impacting finance users" />
+        </div>
+        <div class="grid2">
+          <div class="field">
+            <label for="caseId">Case ID</label>
+            <input id="caseId" type="text" placeholder="INC-..." />
+          </div>
+          <div class="field">
+            <label for="caseDate">Start date</label>
+            <input id="caseDate" type="date" />
+          </div>
+        </div>
+        <div class="field">
+          <label for="caseContext">Context</label>
+          <textarea id="caseContext" placeholder="Trigger, environment, and what is at stake (2–5 sentences)."></textarea>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Status</h2>
+        <div class="mini">Completion is not correctness.</div>
+        <div class="kpis">
+          <div class="kpi"><div class="n" id="overallPct">0%</div><div class="t">Overall completion</div></div>
+          <div class="kpi"><div class="n" id="kpiEvidence">0</div><div class="t">Evidence items logged</div></div>
+          <div class="kpi"><div class="n" id="kpiHyp">0</div><div class="t">Hypotheses defined</div></div>
+        </div>
+        <div class="mutedBox">
+          Minimal discipline: a falsifiable question, at least two competing hypotheses, and explicit “what would change my mind”.
+        </div>
+        <div class="footerNote">All data stays in your browser (localStorage) unless you export.</div>
+      </div>
+    </div>
+
+    <!-- START -->
+    <details open data-section="start">
+      <summary>
+        <div class="sum">
+          <div class="t">Start: Case framing</div>
+          <div class="d">Define the question, consumer, constraints, and at least one alternative explanation.</div>
+        </div>
+        <div class="pct" data-badge="start">0%</div>
+      </summary>
+      <div class="content">
+        <div class="field">
+          <label for="qMain">Primary intelligence question <span class="tag">Required</span></label>
+          <input id="qMain" type="text" placeholder="A question that could be wrong (falsifiable)." />
+          <div class="hint">Example: “Is this activity consistent with credential theft via phishing + OAuth consent abuse, targeting finance users in Dec 2025?”</div>
+        </div>
+
+        <div class="grid2">
+          <div class="field">
+            <label for="consumer">Primary consumer <span class="tag">Required</span></label>
+            <input id="consumer" type="text" placeholder="SOC Lead / IC / CISO / Fraud team..." />
+          </div>
+          <div class="field">
+            <label for="deadline">Decision deadline</label>
+            <input id="deadline" type="date" />
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="decision">Decision to support</label>
+          <input id="decision" type="text" placeholder="Containment scope, notification, takedown, prioritisation..." />
+        </div>
+
+        <div class="check">
+          <input type="checkbox" id="start_c1" />
+          <div class="ct">
+            <div class="it">I defined what “good enough” looks like (timeliness vs accuracy).</div>
+            <div class="id">Prevents over-collection and false precision.</div>
+          </div>
+        </div>
+        <div class="check">
+          <input type="checkbox" id="start_c2" />
+          <div class="ct">
+            <div class="it">I wrote at least one explicit assumption.</div>
+            <div class="id">Hidden assumptions are a common source of bias.</div>
+          </div>
+        </div>
+        <div class="check">
+          <input type="checkbox" id="start_c3" />
+          <div class="ct">
+            <div class="it">I named at least one plausible alternative explanation.</div>
+            <div class="id">Reduces premature closure and narrative fixation.</div>
+          </div>
+        </div>
+
+        <div class="grid2">
+          <div class="field">
+            <label for="assumptions0">Assumptions</label>
+            <textarea id="assumptions0" placeholder="List assumptions and how to test them."></textarea>
+          </div>
+          <div class="field">
+            <label for="alts0">Alternative explanations</label>
+            <textarea id="alts0" placeholder="Misconfiguration, benign admin activity, vendor outage, third-party access, commodity crimeware..."></textarea>
+          </div>
+        </div>
+      </div>
+    </details>
+
+    <!-- ILC -->
+    <details data-section="ilc">
+      <summary>
+        <div class="sum">
+          <div class="t">Intelligence Life Cycle</div>
+          <div class="d">Treat it as a loop: analysis drives collection; feedback refines requirements.</div>
+        </div>
+        <div class="pct" data-badge="ilc">0%</div>
+      </summary>
+      <div class="content">
+        <div class="check">
+          <input type="checkbox" id="ilc_p1" />
+          <div class="ct">
+            <div class="it">Planning: I defined scope boundaries (in/out).</div>
+            <div class="id">Avoids “thoroughness” that is actually scope creep.</div>
+          </div>
+        </div>
+        <div class="check">
+          <input type="checkbox" id="ilc_p2" />
+          <div class="ct">
+            <div class="it">Planning: I defined stop rules (what ends the inquiry).</div>
+            <div class="id">Prevents endless searching for confirmation.</div>
+          </div>
+        </div>
+        <div class="check">
+          <input type="checkbox" id="ilc_c1" />
+          <div class="ct">
+            <div class="it">Collection: Each collection activity maps to a requirement.</div>
+            <div class="id">Prevents tool-driven, data-hoarding behaviour.</div>
+          </div>
+        </div>
+        <div class="check">
+          <input type="checkbox" id="ilc_c2" />
+          <div class="ct">
+            <div class="it">Collection: I documented visibility gaps.</div>
+            <div class="id">Prevents false certainty from incomplete telemetry.</div>
+          </div>
+        </div>
+        <div class="check">
+          <input type="checkbox" id="ilc_pe1" />
+          <div class="ct">
+            <div class="it">Processing: I preserved provenance and avoided circular sourcing.</div>
+            <div class="id">“Two feeds” does not mean “two independent sources”.</div>
+          </div>
+        </div>
+        <div class="check">
+          <input type="checkbox" id="ilc_ap1" />
+          <div class="ct">
+            <div class="it">Analysis: I separated observations (facts) from inferences (judgments).</div>
+            <div class="id">Prevents narrative drift.</div>
+          </div>
+        </div>
+        <div class="check">
+          <input type="checkbox" id="ilc_ap2" />
+          <div class="ct">
+            <div class="it">Dissemination/feedback: I tailored to the consumer and recorded feedback.</div>
+            <div class="id">Without feedback, the cycle cannot improve.</div>
+          </div>
+        </div>
+
+        <div class="grid2">
+          <div class="field">
+            <label for="ilc_scope">Scope boundaries</label>
+            <textarea id="ilc_scope" placeholder="Time window, systems, tenants, users, exclusions."></textarea>
+          </div>
+          <div class="field">
+            <label for="ilc_stop">Stop rules</label>
+            <textarea id="ilc_stop" placeholder="What evidence ends escalation or blocks attribution claims?"></textarea>
+          </div>
+        </div>
+        <div class="grid2">
+          <div class="field">
+            <label for="ilc_requirements">Requirements → collection mapping</label>
+            <textarea id="ilc_requirements" placeholder="R1 → telemetry A/B; R2 → system logs; R3 → partner intel..."></textarea>
+          </div>
+          <div class="field">
+            <label for="ilc_gaps">Visibility gaps</label>
+            <textarea id="ilc_gaps" placeholder="What you cannot see reliably (or cannot see in time)."></textarea>
+          </div>
+        </div>
+        <div class="grid2">
+          <div class="field">
+            <label for="ilc_obs">Key observations (facts only)</label>
+            <textarea id="ilc_obs" placeholder="Fact statements; no “likely”."></textarea>
+          </div>
+          <div class="field">
+            <label for="ilc_inf">Key inferences (judgments)</label>
+            <textarea id="ilc_inf" placeholder="Use controlled language and confidence."></textarea>
+          </div>
+        </div>
+        <div class="field">
+          <label for="ilc_feedback">Feedback / iteration notes</label>
+          <textarea id="ilc_feedback" placeholder="What the consumer asked next, what changed, what to improve."></textarea>
+        </div>
+      </div>
+    </details>
+
+    <!-- ADMIRALTY -->
+    <details data-section="admiralty">
+      <summary>
+        <div class="sum">
+          <div class="t">NATO Admiralty System</div>
+          <div class="d">Rate each evidence item: source reliability (A–F) and information credibility (1–6), plus downgrade conditions.</div>
+        </div>
+        <div class="pct" data-badge="admiralty">0%</div>
+      </summary>
+      <div class="content">
+        <div class="mutedBox">
+          Recommended: record only evidence that is decision-relevant. Noise increases confidence illusions.
+        </div>
+
+        <div class="grid2">
+          <div class="field">
+            <label for="adm_item">Evidence item <span class="tag">Required</span></label>
+            <input id="adm_item" type="text" placeholder="What is it (one line)?" />
+          </div>
+          <div class="field">
+            <label for="adm_rating">Rating (A–F + 1–6) <span class="tag">Required</span></label>
+            <input id="adm_rating" type="text" placeholder="Example: B2" />
+          </div>
+        </div>
+
+        <div class="grid2">
+          <div class="field">
+            <label for="adm_prov">Provenance</label>
+            <input id="adm_prov" type="text" placeholder="Where/when it was observed" />
+          </div>
+          <div class="field">
+            <label for="adm_downgrade">Downgrade conditions <span class="tag">Required</span></label>
+            <input id="adm_downgrade" type="text" placeholder="What would make this less trustworthy?" />
+          </div>
+        </div>
+
+        <div class="grid2">
+          <div class="field">
+            <label for="adm_just">Justification</label>
+            <textarea id="adm_just" placeholder="Why this source and this content deserve that rating."></textarea>
+          </div>
+          <div class="field">
+            <label for="adm_failure">Failure modes</label>
+            <textarea id="adm_failure" placeholder="Deception, compromise, echoing/circular reporting, shared infra confounders."></textarea>
+          </div>
+        </div>
+
+        <div class="row">
+          <button class="primary" id="adm_add">Add evidence</button>
+          <button id="adm_clear">Clear</button>
+        </div>
+
+        <div class="list" id="adm_list"></div>
+
+        <div class="check">
+          <input type="checkbox" id="adm_c1" />
+          <div class="ct">
+            <div class="it">I logged at least one evidence item that weakens my preferred narrative.</div>
+            <div class="id">Disconfirming evidence is mandatory for bias control.</div>
+          </div>
+        </div>
+        <div class="check">
+          <input type="checkbox" id="adm_c2" />
+          <div class="ct">
+            <div class="it">I checked independence of corroboration (no circular sourcing).</div>
+            <div class="id">Multiple sources can still be one origin.</div>
+          </div>
+        </div>
+      </div>
+    </details>
+
+    <!-- PAUL–ELDER -->
+    <details data-section="paul">
+      <summary>
+        <div class="sum">
+          <div class="t">Paul–Elder Critical Thinking</div>
+          <div class="d">Use these as “interrupts” before conclusions: assumptions, POV, implications, and disconfirming checks.</div>
+        </div>
+        <div class="pct" data-badge="paul">0%</div>
+      </summary>
+      <div class="content">
+        <div class="grid2">
+          <div class="field">
+            <label for="pe_purpose">Purpose</label>
+            <textarea id="pe_purpose" placeholder="What are you trying to achieve for the consumer?"></textarea>
+          </div>
+          <div class="field">
+            <label for="pe_pov">Points of view</label>
+            <textarea id="pe_pov" placeholder="Who sees this differently (IR, sysadmin, fraud, vendor, business)?"></textarea>
+          </div>
+        </div>
+
+        <div class="grid2">
+          <div class="field">
+            <label for="pe_assumptions">Assumptions (testable)</label>
+            <textarea id="pe_assumptions" placeholder="List assumptions and how to test them."></textarea>
+          </div>
+          <div class="field">
+            <label for="pe_implications">Implications if wrong</label>
+            <textarea id="pe_implications" placeholder="Operational and strategic consequences of error."></textarea>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="pe_disconfirm">Disconfirming checks <span class="tag">Required</span></label>
+          <textarea id="pe_disconfirm" placeholder="At least 3 conditions that would change your conclusion."></textarea>
+        </div>
+
+        <div class="check">
+          <input type="checkbox" id="pe_s1" />
+          <div class="ct">
+            <div class="it">Clarity/precision: I avoided ambiguous terms and defined key labels.</div>
+            <div class="id">If a non-expert reads it, would they interpret it correctly?</div>
+          </div>
+        </div>
+        <div class="check">
+          <input type="checkbox" id="pe_s2" />
+          <div class="ct">
+            <div class="it">Logic: I avoided leaps from plausibility to certainty.</div>
+            <div class="id">If you inferred it, label it as inference and justify it.</div>
+          </div>
+        </div>
+        <div class="check">
+          <input type="checkbox" id="pe_s3" />
+          <div class="ct">
+            <div class="it">Fairness: I documented disconfirming information rather than ignoring it.</div>
+            <div class="id">Exclusions require justification.</div>
+          </div>
+        </div>
+      </div>
+    </details>
+
+    <!-- DIAMOND -->
+    <details data-section="diamond">
+      <summary>
+        <div class="sum">
+          <div class="t">Threat Intelligence Diamond Model</div>
+          <div class="d">Explicitly model Adversary, Capability, Infrastructure, Victim, and identify the weakest link.</div>
+        </div>
+        <div class="pct" data-badge="diamond">0%</div>
+      </summary>
+      <div class="content">
+        <div class="grid2">
+          <div class="field">
+            <label for="dia_adv">Adversary (who?)</label>
+            <textarea id="dia_adv" placeholder="Name or description. If unknown, state unknown explicitly."></textarea>
+          </div>
+          <div class="field">
+            <label for="dia_cap">Capability (how?)</label>
+            <textarea id="dia_cap" placeholder="Tools/techniques and behaviours."></textarea>
+          </div>
+        </div>
+        <div class="grid2">
+          <div class="field">
+            <label for="dia_inf">Infrastructure (where?)</label>
+            <textarea id="dia_inf" placeholder="Domains/IPs/hosting; include timing and uniqueness notes."></textarea>
+          </div>
+          <div class="field">
+            <label for="dia_vic">Victim (who is targeted?)</label>
+            <textarea id="dia_vic" placeholder="Sector, roles, orgs, geography, selection logic."></textarea>
+          </div>
+        </div>
+
+        <div class="check">
+          <input type="checkbox" id="dia_c1" />
+          <div class="ct">
+            <div class="it">I identified the weakest/most uncertain entity and focused collection there.</div>
+            <div class="id">Do not over-weight infrastructure by default.</div>
+          </div>
+        </div>
+        <div class="check">
+          <input type="checkbox" id="dia_c2" />
+          <div class="ct">
+            <div class="it">I stated what, if wrong, would collapse the assessment.</div>
+            <div class="id">Prevents fragile, attribution-heavy narratives.</div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="dia_weak">Weak link / collapse point</label>
+          <textarea id="dia_weak" placeholder="Which entity is most fragile? What would invalidate the model?"></textarea>
+        </div>
+      </div>
+    </details>
+
+    <!-- KILL CHAIN -->
+    <details data-section="killchain">
+      <summary>
+        <div class="sum">
+          <div class="t">Cyber Kill Chain</div>
+          <div class="d">Mark each stage as observed/inferred/unknown; identify disruption opportunities and missing-but-expected stages.</div>
+        </div>
+        <div class="pct" data-badge="killchain">0%</div>
+      </summary>
+      <div class="content">
+        <div class="mutedBox">
+          Do not “complete the story”. If a stage is unknown, write unknown and state the best next evidence to seek.
+        </div>
+
+        <div class="grid2">
+          <div class="field"><label for="kc_recon">Reconnaissance</label><input id="kc_recon" type="text" placeholder="Observed / Inferred / Unknown + note" /></div>
+          <div class="field"><label for="kc_weapon">Weaponisation</label><input id="kc_weapon" type="text" placeholder="Observed / Inferred / Unknown + note" /></div>
+        </div>
+        <div class="grid2">
+          <div class="field"><label for="kc_delivery">Delivery</label><input id="kc_delivery" type="text" placeholder="Observed / Inferred / Unknown + note" /></div>
+          <div class="field"><label for="kc_exploit">Exploitation</label><input id="kc_exploit" type="text" placeholder="Observed / Inferred / Unknown + note" /></div>
+        </div>
+        <div class="grid2">
+          <div class="field"><label for="kc_install">Installation</label><input id="kc_install" type="text" placeholder="Observed / Inferred / Unknown + note" /></div>
+          <div class="field"><label for="kc_c2">Command & Control</label><input id="kc_c2" type="text" placeholder="Observed / Inferred / Unknown + note" /></div>
+        </div>
+        <div class="field">
+          <label for="kc_actions">Actions on Objectives</label>
+          <input id="kc_actions" type="text" placeholder="Observed / Inferred / Unknown + note" />
+        </div>
+
+        <div class="check">
+          <input type="checkbox" id="kc_c1" />
+          <div class="ct">
+            <div class="it">I clearly separated observed stages from inferred stages in the narrative.</div>
+            <div class="id">Prevents readers from treating inference as fact.</div>
+          </div>
+        </div>
+        <div class="check">
+          <input type="checkbox" id="kc_c2" />
+          <div class="ct">
+            <div class="it">I identified at least two disruption points (controls/detections).</div>
+            <div class="id">Kill Chain is for intervention, not storytelling.</div>
+          </div>
+        </div>
+
+        <div class="grid2">
+          <div class="field">
+            <label for="kc_disrupt">Disruption opportunities</label>
+            <textarea id="kc_disrupt" placeholder="What can be blocked/detected, and where?"></textarea>
+          </div>
+          <div class="field">
+            <label for="kc_missing">Missing-but-expected stages</label>
+            <textarea id="kc_missing" placeholder="What is missing, and what could explain it (e.g., valid credentials, LoL)?"></textarea>
+          </div>
+        </div>
+      </div>
+    </details>
+
+    <!-- ACH -->
+    <details data-section="ach">
+      <summary>
+        <div class="sum">
+          <div class="t">ACH: Analysis of Competing Hypotheses</div>
+          <div class="d">Define hypotheses and prioritise disconfirming evidence; record flip conditions and confidence.</div>
+        </div>
+        <div class="pct" data-badge="ach">0%</div>
+      </summary>
+      <div class="content">
+        <div class="dangerBox">
+          Do not “argue” for your favourite hypothesis. If you cannot list disconfirming checks, you are performing advocacy, not analysis.
+        </div>
+
+        <div class="field">
+          <label for="ach_h0">H0 (working hypothesis) <span class="tag">Required</span></label>
+          <textarea id="ach_h0" placeholder="Primary working explanation (may change)."></textarea>
+        </div>
+
+        <div class="grid2">
+          <div class="field">
+            <label for="ach_h1">H1 (competing) <span class="tag">Required</span></label>
+            <textarea id="ach_h1" placeholder="Alternative explanation."></textarea>
+          </div>
+          <div class="field">
+            <label for="ach_h2">H2 (competing) <span class="tag">Required</span></label>
+            <textarea id="ach_h2" placeholder="Alternative explanation."></textarea>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="ach_h3">H3 (optional)</label>
+          <textarea id="ach_h3" placeholder="Additional alternative if needed."></textarea>
+        </div>
+
+        <div class="check">
+          <input type="checkbox" id="ach_c1" />
+          <div class="ct">
+            <div class="it">I listed at least three disconfirming evidence items against H0.</div>
+            <div class="id">Inconsistency matters more than consistency.</div>
+          </div>
+        </div>
+        <div class="check">
+          <input type="checkbox" id="ach_c2" />
+          <div class="ct">
+            <div class="it">I identified assumptions that I treated as evidence.</div>
+            <div class="id">This is a frequent CTI failure mode.</div>
+          </div>
+        </div>
+        <div class="check">
+          <input type="checkbox" id="ach_c3" />
+          <div class="ct">
+            <div class="it">I wrote explicit flip conditions (what changes my mind).</div>
+            <div class="id">Without flip conditions, confidence claims are weak.</div>
+          </div>
+        </div>
+
+        <div class="grid2">
+          <div class="field">
+            <label for="ach_disconfirm">Disconfirming evidence list <span class="tag">Required</span></label>
+            <textarea id="ach_disconfirm" placeholder="List 3+ conditions/evidence that contradict H0 if true."></textarea>
+          </div>
+          <div class="field">
+            <label for="ach_assum_as_evid">Assumptions masquerading as evidence</label>
+            <textarea id="ach_assum_as_evid" placeholder="What did you assume rather than observe?"></textarea>
+          </div>
+        </div>
+
+        <div class="grid2">
+          <div class="field">
+            <label for="ach_flip">Flip conditions <span class="tag">Required</span></label>
+            <textarea id="ach_flip" placeholder="What evidence would move weight to H1/H2/H3?"></textarea>
+          </div>
+          <div class="field">
+            <label for="ach_sens">Sensitivity (most impactful assumption)</label>
+            <textarea id="ach_sens" placeholder="Which single assumption dominates your conclusion?"></textarea>
+          </div>
+        </div>
+
+        <div class="grid2">
+          <div class="field">
+            <label for="ach_pref">Current preferred hypothesis</label>
+            <select id="ach_pref">
+              <option value="">Select…</option>
+              <option>H0</option><option>H1</option><option>H2</option><option>H3</option>
+              <option>None (insufficient evidence)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="ach_conf">Confidence</label>
+            <select id="ach_conf">
+              <option value="">Select…</option>
+              <option>Low</option><option>Medium</option><option>High</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="ach_rationale">Rationale (why preferred; what remains uncertain) <span class="tag">Required</span></label>
+          <textarea id="ach_rationale" placeholder="Use controlled language: consistent/inconsistent/insufficient to assess; include downgrade conditions."></textarea>
+        </div>
+      </div>
+    </details>
+
+    <!-- WRAP-UP -->
+    <details data-section="wrap">
+      <summary>
+        <div class="sum">
+          <div class="t">Wrap-up: Dissemination</div>
+          <div class="d">Produce a short, usable assessment: facts vs judgments, confidence, gaps, and actions.</div>
+        </div>
+        <div class="pct" data-badge="wrap">0%</div>
+      </summary>
+      <div class="content">
+        <div class="check">
+          <input type="checkbox" id="wrap_c1" />
+          <div class="ct">
+            <div class="it">I wrote an executive summary for non-experts (5–8 lines).</div>
+            <div class="id">If you cannot summarise, you may not understand.</div>
+          </div>
+        </div>
+        <div class="check">
+          <input type="checkbox" id="wrap_c2" />
+          <div class="ct">
+            <div class="it">I included gaps and caveats explicitly.</div>
+            <div class="id">Caveats are intellectual honesty, not weakness.</div>
+          </div>
+        </div>
+        <div class="check">
+          <input type="checkbox" id="wrap_c3" />
+          <div class="ct">
+            <div class="it">I included recommended actions and rationale.</div>
+            <div class="id">Intelligence must support decisions.</div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="wrap_exec">Executive summary</label>
+          <textarea id="wrap_exec" placeholder="Write for a reader with no CTI framework knowledge."></textarea>
+        </div>
+
+        <div class="grid2">
+          <div class="field">
+            <label for="wrap_findings">Key findings (facts + disciplined judgments)</label>
+            <textarea id="wrap_findings" placeholder="Separate facts and judgments; include confidence."></textarea>
+          </div>
+          <div class="field">
+            <label for="wrap_actions">Recommended actions</label>
+            <textarea id="wrap_actions" placeholder="Immediate and near-term actions, tied to risk."></textarea>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="wrap_gaps">Gaps / next collection steps</label>
+          <textarea id="wrap_gaps" placeholder="What you do not know, and the next best evidence to collect."></textarea>
+        </div>
+
+        <div class="row">
+          <button id="btnCopyReport">Copy report</button>
+        </div>
+        <div class="field">
+          <label for="reportPreview">Report (auto-generated)</label>
+          <textarea id="reportPreview" class="mono" readonly style="min-height:220px; font-family:var(--mono)"></textarea>
+        </div>
+      </div>
+    </details>
+
+    <div class="footerNote">
+      Usage note: this is a worksheet, not an authority. If your process becomes box-ticking, expand the rationale fields and record disconfirming evidence.
+    </div>
+
+    <input type="file" id="fileImport" accept="application/json" class="hidden" />
+
+  </div>
+
+  <script>
+    (function(){
+      const STORAGE_KEY = "cti_organizer_min_v1";
+      const $ = (id) => document.getElementById(id);
+
+      // Progress definition (minimal, still meaningful)
+      const sections = {
+        start: { required: ["qMain","consumer"], checks: ["start_c1","start_c2","start_c3"] },
+        ilc: { required: [], checks: ["ilc_p1","ilc_p2","ilc_c1","ilc_c2","ilc_pe1","ilc_ap1","ilc_ap2"] },
+        admiralty: { required: [], checks: ["adm_c1","adm_c2"] }, // evidence count added separately
+        paul: { required: ["pe_disconfirm"], checks: ["pe_s1","pe_s2","pe_s3"] },
+        diamond: { required: [], checks: ["dia_c1","dia_c2"] },
+        killchain: { required: [], checks: ["kc_c1","kc_c2"] },
+        ach: { required: ["ach_h0","ach_h1","ach_h2","ach_disconfirm","ach_flip","ach_rationale"], checks: ["ach_c1","ach_c2","ach_c3"] },
+        wrap: { required: [], checks: ["wrap_c1","wrap_c2","wrap_c3"] },
+      };
+
+      let evidence = [];
+
+      function pct(sectionId){
+        const cfg = sections[sectionId];
+        let total = 0, done = 0;
+
+        cfg.checks.forEach(id=>{
+          const el = $(id);
+          if(!el) return;
+          total++; if(el.checked) done++;
+        });
+        cfg.required.forEach(id=>{
+          const el = $(id);
+          if(!el) return;
+          total++; if((el.value||"").trim()) done++;
+        });
+
+        // Admiralty evidence weight: 0 items = 0, 1 item = half, 2+ = full (adds 4 points)
+        if(sectionId === "admiralty"){
+          total += 4;
+          if(evidence.length >= 2) done += 4;
+          else if(evidence.length === 1) done += 2;
+        }
+
+        return total ? Math.round(done/total*100) : 0;
+      }
+
+      function updateBadges(){
+        document.querySelectorAll("[data-section]").forEach(d=>{
+          const sid = d.getAttribute("data-section");
+          const b = d.querySelector(`[data-badge="${sid}"]`);
+          if(b) b.textContent = pct(sid) + "%";
+        });
+
+        const values = Object.keys(sections).map(pct);
+        const overall = Math.round(values.reduce((a,b)=>a+b,0)/values.length);
+        $("overallPct").textContent = overall + "%";
+      }
+
+      function updateKPIs(){
+        $("kpiEvidence").textContent = String(evidence.length);
+        let hyp = 0;
+        ["ach_h0","ach_h1","ach_h2","ach_h3"].forEach(id=>{
+          if((($(id).value||"")).trim()) hyp++;
+        });
+        $("kpiHyp").textContent = String(hyp);
+      }
+
+      function buildReport(){
+        const title = ($("caseTitle").value||"CTI Assessment").trim();
+        const id = ($("caseId").value||"").trim();
+        const date = ($("caseDate").value||"").trim();
+
+        const lines = [];
+        lines.push(`# ${title}${id ? " ("+id+")" : ""}${date ? " — " + date : ""}\n`);
+        lines.push(`## Intelligence question\n${($("qMain").value||"—").trim()}\n`);
+        lines.push(`## Consumer / decision\nConsumer: ${($("consumer").value||"—").trim()}\nDecision: ${($("decision").value||"—").trim()}\nDeadline: ${($("deadline").value||"—").trim()}\n`);
+        lines.push(`## Context\n${($("caseContext").value||"—").trim()}\n`);
+
+        lines.push(`## Key evidence (Admiralty)\n`);
+        if(evidence.length){
+          evidence.forEach((e,i)=>{
+            lines.push(`${i+1}. [${e.rating||"?"}] ${e.item}${e.prov ? " — " + e.prov : ""}\n   Downgrade: ${e.downgrade||"—"}`);
+          });
+        } else {
+          lines.push("—");
+        }
+        lines.push("");
+
+        lines.push(`## Diamond model\nAdversary: ${($("dia_adv").value||"—").trim()}\nCapability: ${($("dia_cap").value||"—").trim()}\nInfrastructure: ${($("dia_inf").value||"—").trim()}\nVictim: ${($("dia_vic").value||"—").trim()}\nWeak link: ${($("dia_weak").value||"—").trim()}\n`);
+
+        lines.push(`## Kill Chain (observed/inferred/unknown)\nRecon: ${($("kc_recon").value||"—").trim()}\nWeaponisation: ${($("kc_weapon").value||"—").trim()}\nDelivery: ${($("kc_delivery").value||"—").trim()}\nExploitation: ${($("kc_exploit").value||"—").trim()}\nInstallation: ${($("kc_install").value||"—").trim()}\nC2: ${($("kc_c2").value||"—").trim()}\nActions: ${($("kc_actions").value||"—").trim()}\nDisruption: ${($("kc_disrupt").value||"—").trim()}\nMissing: ${($("kc_missing").value||"—").trim()}\n`);
+
+        lines.push(`## ACH\nPreferred: ${($("ach_pref").value||"—").trim()} (confidence: ${($("ach_conf").value||"—").trim()})\nRationale: ${($("ach_rationale").value||"—").trim()}\nDisconfirming checks: ${($("ach_disconfirm").value||"—").trim()}\nFlip conditions: ${($("ach_flip").value||"—").trim()}\nSensitivity: ${($("ach_sens").value||"—").trim()}\n`);
+
+        lines.push(`## Paul–Elder (bias interrupts)\nAssumptions: ${($("pe_assumptions").value||"—").trim()}\nDisconfirming checks: ${($("pe_disconfirm").value||"—").trim()}\nImplications: ${($("pe_implications").value||"—").trim()}\nPOV: ${($("pe_pov").value||"—").trim()}\n`);
+
+        lines.push(`## Executive summary\n${($("wrap_exec").value||"—").trim()}\n`);
+        lines.push(`## Findings / actions / gaps\nFindings: ${($("wrap_findings").value||"—").trim()}\nActions: ${($("wrap_actions").value||"—").trim()}\nGaps: ${($("wrap_gaps").value||"—").trim()}\n`);
+
+        $("reportPreview").value = lines.join("\n");
+      }
+
+      function updateAll(){
+        updateBadges();
+        updateKPIs();
+        buildReport();
+      }
+
+      function gatherState(){
+        const state = { fields:{}, checks:{}, evidence: evidence.slice() };
+        document.querySelectorAll("input, textarea, select").forEach(el=>{
+          if(!el.id) return;
+          if(["adm_item","adm_rating","adm_prov","adm_downgrade","adm_just","adm_failure"].includes(el.id)) return;
+          if(el.type === "checkbox") state.checks[el.id] = el.checked;
+          else state.fields[el.id] = el.value;
+        });
+        ["caseTitle","caseId","caseDate","caseContext"].forEach(id=> state.fields[id] = $(id).value || "");
+        return state;
+      }
+
+      function applyState(state){
+        if(!state) return;
+        evidence = Array.isArray(state.evidence) ? state.evidence : [];
+        document.querySelectorAll("input, textarea, select").forEach(el=>{
+          if(!el.id) return;
+          if(["adm_item","adm_rating","adm_prov","adm_downgrade","adm_just","adm_failure"].includes(el.id)) return;
+          if(el.type === "checkbox") el.checked = !!(state.checks && state.checks[el.id]);
+          else if(state.fields && Object.prototype.hasOwnProperty.call(state.fields, el.id)) el.value = state.fields[el.id] ?? "";
+        });
+        ["caseTitle","caseId","caseDate","caseContext"].forEach(id=>{
+          if(state.fields && Object.prototype.hasOwnProperty.call(state.fields, id)) $(id).value = state.fields[id] ?? "";
+        });
+        renderEvidence();
+      }
+
+      function save(){
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(gatherState()));
+      }
+
+      function load(){
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if(!raw) return;
+        try{ applyState(JSON.parse(raw)); } catch(_){}
+      }
+
+      function exportJSON(){
+        const blob = new Blob([JSON.stringify(gatherState(), null, 2)], {type:"application/json"});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        const base = ( ($("caseId").value || $("caseTitle").value || "cti_case").replace(/[^\w\-]+/g,"_").slice(0,60) );
+        a.href = url;
+        a.download = base + "_organizer.json";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      }
+
+      function importJSON(file){
+        const reader = new FileReader();
+        reader.onload = () => {
+          try{
+            const state = JSON.parse(reader.result);
+            applyState(state);
+            save();
+            updateAll();
+          } catch(e){
+            alert("Invalid JSON.");
+          }
+        };
+        reader.readAsText(file);
+      }
+
+      // Evidence
+      function renderEvidence(){
+        const list = $("adm_list");
+        list.innerHTML = "";
+        if(!evidence.length){
+          const div = document.createElement("div");
+          div.className = "mini";
+          div.textContent = "No evidence items logged.";
+          list.appendChild(div);
+          updateAll();
+          return;
+        }
+        evidence.forEach((e, idx)=>{
+          const el = document.createElement("div");
+          el.className = "item";
+          const left = document.createElement("div");
+          left.className = "left";
+          left.innerHTML = `
+            <div class="a">[${escapeHtml(e.rating||"?")}] ${escapeHtml(e.item||"Untitled evidence")}</div>
+            <div class="b">${escapeHtml(e.prov||"No provenance")} • Downgrade: ${escapeHtml((e.downgrade||"—").slice(0,100))}</div>
+          `;
+          const btns = document.createElement("div");
+          btns.className = "btns";
+
+          const v = document.createElement("button");
+          v.textContent = "View";
+          v.onclick = ()=> alert(
+            "Rating: " + (e.rating||"—") + "\n" +
+            "Item: " + (e.item||"—") + "\n" +
+            "Provenance: " + (e.prov||"—") + "\n\n" +
+            "Downgrade: " + (e.downgrade||"—") + "\n\n" +
+            "Justification:\n" + (e.just||"—") + "\n\n" +
+            "Failure modes:\n" + (e.failure||"—")
+          );
+
+          const d = document.createElement("button");
+          d.className = "danger";
+          d.textContent = "Delete";
+          d.onclick = ()=>{
+            evidence.splice(idx,1);
+            renderEvidence();
+            save();
+          };
+
+          btns.appendChild(v);
+          btns.appendChild(d);
+
+          el.appendChild(left);
+          el.appendChild(btns);
+          list.appendChild(el);
+        });
+        updateAll();
+      }
+
+      function escapeHtml(s){
+        return String(s).replace(/[&<>"']/g, m => ({
+          "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+        }[m]));
+      }
+
+      function addEvidence(){
+        const item = ($("adm_item").value||"").trim();
+        const rating = ($("adm_rating").value||"").trim().toUpperCase().replace(/\s+/g,"");
+        const prov = ($("adm_prov").value||"").trim();
+        const downgrade = ($("adm_downgrade").value||"").trim();
+        const just = ($("adm_just").value||"").trim();
+        const failure = ($("adm_failure").value||"").trim();
+
+        if(!item || !rating || !downgrade){
+          alert("Evidence requires: item, rating (e.g., B2), and downgrade conditions.");
+          return;
+        }
+        if(!/^[A-F][1-6]$/.test(rating)){
+          const ok = confirm("Rating does not match A–F + 1–6 (example: B2). Save anyway?");
+          if(!ok) return;
+        }
+        evidence.unshift({ item, rating, prov, downgrade, just, failure, ts: Date.now() });
+        $("adm_item").value = "";
+        $("adm_rating").value = "";
+        $("adm_prov").value = "";
+        $("adm_downgrade").value = "";
+        $("adm_just").value = "";
+        $("adm_failure").value = "";
+        renderEvidence();
+        save();
+      }
+
+      // Buttons
+      $("btnSave").onclick = ()=>{ save(); updateAll(); };
+      $("btnExport").onclick = exportJSON;
+      $("btnImport").onclick = ()=> $("fileImport").click();
+      $("fileImport").addEventListener("change", (e)=>{
+        if(e.target.files && e.target.files[0]) importJSON(e.target.files[0]);
+        e.target.value = "";
+      });
+      $("btnPrint").onclick = ()=> window.print();
+      $("btnReset").onclick = ()=>{
+        const ok = confirm("Reset everything? This clears locally saved data.");
+        if(ok){ localStorage.removeItem(STORAGE_KEY); location.reload(); }
+      };
+      $("adm_add").onclick = addEvidence;
+      $("adm_clear").onclick = ()=>{
+        ["adm_item","adm_rating","adm_prov","adm_downgrade","adm_just","adm_failure"].forEach(id=> $(id).value="");
+      };
+      $("btnCopyReport").onclick = async ()=>{
+        try{
+          await navigator.clipboard.writeText($("reportPreview").value);
+          alert("Report copied.");
+        } catch(_){
+          $("reportPreview").select();
+          document.execCommand("copy");
+          alert("Report copied.");
+        }
+      };
+
+      // Live updates
+      document.querySelectorAll("input, textarea, select").forEach(el=>{
+        el.addEventListener("input", updateAll);
+        el.addEventListener("change", updateAll);
+      });
+
+      // Init date
+      if(!$("caseDate").value){
+        const d = new Date();
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth()+1).padStart(2,"0");
+        const dd = String(d.getDate()).padStart(2,"0");
+        $("caseDate").value = `${yyyy}-${mm}-${dd}`;
+      }
+
+      load();
+      renderEvidence();
+      updateAll();
+    })();
+  </script>
+</body>
+</html>
