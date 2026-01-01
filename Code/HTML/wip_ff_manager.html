@@ -1,0 +1,4574 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Fighting Fantasy – Campaign Tracker (Fantasy Edition)</title>
+  <style>
+    :root{
+      /* LOTRO-ish: dark leather + brass + parchment */
+      --bg0:#07060a;
+      --bg1:#0c0a10;
+      --panel:#14101b;
+      --panel2:#0f0b14;
+      --line:#3a2f46;
+      --line2:#5a4a63;
+
+      --text:#efe9da;
+      --muted:#c9bb9c;
+
+      --gold:#d7b66b;
+      --gold2:#a7863f;
+      --ember:#d46a3f;
+      --good:#6ccf7c;
+      --warn:#e0b35d;
+      --bad:#e05c5c;
+
+      --shadow: 0 18px 44px rgba(0,0,0,.5);
+
+      --r:16px;
+      --r2:999px;
+
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;
+      --serif: ui-serif, "Palatino Linotype", Palatino, Georgia, "Times New Roman", Times, serif;
+    }
+
+    *{ box-sizing:border-box; }
+    body{
+      margin:0;
+      color:var(--text);
+      font-family: var(--serif);
+      background:
+        radial-gradient(1200px 700px at 18% -10%, rgba(215,182,107,.12), transparent 55%),
+        radial-gradient(900px 500px at 92% 0%, rgba(212,106,63,.08), transparent 60%),
+        linear-gradient(180deg, var(--bg0), var(--bg1));
+    }
+
+    /* Subtle “grain” */
+    body:before{
+      content:"";
+      position:fixed; inset:0;
+      pointer-events:none;
+      background:
+        repeating-linear-gradient(0deg, rgba(255,255,255,.015), rgba(255,255,255,.015) 1px, transparent 1px, transparent 3px);
+      mix-blend-mode: overlay;
+      opacity:.25;
+    }
+
+    header{
+      position:sticky; top:0; z-index:20;
+      background: rgba(16,11,22,.72);
+      border-bottom: 1px solid rgba(90,74,99,.85);
+      backdrop-filter: blur(10px);
+    }
+
+    .top{
+      padding:14px 16px 10px;
+      display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap;
+    }
+
+    .brand{
+      display:flex; flex-direction:column; gap:4px;
+    }
+    .brand h1{
+      margin:0;
+      font-size:14px;
+      font-weight: 750;
+      letter-spacing: .35px;
+      color: var(--text);
+    }
+    .brand p{
+      margin:0;
+      font-size:12px;
+      color: rgba(201,187,156,.9);
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
+
+    .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    .spacer{ flex:1; }
+
+    .tabs{
+      display:flex; gap:6px; flex-wrap:wrap;
+      padding:0 12px 12px;
+    }
+
+    .tab{
+      border:1px solid rgba(90,74,99,.9);
+      background: rgba(20,16,27,.55);
+      color: rgba(201,187,156,.95);
+      border-radius: var(--r2);
+      padding: 8px 12px;
+      cursor:pointer;
+      font-size:12px;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      transition: transform .05s ease, background .12s ease, border-color .12s ease, color .12s ease;
+      position:relative;
+    }
+    .tab:hover{
+      border-color: rgba(215,182,107,.75);
+      color: var(--text);
+      background: rgba(20,16,27,.72);
+    }
+    .tab.active{
+      background: rgba(215,182,107,.12);
+      border-color: rgba(215,182,107,.85);
+      color: var(--text);
+      box-shadow: 0 10px 28px rgba(0,0,0,.35) inset;
+    }
+
+    main{
+      padding:16px;
+      max-width: 1240px;
+      margin:0 auto;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
+
+    .card{
+      background:
+        radial-gradient(900px 500px at 20% -20%, rgba(215,182,107,.08), transparent 60%),
+        linear-gradient(180deg, rgba(20,16,27,.92), rgba(15,11,22,.92));
+      border: 1px solid rgba(90,74,99,.85);
+      border-radius: var(--r);
+      box-shadow: var(--shadow);
+      padding: 14px;
+      position:relative;
+      overflow:hidden;
+    }
+
+    /* Decorative corner glints */
+    .card:before{
+      content:"";
+      position:absolute; inset:-1px;
+      pointer-events:none;
+      border-radius: var(--r);
+      background:
+        linear-gradient(135deg, rgba(215,182,107,.18), transparent 35%),
+        linear-gradient(315deg, rgba(215,182,107,.10), transparent 35%);
+      opacity:.55;
+      mix-blend-mode: screen;
+    }
+
+    .grid{ display:grid; gap:12px; }
+    .grid2{ grid-template-columns: 1fr 1fr; }
+    .grid3{ grid-template-columns: 1fr 1fr 1fr; }
+    @media (max-width: 980px){ .grid2,.grid3{ grid-template-columns: 1fr; } }
+
+    h2{
+      margin:0 0 10px;
+      font-size:14px;
+      letter-spacing:.25px;
+      font-family: var(--serif);
+      color: var(--text);
+    }
+
+    label{
+      display:block;
+      font-size:12px;
+      color: rgba(201,187,156,.95);
+      margin: 0 0 6px;
+      font-family: var(--serif);
+    }
+
+    input[type="text"], input[type="number"], textarea, select{
+      width:100%;
+      padding:10px 11px;
+      border-radius: 12px;
+      border:1px solid rgba(90,74,99,.9);
+      background: rgba(10,8,14,.65);
+      color: var(--text);
+      outline:none;
+      box-shadow: 0 8px 18px rgba(0,0,0,.35) inset;
+    }
+    textarea{ min-height:76px; resize: vertical; }
+
+    button{
+      padding:9px 11px;
+      border-radius: 12px;
+      border: 1px solid rgba(90,74,99,.9);
+      background: rgba(10,8,14,.55);
+      color: var(--text);
+      cursor:pointer;
+      transition: transform .05s ease, background .12s ease, border-color .12s ease, box-shadow .12s ease;
+      font-size: 12px;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
+    button:hover{
+      border-color: rgba(215,182,107,.75);
+      box-shadow: 0 0 0 2px rgba(215,182,107,.10);
+    }
+    button:active{ transform: translateY(1px); }
+
+    .btnGold{
+      background: rgba(215,182,107,.14);
+      border-color: rgba(215,182,107,.75);
+    }
+    .btnGood{
+      background: rgba(108,207,124,.12);
+      border-color: rgba(108,207,124,.65);
+    }
+    .btnWarn{
+      background: rgba(224,179,93,.12);
+      border-color: rgba(224,179,93,.65);
+    }
+    .btnBad{
+      background: rgba(224,92,92,.12);
+      border-color: rgba(224,92,92,.65);
+    }
+
+    .pill{
+      display:inline-flex; gap:8px; align-items:center;
+      padding: 6px 10px;
+      border-radius: var(--r2);
+      border: 1px solid rgba(90,74,99,.9);
+      background: rgba(10,8,14,.55);
+      color: rgba(201,187,156,.95);
+      font-size: 12px;
+      white-space: nowrap;
+      box-shadow: 0 8px 18px rgba(0,0,0,.28) inset;
+    }
+    .pill b{ color: var(--text); font-weight:800; }
+
+    .muted{
+      color: rgba(201,187,156,.92);
+      font-size:12px;
+      line-height:1.4;
+    }
+
+    .hr{ height:1px; background: rgba(90,74,99,.85); margin: 12px 0; }
+
+    .hidden{ display:none !important; }
+
+    /* Stat tiles */
+    .statGrid{
+      display:grid;
+      grid-template-columns: repeat(6, minmax(120px,1fr));
+      gap:10px;
+    }
+    @media (max-width: 1100px){ .statGrid{ grid-template-columns: repeat(3, minmax(120px,1fr)); } }
+    @media (max-width: 640px){ .statGrid{ grid-template-columns: repeat(2, minmax(120px,1fr)); } }
+
+    .stat{
+      border:1px solid rgba(90,74,99,.85);
+      background: rgba(10,8,14,.45);
+      border-radius: 14px;
+      padding:10px;
+      display:flex; flex-direction:column; gap:6px;
+      box-shadow: 0 12px 26px rgba(0,0,0,.28) inset;
+    }
+    .stat .k{ font-size:11px; color: rgba(201,187,156,.95); font-family: var(--serif); }
+    .stat .v{ font-family: var(--mono); font-size:18px; letter-spacing:.3px; font-weight:800; }
+    .stat .miniRow{ display:flex; gap:8px; flex-wrap:wrap; }
+    .stat .miniRow button{ padding:6px 8px; border-radius: 10px; }
+
+    .list{ display:flex; flex-direction:column; gap:8px; }
+    .item{
+      border:1px solid rgba(90,74,99,.85);
+      background: rgba(10,8,14,.45);
+      border-radius: 12px;
+      padding: 10px;
+      display:grid;
+      grid-template-columns: 1fr auto;
+      gap:10px;
+      align-items:start;
+      box-shadow: 0 12px 26px rgba(0,0,0,.25) inset;
+    }
+    .item h3{
+      margin:0;
+      font-size:13px;
+      font-weight:850;
+      letter-spacing:.18px;
+      font-family: var(--serif);
+    }
+    .meta{ margin-top:4px; font-size:12px; color: rgba(201,187,156,.9); line-height:1.4; }
+    .actions{ display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
+
+    .tag{
+      font-size:11px;
+      color: rgba(201,187,156,.95);
+      border:1px dashed rgba(90,74,99,.95);
+      padding:2px 8px;
+      border-radius: var(--r2);
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
+
+    /* Map */
+    .mapWrap{
+      border:1px solid rgba(90,74,99,.85);
+      background: rgba(10,8,14,.35);
+      border-radius: var(--r);
+      overflow:hidden;
+      box-shadow: 0 18px 44px rgba(0,0,0,.45) inset;
+    }
+    .mapBar{
+      padding:10px;
+      display:flex; gap:8px; flex-wrap:wrap; align-items:center;
+      border-bottom: 1px solid rgba(90,74,99,.85);
+    }
+    .mapCanvasWrap{
+      position:relative;
+      height: 640px;
+      background:
+        radial-gradient(900px 500px at 20% -20%, rgba(215,182,107,.08), transparent 60%),
+        radial-gradient(900px 500px at 100% 0%, rgba(212,106,63,.06), transparent 60%),
+        #07060a;
+      cursor: crosshair;
+      user-select:none;
+    }
+    .mapCanvasWrap.panning{ cursor: grabbing; }
+    canvas{ display:block; width:100%; height:100%; }
+
+    .hint{
+      position:absolute;
+      right:10px; bottom:10px;
+      background: rgba(0,0,0,.45);
+      border:1px solid rgba(255,255,255,.12);
+      padding:8px 10px;
+      border-radius: 12px;
+      color: rgba(239,233,218,.92);
+      font-size:12px;
+      max-width: 380px;
+    }
+
+    /* Modal (notes) */
+    .modalBack{
+      position:fixed; inset:0; z-index:999;
+      background: rgba(0,0,0,.6);
+      display:none;
+      align-items:center; justify-content:center;
+      padding:16px;
+    }
+    .modal{
+      width: min(720px, 100%);
+      background:
+        radial-gradient(900px 500px at 20% -20%, rgba(215,182,107,.10), transparent 60%),
+        linear-gradient(180deg, rgba(20,16,27,.98), rgba(15,11,22,.98));
+      border: 1px solid rgba(215,182,107,.65);
+      border-radius: 18px;
+      box-shadow: 0 22px 60px rgba(0,0,0,.65);
+      padding: 14px;
+    }
+    .modal h3{
+      margin:0 0 10px;
+      font-family: var(--serif);
+      letter-spacing:.25px;
+    }
+    .modal .sub{
+      color: rgba(201,187,156,.92);
+      font-size:12px;
+      margin-top:-4px;
+      margin-bottom:10px;
+      line-height:1.35;
+    }
+    .modal .row{ margin-top:10px; }
+  </style>
+</head>
+
+<body>
+<header>
+  <div class="top">
+    <div class="brand">
+      <h1>Fighting Fantasy – Campaign Tracker</h1>
+      <p>Local-only • extensible rules • battle log + notes • Metroid-style grid map</p>
+    </div>
+
+    <div class="row">
+      <span class="pill">Campaign <b id="campPill">—</b></span>
+      <span class="pill">STAMINA <b id="stamPill">0</b></span>
+      <span class="pill">SKILL <b id="skillPill">0</b></span>
+      <span class="pill">LUCK <b id="luckPill">0</b></span>
+
+      <button class="btnGold" onclick="openNoteModal({scope:'campaign', ref:null})">Add note</button>
+      <button class="btnGold" onclick="rollInitial()">Auto-roll</button>
+    </div>
+  </div>
+
+  <div class="tabs" id="tabs"></div>
+</header>
+
+<main>
+  <!-- OVERVIEW -->
+  <section class="card" id="view-overview">
+    <div class="row">
+      <div style="min-width:260px; flex:1;">
+        <label>Campaign name</label>
+        <input id="campName" type="text" placeholder="e.g., The Warlock of Firetop Mountain" />
+      </div>
+      <div style="min-width:220px;">
+        <label>Preset</label>
+        <select id="preset">
+          <option value="classic">Classic (SKILL / STAMINA / LUCK)</option>
+          <option value="magic">Classic + MAGIC (generic)</option>
+          <option value="custom">Custom (you define everything)</option>
+        </select>
+      </div>
+      <div style="min-width:220px;">
+        <label>Section / paragraph (optional)</label>
+        <input id="sectionNow" type="text" placeholder="e.g., § 142" />
+      </div>
+    </div>
+
+    <div class="hr"></div>
+
+    <div class="statGrid">
+      <div class="stat">
+        <div class="k">STAMINA (current / max)</div>
+        <div class="v" id="staminaOut">0 / 0</div>
+        <div class="miniRow">
+          <button class="btnGood" onclick="adjustMeter('stamina', +1)">+1</button>
+          <button class="btnBad" onclick="adjustMeter('stamina', -1)">-1</button>
+          <button class="btnWarn" onclick="adjustMeter('stamina', -2)">-2</button>
+          <button onclick="setToMax('stamina')">To max</button>
+        </div>
+      </div>
+
+      <div class="stat">
+        <div class="k">ENERGY (current / max)</div>
+        <div class="v" id="energyOut">0 / 0</div>
+        <div class="miniRow">
+          <button class="btnGood" onclick="adjustMeter('energy', +1)">+1</button>
+          <button class="btnBad" onclick="adjustMeter('energy', -1)">-1</button>
+          <button onclick="setToMax('energy')">To max</button>
+        </div>
+      </div>
+
+      <div class="stat">
+        <div class="k">SKILL</div>
+        <div class="v" id="skillOut">0</div>
+        <div class="miniRow">
+          <button onclick="adjustStat('skill', +1)">+1</button>
+          <button onclick="adjustStat('skill', -1)">-1</button>
+        </div>
+      </div>
+
+      <div class="stat">
+        <div class="k">LUCK (current / max)</div>
+        <div class="v" id="luckOut">0 / 0</div>
+        <div class="miniRow">
+          <button onclick="adjustMeter('luck', +1)">+1</button>
+          <button class="btnBad" onclick="adjustMeter('luck', -1)">-1</button>
+          <button onclick="setToMax('luck')">To max</button>
+        </div>
+      </div>
+
+      <div class="stat">
+        <div class="k">MAGIC (current / max)</div>
+        <div class="v" id="magicOut">0 / 0</div>
+        <div class="miniRow">
+          <button onclick="adjustMeter('magic', +1)">+1</button>
+          <button class="btnBad" onclick="adjustMeter('magic', -1)">-1</button>
+          <button onclick="setToMax('magic')">To max</button>
+        </div>
+      </div>
+
+      <div class="stat">
+        <div class="k">PROVISIONS</div>
+        <div class="v" id="provOut">0</div>
+        <div class="miniRow">
+          <button class="btnGood" onclick="adjustStat('provisions', +1)">+1</button>
+          <button class="btnBad" onclick="adjustStat('provisions', -1)">-1</button>
+          <button class="btnGold" onclick="eatProvision()">Eat</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="hr"></div>
+
+    <div class="grid grid2">
+      <div>
+        <label>Rule notes (book-specific exceptions)</label>
+        <textarea id="ruleNotes" placeholder="Write special rules here (extra attributes, variant combat, timers, etc.)."></textarea>
+        <div class="row" style="margin-top:10px;">
+          <button class="btnGold" onclick="openNoteModal({scope:'campaign', ref:null})">Add note</button>
+          <button onclick="createCheckpoint()">Checkpoint</button>
+          <span class="pill">Checkpoints <b id="cpCount">0</b></span>
+        </div>
+      </div>
+      <div>
+        <label>Quick actions</label>
+        <div class="row">
+          <button onclick="testLuck()">Test luck</button>
+          <span class="pill">Luck test <b id="luckTestOut">—</b></span>
+        </div>
+
+        <div class="hr"></div>
+
+        <div class="muted">
+          This tool stays generic by design. For unusual books: add <b>Custom Stats</b>, write exceptions in <b>Rule notes</b>,
+          and use <b>Notes</b> to document decisions and outcomes.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CHARACTER -->
+  <section class="card hidden" id="view-character">
+    <div class="grid grid2">
+      <div>
+        <h2>Core stats</h2>
+        <div class="grid grid3">
+          <div>
+            <label>STAMINA current</label>
+            <input id="staminaCur" type="number">
+          </div>
+          <div>
+            <label>STAMINA max</label>
+            <input id="staminaMax" type="number">
+          </div>
+          <div>
+            <label>SKILL</label>
+            <input id="skill" type="number">
+          </div>
+        </div>
+
+        <div class="grid grid3" style="margin-top:10px;">
+          <div>
+            <label>LUCK current</label>
+            <input id="luckCur" type="number">
+          </div>
+          <div>
+            <label>LUCK max</label>
+            <input id="luckMax" type="number">
+          </div>
+          <div>
+            <label>PROVISIONS</label>
+            <input id="provisions" type="number">
+          </div>
+        </div>
+
+        <div class="grid grid3" style="margin-top:10px;">
+          <div>
+            <label>ENERGY current</label>
+            <input id="energyCur" type="number">
+          </div>
+          <div>
+            <label>ENERGY max</label>
+            <input id="energyMax" type="number">
+          </div>
+          <div>
+            <label>MAGIC current</label>
+            <input id="magicCur" type="number">
+          </div>
+        </div>
+
+        <div class="grid grid3" style="margin-top:10px;">
+          <div>
+            <label>MAGIC max</label>
+            <input id="magicMax" type="number">
+          </div>
+          <div>
+            <label>—</label>
+            <button style="width:100%;" onclick="setAllToMax()">Set all meters to max</button>
+          </div>
+          <div>
+            <label>—</label>
+            <button class="btnBad" style="width:100%;" onclick="resetCore()">Reset core</button>
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:12px;">
+          <button class="btnGold" onclick="rollInitial()">Auto-roll</button>
+          <button onclick="openNoteModal({scope:'character', ref:null})">Add note</button>
+        </div>
+
+        <div class="hr"></div>
+
+        <div class="muted">
+          Meters (STAMINA/LUCK/MAGIC/ENERGY) have <b>current</b> and <b>max</b>. Healing is clamped to max.
+        </div>
+      </div>
+
+      <div>
+        <h2>Custom stats</h2>
+        <div class="muted" style="margin-bottom:10px;">
+          Add any book-specific parameters (Fear, Honor, Time, Sanity, Keys, etc.). You can attach notes to each entry.
+        </div>
+
+        <div class="grid grid2">
+          <div><label>Stat name</label><input id="customStatName" type="text" placeholder="e.g., Fear"></div>
+          <div><label>Initial value</label><input id="customStatValue" type="number" value="0"></div>
+        </div>
+        <div class="row" style="margin-top:10px;">
+          <button class="btnGold" onclick="addCustomStat()">Add</button>
+          <button class="btnBad" onclick="clearCustomStats()">Clear all</button>
+        </div>
+
+        <div id="customStats" class="list" style="margin-top:12px;"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- INVENTORY -->
+  <section class="card hidden" id="view-inventory">
+    <div class="grid grid2">
+      <div>
+        <h2>Add item</h2>
+        <div class="grid grid2">
+          <div><label>Item</label><input id="invName" type="text" placeholder="e.g., Rope"></div>
+          <div><label>Qty</label><input id="invQty" type="number" value="1"></div>
+        </div>
+        <div style="margin-top:10px;">
+          <label>Notes</label>
+          <input id="invNotes" type="text" placeholder="Weapon bonus, clues, keywords, etc.">
+        </div>
+        <div class="row" style="margin-top:10px;">
+          <button class="btnGold" onclick="addInventory()">Add</button>
+          <button onclick="openNoteModal({scope:'inventory', ref:null})">Add note</button>
+          <button class="btnBad" onclick="clearInventory()">Clear all</button>
+        </div>
+      </div>
+
+      <div>
+        <h2>Inventory</h2>
+        <div id="inventory" class="list"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DICE -->
+  <section class="card hidden" id="view-dice">
+    <div class="grid grid2">
+      <div>
+        <h2>Dice</h2>
+        <label>Expression (NdM ± C)</label>
+        <input id="diceExpr" type="text" value="2d6" />
+        <div class="row" style="margin-top:10px;">
+          <button class="btnGold" onclick="rollDice()">Roll</button>
+          <span class="pill">Result <b id="diceOut">—</b></span>
+          <button onclick="openNoteModal({scope:'dice', ref:null})">Add note</button>
+        </div>
+
+        <div class="hr"></div>
+
+        <h2>Initial parameters</h2>
+        <div class="grid grid3">
+          <div><label>SKILL formula</label><input id="initSkill" type="text" value="1d6+6"></div>
+          <div><label>STAMINA formula</label><input id="initStamina" type="text" value="2d6+12"></div>
+          <div><label>LUCK formula</label><input id="initLuck" type="text" value="1d6+6"></div>
+        </div>
+
+        <div class="grid grid3" style="margin-top:10px;">
+          <div><label>MAGIC formula (optional)</label><input id="initMagic" type="text" value="0"></div>
+          <div><label>ENERGY formula (optional)</label><input id="initEnergy" type="text" value="0"></div>
+          <div><label>—</label><button class="btnGold" style="width:100%;" onclick="rollInitial()">Roll initial now</button></div>
+        </div>
+      </div>
+
+      <div>
+        <h2>Rules knobs</h2>
+        <div class="grid grid2">
+          <div>
+            <label>Provision heal amount</label>
+            <input id="provisionHeal" type="number" value="4" />
+          </div>
+          <div>
+            <label>Luck test mode</label>
+            <select id="luckMode">
+              <option value="classic">Classic: 2d6 ≤ LUCK, then LUCK-1</option>
+              <option value="manual">Manual</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="hr"></div>
+
+        <div class="muted">
+          The dice parser is intentionally conservative (NdM ± C) to remain reliable and predictable.
+          For unusual mechanics, use notes + manual rolls.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- COMBAT -->
+  <section class="card hidden" id="view-combat">
+    <div class="grid grid2">
+      <div>
+        <h2>Add enemy</h2>
+        <div class="grid grid2">
+          <div><label>Name</label><input id="eName" type="text" placeholder="e.g., Goblin"></div>
+          <div><label>Group tag</label><input id="eTag" type="text" placeholder="e.g., Room 12"></div>
+        </div>
+        <div class="grid grid3" style="margin-top:10px;">
+          <div><label>Enemy SKILL</label><input id="eSkill" type="number" value="6"></div>
+          <div><label>Enemy STAMINA</label><input id="eStamina" type="number" value="6"></div>
+          <div><label>Damage (default)</label><input id="eDmg" type="number" value="2"></div>
+        </div>
+        <div style="margin-top:10px;">
+          <label>Notes</label>
+          <input id="eNotes" type="text" placeholder="Poison, armor, modifiers, special rules...">
+        </div>
+        <div class="row" style="margin-top:10px;">
+          <button class="btnGold" onclick="addEnemy()">Add</button>
+          <button onclick="openNoteModal({scope:'combat', ref:null})">Add note</button>
+          <button class="btnBad" onclick="clearEnemies()">Clear all</button>
+        </div>
+      </div>
+
+      <div>
+        <h2>Round</h2>
+        <div class="row">
+          <span class="pill">Round <b id="roundNum">1</b></span>
+          <span class="pill">Target <b id="targetOut">—</b></span>
+          <span class="pill">Flow <b id="flowOut">—</b></span>
+
+          <div class="spacer"></div>
+          <button onclick="nextRound()">Next round</button>
+          <button class="btnBad" onclick="resetCombat()">Reset</button>
+        </div>
+
+        <div class="hr"></div>
+
+        <div class="grid grid2">
+          <div>
+            <label>Player AS roll (2d6) + modifier</label>
+            <div class="row">
+              <input id="pMod" type="number" value="0" style="max-width:110px;">
+              <button class="btnGold" style="flex:1;" onclick="rollPlayerAS()">Roll</button>
+            </div>
+            <div class="row" style="margin-top:8px;">
+              <span class="pill">Roll <b id="pRoll">—</b></span>
+              <span class="pill">AS <b id="pAS">—</b></span>
+            </div>
+          </div>
+
+          <div>
+            <label>Enemy AS roll (2d6) + modifier</label>
+            <div class="row">
+              <input id="eMod" type="number" value="0" style="max-width:110px;">
+              <button class="btnGold" style="flex:1;" onclick="rollEnemyAS()">Roll</button>
+            </div>
+            <div class="row" style="margin-top:8px;">
+              <span class="pill">Roll <b id="eRoll">—</b></span>
+              <span class="pill">AS <b id="eAS">—</b></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:10px;">
+          <button class="btnGood" onclick="resolveRound()">Resolve</button>
+          <button onclick="manualDamageToEnemy()">Manual: damage enemy</button>
+          <button onclick="manualDamageToPlayer()">Manual: damage player</button>
+          <button onclick="openNoteModal({scope:'combat', ref:{type:'round', round:state.combat.round}})">Note this round</button>
+        </div>
+
+        <div class="hr"></div>
+
+        <div class="muted">
+          Default combat: AS = SKILL + 2d6 + modifier. Higher AS deals <b>enemy Damage</b> (ties: no damage).
+          Use modifiers for weapon bonuses / situational effects, and notes for special rules.
+        </div>
+      </div>
+    </div>
+
+    <div class="hr"></div>
+
+    <div class="grid grid2">
+      <div>
+        <h2>Enemies</h2>
+        <div id="enemies" class="list"></div>
+      </div>
+
+      <div>
+        <h2>Battle log (saved + exported)</h2>
+        <div class="row">
+          <button onclick="clearBattleLog()">Clear log</button>
+          <span class="pill">Entries <b id="logCount">0</b></span>
+        </div>
+        <div id="battleLog" class="list" style="margin-top:10px;"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MAP -->
+  <section class="card hidden" id="view-map">
+    <div class="mapWrap">
+      <div class="mapBar">
+        <span class="pill">Tool <b id="mapToolOut">paint</b></span>
+        <button class="btnGold" onclick="setMapTool('paint')">Paint</button>
+        <button onclick="setMapTool('erase')">Erase</button>
+        <button onclick="setMapTool('current')">Set current</button>
+        <button onclick="setMapTool('note')">Note</button>
+        <button onclick="setMapTool('pan')">Pan</button>
+
+        <span class="pill">Room <b id="roomTypeOut">normal</b></span>
+        <select id="roomType" style="max-width:200px;">
+          <option value="normal">Normal</option>
+          <option value="save">Save</option>
+          <option value="shop">Shop</option>
+          <option value="boss">Boss</option>
+          <option value="key">Key</option>
+          <option value="special">Special</option>
+        </select>
+
+        <span class="pill">Zoom <b id="zoomOut">100%</b></span>
+        <button onclick="zoomMap(1.1)">+</button>
+        <button onclick="zoomMap(1/1.1)">−</button>
+        <button onclick="resetView()">Reset view</button>
+
+        <div class="spacer"></div>
+
+        <button onclick="toggleGridLines()">Grid lines</button>
+        <button class="btnGold" onclick="openNoteModal({scope:'map', ref: state.map.current ? {tile: state.map.current} : null})">Add note</button>
+        <button class="btnBad" onclick="clearMap()">Clear map</button>
+      </div>
+
+      <div class="mapCanvasWrap" id="mapWrap">
+        <canvas id="mapCanvas" width="1700" height="1050"></canvas>
+        <div class="hint">
+          <b>Map:</b> click to paint/erase rooms • connections auto-draw • set “current” tile • “Note” tool attaches a free text note to a tile.<br/>
+          <b>Pan:</b> use the Pan tool, or drag beyond a small threshold (prevents accidental painting).
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- NOTES -->
+  <section class="card hidden" id="view-notes">
+    <div class="row">
+      <h2 style="margin:0;">Notes</h2>
+      <div class="spacer"></div>
+      <button class="btnGold" onclick="openNoteModal({scope:'campaign', ref:null})">Add note</button>
+      <button onclick="exportNotesText()">Export notes as text</button>
+      <button class="btnBad" onclick="clearNotes()">Clear notes</button>
+    </div>
+
+    <div class="hr"></div>
+
+    <div class="grid grid3">
+      <div>
+        <label>Filter by scope</label>
+        <select id="noteScopeFilter">
+          <option value="all">All</option>
+          <option value="campaign">Campaign</option>
+          <option value="character">Character</option>
+          <option value="inventory">Inventory</option>
+          <option value="dice">Dice</option>
+          <option value="combat">Combat</option>
+          <option value="map">Map</option>
+          <option value="checkpoint">Checkpoint</option>
+        </select>
+      </div>
+      <div>
+        <label>Search text</label>
+        <input id="noteSearch" type="text" placeholder="Search…" />
+      </div>
+      <div>
+        <label>—</label>
+        <button style="width:100%;" onclick="renderNotes()">Apply</button>
+      </div>
+    </div>
+
+    <div id="notesList" class="list" style="margin-top:12px;"></div>
+  </section>
+
+  <!-- DATA -->
+  <section class="card hidden" id="view-data">
+    <div class="grid grid2">
+      <div>
+        <h2>Export / Import</h2>
+        <div class="muted">Saved automatically in this browser. Export JSON to move between devices.</div>
+        <div class="row" style="margin-top:10px;">
+          <button onclick="exportJSON()">Export JSON</button>
+          <button onclick="importJSON()">Import JSON</button>
+          <button class="btnBad" onclick="wipeAll()">Wipe local data</button>
+        </div>
+        <textarea id="ioBox" placeholder="Export appears here. Paste JSON here to import." style="margin-top:10px;"></textarea>
+      </div>
+      <div>
+        <h2>Diagnostics</h2>
+        <div class="muted">LocalStorage is limited. If you store huge maps or logs, exports are safer than long-term accumulation.</div>
+        <div class="hr"></div>
+        <div class="row">
+          <span class="pill">Enemies <b id="diagEnemies">0</b></span>
+          <span class="pill">Inventory <b id="diagInv">0</b></span>
+          <span class="pill">Custom stats <b id="diagCustom">0</b></span>
+          <span class="pill">Rooms <b id="diagRooms">0</b></span>
+          <span class="pill">Notes <b id="diagNotes">0</b></span>
+          <span class="pill">Log <b id="diagLog">0</b></span>
+          <span class="pill">Checkpoints <b id="diagCP">0</b></span>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- NOTE MODAL -->
+<div class="modalBack" id="noteModalBack" role="dialog" aria-modal="true">
+  <div class="modal">
+    <h3 id="noteModalTitle">Add note</h3>
+    <div class="sub" id="noteModalSub">—</div>
+
+    <div class="grid grid2">
+      <div>
+        <label>Scope</label>
+        <select id="noteScope">
+          <option value="campaign">Campaign</option>
+          <option value="character">Character</option>
+          <option value="inventory">Inventory</option>
+          <option value="dice">Dice</option>
+          <option value="combat">Combat</option>
+          <option value="map">Map</option>
+          <option value="checkpoint">Checkpoint</option>
+        </select>
+      </div>
+      <div>
+        <label>Section / paragraph (optional)</label>
+        <input id="noteSection" type="text" placeholder="e.g., § 142">
+      </div>
+    </div>
+
+    <div style="margin-top:10px;">
+      <label>Text</label>
+      <textarea id="noteText" placeholder="Write your note…"></textarea>
+    </div>
+
+    <div class="row">
+      <button class="btnGold" onclick="saveNoteFromModal()">Save note</button>
+      <button onclick="closeNoteModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =========================
+   Versioned state
+========================= */
+const STORAGE_KEY = "ff_tracker_fantasy_v3";
+const STATE_VERSION = 3;
+
+const DEFAULT_STATE = () => ({
+  version: STATE_VERSION,
+  campaign: { name:"", preset:"classic", ruleNotes:"", sectionNow:"" },
+
+  // Meters have current/max to prevent accidental “overhealing”.
+  meters: {
+    stamina: { cur:0, max:0 },
+    luck:    { cur:0, max:0 },
+    magic:   { cur:0, max:0 },
+    energy:  { cur:0, max:0 }
+  },
+
+  // Non-meter core stats
+  stats: { skill:0, provisions:0 },
+
+  customStats: [], // {id,name,value}
+
+  inventory: [],   // {id,name,qty,notes}
+
+  dice: {
+    expr:"2d6",
+    initSkill:"1d6+6",
+    initStamina:"2d6+12",
+    initLuck:"1d6+6",
+    initMagic:"0",
+    initEnergy:"0",
+    provisionHeal: 4,
+    luckMode: "classic"
+  },
+
+  combat: {
+    round: 1,
+    playerLastRoll: null, enemyLastRoll: null,
+    playerAS: null, enemyAS: null,
+    enemies: [],      // {id,name,tag,skill,stamina,damage,notes}
+    battleLog: []     // events (saved + exported)
+  },
+
+  map: {
+    tiles: {},        // key "x,y" => {type}
+    current: null,    // {x,y}
+    showGrid: true,
+    tool: "paint",
+    roomType: "normal",
+    zoom: 1,
+    panX: 0,
+    panY: 0
+  },
+
+  // Free text notes everywhere (campaign, map tiles, combat rounds, etc.)
+  notes: [],          // {id,ts,scope,ref,section,text}
+
+  // Checkpoints store a snapshot of key state (not a full “save slot” engine, but useful)
+  checkpoints: []     // {id,ts,label,section,snapshot}
+});
+
+let state = loadState();
+let selectedEnemyId = null;
+
+/* =========================
+   Tabs
+========================= */
+const VIEWS = [
+  { id:"overview",  label:"Overview" },
+  { id:"character", label:"Character" },
+  { id:"inventory", label:"Inventory" },
+  { id:"dice",      label:"Dice" },
+  { id:"combat",    label:"Combat" },
+  { id:"map",       label:"Map" },
+  { id:"notes",     label:"Notes" },
+  { id:"data",      label:"Data" }
+];
+
+function mountTabs(){
+  const tabs = $("tabs");
+  tabs.innerHTML = "";
+  VIEWS.forEach(v => {
+    const b = document.createElement("button");
+    b.className = "tab";
+    b.textContent = v.label;
+    b.onclick = () => showView(v.id);
+    b.dataset.view = v.id;
+    tabs.appendChild(b);
+  });
+}
+function showView(id){
+  VIEWS.forEach(v => {
+    $("view-"+v.id).classList.toggle("hidden", v.id !== id);
+    document.querySelector(`.tab[data-view="${v.id}"]`).classList.toggle("active", v.id === id);
+  });
+  if (id === "map") drawMap();
+  if (id === "notes") renderNotes();
+}
+
+/* =========================
+   Storage + migration
+========================= */
+function saveState(){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+function loadState(){
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (!raw) return DEFAULT_STATE();
+
+  try{
+    const parsed = JSON.parse(raw);
+
+    // Merge for forward compatibility
+    const merged = deepMerge(DEFAULT_STATE(), parsed);
+
+    // Migration from older shapes (if any)
+    return migrateState(merged);
+  }catch{
+    return DEFAULT_STATE();
+  }
+}
+function migrateState(s){
+  // If older versions stored numeric stats instead of meters, convert.
+  // (Safe even if already migrated.)
+  if (s.stats && typeof s.stats.stamina === "number"){
+    // Older format: stats.stamina, stats.luck, stats.magic, stats.energy
+    s.meters.stamina.cur = s.stats.stamina || 0;
+    s.meters.stamina.max = Math.max(s.meters.stamina.max, s.stats.stamina || 0);
+    delete s.stats.stamina;
+
+    if (typeof s.stats.luck === "number"){
+      s.meters.luck.cur = s.stats.luck || 0;
+      s.meters.luck.max = Math.max(s.meters.luck.max, s.stats.luck || 0);
+      delete s.stats.luck;
+    }
+    if (typeof s.stats.magic === "number"){
+      s.meters.magic.cur = s.stats.magic || 0;
+      s.meters.magic.max = Math.max(s.meters.magic.max, s.stats.magic || 0);
+      delete s.stats.magic;
+    }
+    if (typeof s.stats.energy === "number"){
+      s.meters.energy.cur = s.stats.energy || 0;
+      s.meters.energy.max = Math.max(s.meters.energy.max, s.stats.energy || 0);
+      delete s.stats.energy;
+    }
+    if (typeof s.stats.skill !== "number") s.stats.skill = 0;
+    if (typeof s.stats.provisions !== "number") s.stats.provisions = 0;
+  }
+
+  // Ensure arrays exist
+  s.notes = Array.isArray(s.notes) ? s.notes : [];
+  s.checkpoints = Array.isArray(s.checkpoints) ? s.checkpoints : [];
+  s.combat.battleLog = Array.isArray(s.combat.battleLog) ? s.combat.battleLog : [];
+
+  // Bump version
+  s.version = STATE_VERSION;
+  return s;
+}
+function deepMerge(target, source){
+  if (typeof source !== "object" || source === null) return target;
+  for (const k of Object.keys(source)){
+    if (Array.isArray(source[k])) target[k] = source[k];
+    else if (typeof source[k] === "object" && source[k] !== null){
+      if (typeof target[k] !== "object" || target[k] === null) target[k] = {};
+      target[k] = deepMerge(target[k], source[k]);
+    } else target[k] = source[k];
+  }
+  return target;
+}
+function uid(){ return Math.random().toString(16).slice(2) + Date.now().toString(16); }
+function nowIso(){ return new Date().toISOString(); }
+function clamp(n,min,max){ return Math.max(min, Math.min(max,n)); }
+
+/* =========================
+   DOM helpers
+========================= */
+function $(id){ return document.getElementById(id); }
+function setVal(id,v){ $(id).value = v; }
+function getVal(id){ return $(id).value; }
+function getNum(id){ return Number($(id).value || 0); }
+function escapeHtml(s){
+  return String(s).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;").replaceAll("'","&#039;");
+}
+function fmtTs(iso){
+  try{
+    const d = new Date(iso);
+    return d.toLocaleString();
+  }catch{
+    return iso;
+  }
+}
+
+/* =========================
+   Dice (conservative parser: NdM ± C)
+========================= */
+function parseDice(exprRaw){
+  const expr = (exprRaw || "").replace(/\s+/g,"").toLowerCase();
+  if (/^\d+$/.test(expr)) return { type:"const", c: Number(expr) };
+  const m = expr.match(/^(\d+)d(\d+)([+-]\d+)?$/);
+  if (!m) return null;
+  const n = Number(m[1]), faces = Number(m[2]), mod = m[3] ? Number(m[3]) : 0;
+  if (n<=0 || faces<=0 || faces>1000 || n>200) return null;
+  return { type:"dice", n, faces, mod };
+}
+function rollExpr(exprRaw){
+  const p = parseDice(exprRaw);
+  if (!p) return { ok:false, error:"Invalid dice expression (use NdM ± C)." };
+  if (p.type === "const") return { ok:true, total:p.c, detail:[p.c], mod:0 };
+  const rolls = [];
+  for (let i=0;i<p.n;i++) rolls.push(1 + Math.floor(Math.random()*p.faces));
+  const sum = rolls.reduce((a,b)=>a+b,0);
+  return { ok:true, total: sum + p.mod, detail: rolls, mod:p.mod };
+}
+function fmtRoll(r){
+  const det = (r.detail||[]).join(",");
+  const mod = (r.mod && r.mod!==0) ? (r.mod>0?` +${r.mod}`:` ${r.mod}`) : "";
+  return `${r.total} (${det}${mod})`;
+}
+
+/* =========================
+   Core stats + meters
+========================= */
+function adjustStat(key, delta){
+  state.stats[key] = Number(state.stats[key]||0) + delta;
+  if (key === "provisions" && state.stats.provisions < 0) state.stats.provisions = 0;
+  saveState(); renderAll();
+}
+function adjustMeter(key, delta){
+  const m = state.meters[key];
+  m.cur = Number(m.cur||0) + delta;
+  m.cur = clamp(m.cur, 0, Number(m.max||0));
+  saveState(); renderAll();
+}
+function setToMax(key){
+  const m = state.meters[key];
+  m.cur = Number(m.max||0);
+  saveState(); renderAll();
+}
+function setAllToMax(){
+  ["stamina","luck","magic","energy"].forEach(k => { state.meters[k].cur = Number(state.meters[k].max||0); });
+  saveState(); renderAll();
+}
+function resetCore(){
+  if (!confirm("Reset core stats and meters to zero?")) return;
+  state.meters = {
+    stamina:{cur:0,max:0}, luck:{cur:0,max:0}, magic:{cur:0,max:0}, energy:{cur:0,max:0}
+  };
+  state.stats = { skill:0, provisions:0 };
+  saveState(); renderAll();
+}
+function eatProvision(){
+  const heal = Number(state.dice.provisionHeal || 0);
+  if (state.stats.provisions <= 0){ alert("No provisions."); return; }
+  state.stats.provisions -= 1;
+  state.meters.stamina.cur = clamp(state.meters.stamina.cur + heal, 0, state.meters.stamina.max);
+  addBattleOrNoteHint("campaign", null, `Ate a provision: +${heal} STAMINA (clamped to max).`);
+  saveState(); renderAll();
+}
+
+/* =========================
+   Campaign / rule notes / section
+========================= */
+function syncCampaignFromUI(){
+  state.campaign.name = getVal("campName");
+  state.campaign.preset = getVal("preset");
+  state.campaign.ruleNotes = getVal("ruleNotes");
+  state.campaign.sectionNow = getVal("sectionNow");
+}
+
+/* =========================
+   Initial rolls
+========================= */
+function rollInitial(){
+  // Pull formulas from UI
+  state.dice.initSkill = getVal("initSkill");
+  state.dice.initStamina = getVal("initStamina");
+  state.dice.initLuck = getVal("initLuck");
+  state.dice.initMagic = getVal("initMagic");
+  state.dice.initEnergy = getVal("initEnergy");
+
+  const rs = rollExpr(state.dice.initSkill);
+  const rsta = rollExpr(state.dice.initStamina);
+  const rl = rollExpr(state.dice.initLuck);
+  const rmag = rollExpr(state.dice.initMagic);
+  const reng = rollExpr(state.dice.initEnergy);
+
+  if (!rs.ok || !rsta.ok || !rl.ok || !rmag.ok || !reng.ok){
+    alert("One of the initial formulas is invalid (Dice tab).");
+    return;
+  }
+
+  state.stats.skill = rs.total;
+
+  state.meters.stamina.max = rsta.total;
+  state.meters.stamina.cur = rsta.total;
+
+  state.meters.luck.max = rl.total;
+  state.meters.luck.cur = rl.total;
+
+  // Preset: magic is optional, but allow formula-driven
+  if (state.campaign.preset === "magic" || rmag.total !== 0){
+    state.meters.magic.max = Math.max(0, rmag.total);
+    state.meters.magic.cur = Math.max(0, rmag.total);
+  }
+
+  if (reng.total !== 0){
+    state.meters.energy.max = Math.max(0, reng.total);
+    state.meters.energy.cur = Math.max(0, reng.total);
+  }
+
+  // Ensure current does not exceed max
+  ["stamina","luck","magic","energy"].forEach(k => {
+    state.meters[k].cur = clamp(state.meters[k].cur, 0, state.meters[k].max);
+  });
+
+  addNote({
+    scope:"campaign",
+    ref:{type:"init"},
+    section: state.campaign.sectionNow || "",
+    text: `Auto-roll: SKILL=${state.stats.skill}, STAMINA=${state.meters.stamina.max}, LUCK=${state.meters.luck.max}` +
+          ((state.meters.magic.max||0) ? `, MAGIC=${state.meters.magic.max}` : "") +
+          ((state.meters.energy.max||0) ? `, ENERGY=${state.meters.energy.max}` : "")
+  });
+
+  saveState(); renderAll();
+}
+function rollDice(){
+  state.dice.expr = getVal("diceExpr");
+  const r = rollExpr(state.dice.expr);
+  if (!r.ok){ alert(r.error); return; }
+  $("diceOut").textContent = fmtRoll(r);
+  saveState();
+}
+function testLuck(){
+  state.dice.luckMode = getVal("luckMode");
+  if (state.dice.luckMode === "manual"){
+    $("luckTestOut").textContent = "Manual";
+    saveState(); return;
+  }
+  const r = rollExpr("2d6");
+  const ok = r.total <= Number(state.meters.luck.cur || 0);
+  $("luckTestOut").textContent = `${ok ? "Success" : "Fail"} (${r.total})`;
+  // Classic: decrement current Luck after each test
+  state.meters.luck.cur = clamp(state.meters.luck.cur - 1, 0, state.meters.luck.max);
+
+  addNote({
+    scope:"dice",
+    ref:{type:"luckTest"},
+    section: state.campaign.sectionNow || "",
+    text: `Luck test: roll ${r.total} vs LUCK ${ok ? "success" : "fail"}. LUCK now ${state.meters.luck.cur}/${state.meters.luck.max}.`
+  });
+
+  saveState(); renderAll();
+}
+
+/* =========================
+   Custom stats
+========================= */
+function addCustomStat(){
+  const name = getVal("customStatName").trim();
+  const value = getNum("customStatValue");
+  if (!name){ alert("Provide a stat name."); return; }
+  state.customStats.push({ id: uid(), name, value });
+  setVal("customStatName",""); setVal("customStatValue",0);
+  saveState(); renderAll();
+}
+function bumpCustom(id, delta){
+  const s = state.customStats.find(x => x.id === id);
+  if (!s) return;
+  s.value = Number(s.value||0) + delta;
+  saveState(); renderAll();
+}
+function removeCustom(id){
+  state.customStats = state.customStats.filter(x => x.id !== id);
+  saveState(); renderAll();
+}
+function clearCustomStats(){
+  if (!confirm("Clear all custom stats?")) return;
+  state.customStats = [];
+  saveState(); renderAll();
+}
+function renderCustomStats(){
+  const el = $("customStats");
+  el.innerHTML = "";
+  if (!state.customStats.length){
+    el.innerHTML = `<div class="muted">No custom stats.</div>`;
+    return;
+  }
+  state.customStats.forEach(s => {
+    const row = document.createElement("div");
+    row.className = "item";
+    row.innerHTML = `
+      <div>
+        <h3>${escapeHtml(s.name)} <span class="tag">custom</span></h3>
+        <div class="meta">Value: <b>${Number(s.value)}</b></div>
+      </div>
+      <div class="actions">
+        <button onclick="bumpCustom('${s.id}', +1)">+1</button>
+        <button onclick="bumpCustom('${s.id}', -1)">-1</button>
+        <button onclick="openNoteModal({scope:'character', ref:{type:'customStat', id:'${s.id}', name:'${escapeHtml(s.name)}'}})">Note</button>
+        <button class="btnBad" onclick="removeCustom('${s.id}')">Remove</button>
+      </div>
+    `;
+    el.appendChild(row);
+  });
+}
+
+/* =========================
+   Inventory
+========================= */
+function addInventory(){
+  const name = getVal("invName").trim();
+  const qty = getNum("invQty") || 1;
+  const notes = getVal("invNotes").trim();
+  if (!name){ alert("Provide an item name."); return; }
+  state.inventory.push({ id: uid(), name, qty, notes });
+  setVal("invName",""); setVal("invQty",1); setVal("invNotes","");
+  saveState(); renderAll();
+}
+function bumpInv(id, delta){
+  const it = state.inventory.find(x => x.id === id);
+  if (!it) return;
+  it.qty = Number(it.qty||0) + delta;
+  if (it.qty <= 0) state.inventory = state.inventory.filter(x => x.id !== id);
+  saveState(); renderAll();
+}
+function removeInv(id){
+  state.inventory = state.inventory.filter(x => x.id !== id);
+  saveState(); renderAll();
+}
+function clearInventory(){
+  if (!confirm("Clear inventory?")) return;
+  state.inventory = [];
+  saveState(); renderAll();
+}
+function renderInventory(){
+  const el = $("inventory");
+  el.innerHTML = "";
+  if (!state.inventory.length){
+    el.innerHTML = `<div class="muted">Inventory is empty.</div>`;
+    return;
+  }
+  state.inventory.forEach(it => {
+    const row = document.createElement("div");
+    row.className = "item";
+    row.innerHTML = `
+      <div>
+        <h3>${escapeHtml(it.name)}</h3>
+        <div class="meta">Qty: <b>${Number(it.qty)}</b>${it.notes ? ` • ${escapeHtml(it.notes)}` : ""}</div>
+      </div>
+      <div class="actions">
+        <button onclick="bumpInv('${it.id}', +1)">+1</button>
+        <button onclick="bumpInv('${it.id}', -1)">-1</button>
+        <button onclick="openNoteModal({scope:'inventory', ref:{type:'item', id:'${it.id}', name:'${escapeHtml(it.name)}'}})">Note</button>
+        <button class="btnBad" onclick="removeInv('${it.id}')">Remove</button>
+      </div>
+    `;
+    el.appendChild(row);
+  });
+}
+
+/* =========================
+   Combat + battle log
+========================= */
+function addEnemy(){
+  const name = getVal("eName").trim();
+  if (!name){ alert("Provide an enemy name."); return; }
+  state.combat.enemies.push({
+    id: uid(),
+    name,
+    tag: getVal("eTag").trim(),
+    skill: getNum("eSkill"),
+    stamina: getNum("eStamina"),
+    damage: getNum("eDmg") || 2,
+    notes: getVal("eNotes").trim()
+  });
+  setVal("eName",""); setVal("eTag",""); setVal("eNotes","");
+  saveState(); renderAll();
+}
+function clearEnemies(){
+  if (!confirm("Clear enemies?")) return;
+  state.combat.enemies = [];
+  selectedEnemyId = null;
+  saveState(); renderAll();
+}
+function removeEnemy(id){
+  state.combat.enemies = state.combat.enemies.filter(x => x.id !== id);
+  if (selectedEnemyId === id) selectedEnemyId = null;
+  saveState(); renderAll();
+}
+function selectEnemy(id){
+  selectedEnemyId = id;
+  saveState(); renderAll();
+}
+function aliveEnemies(){
+  return state.combat.enemies.filter(e => Number(e.stamina) > 0);
+}
+function targetEnemy(){
+  const alive = aliveEnemies();
+  if (!alive.length) return null;
+  let e = null;
+  if (selectedEnemyId) e = alive.find(x => x.id === selectedEnemyId) || null;
+  if (!e) e = alive[0];
+  return e;
+}
+
+function rollPlayerAS(){
+  const mod = getNum("pMod");
+  const r = rollExpr("2d6");
+  state.combat.playerLastRoll = r.total;
+  state.combat.playerAS = Number(state.stats.skill||0) + r.total + mod;
+  saveState(); renderAll();
+
+  logCombatEvent({
+    type:"roll",
+    who:"player",
+    round: state.combat.round,
+    section: state.campaign.sectionNow || "",
+    roll: r.total,
+    mod,
+    skill: Number(state.stats.skill||0),
+    as: state.combat.playerAS
+  });
+}
+function rollEnemyAS(){
+  const e = targetEnemy();
+  if (!e){ alert("No alive enemies."); return; }
+  const mod = getNum("eMod");
+  const r = rollExpr("2d6");
+  state.combat.enemyLastRoll = r.total;
+  state.combat.enemyAS = Number(e.skill||0) + r.total + mod;
+  saveState(); renderAll();
+
+  logCombatEvent({
+    type:"roll",
+    who:"enemy",
+    round: state.combat.round,
+    enemyId: e.id,
+    enemyName: e.name,
+    section: state.campaign.sectionNow || "",
+    roll: r.total,
+    mod,
+    skill: Number(e.skill||0),
+    as: state.combat.enemyAS
+  });
+}
+function resolveRound(){
+  const e = targetEnemy();
+  if (!e){ alert("No alive enemies."); return; }
+
+  // Auto-roll if missing
+  if (state.combat.playerAS == null) rollPlayerAS();
+  if (state.combat.enemyAS == null) rollEnemyAS();
+
+  const pAS = state.combat.playerAS;
+  const eAS = state.combat.enemyAS;
+
+  let outcome = "tie";
+  let dmgToEnemy = 0;
+  let dmgToPlayer = 0;
+
+  if (pAS > eAS){
+    outcome = "playerHit";
+    dmgToEnemy = Number(e.damage||2);
+    e.stamina = Math.max(0, Number(e.stamina) - dmgToEnemy);
+  } else if (eAS > pAS){
+    outcome = "enemyHit";
+    dmgToPlayer = Number(e.damage||2);
+    state.meters.stamina.cur = clamp(state.meters.stamina.cur - dmgToPlayer, 0, state.meters.stamina.max);
+  }
+
+  logCombatEvent({
+    type:"resolve",
+    round: state.combat.round,
+    section: state.campaign.sectionNow || "",
+    enemyId: e.id,
+    enemyName: e.name,
+    playerAS: pAS,
+    enemyAS: eAS,
+    outcome,
+    dmgToEnemy,
+    dmgToPlayer,
+    playerStaminaAfter: state.meters.stamina.cur,
+    enemyStaminaAfter: e.stamina
+  });
+
+  // Clear for next action
+  state.combat.playerAS = null;
+  state.combat.enemyAS = null;
+
+  // If enemy defeated, auto-log a note (lightweight)
+  if (e.stamina === 0){
+    addNote({
+      scope:"combat",
+      ref:{type:"defeat", enemyId:e.id, enemyName:e.name},
+      section: state.campaign.sectionNow || "",
+      text: `Defeated ${e.name}${e.tag ? ` (${e.tag})` : ""} on round ${state.combat.round}.`
+    });
+  }
+
+  saveState(); renderAll();
+}
+function nextRound(){
+  state.combat.round += 1;
+  state.combat.playerLastRoll = null;
+  state.combat.enemyLastRoll = null;
+  state.combat.playerAS = null;
+  state.combat.enemyAS = null;
+  saveState(); renderAll();
+}
+function resetCombat(){
+  if (!confirm("Reset round counters and last rolls? (Enemies and log remain.)")) return;
+  state.combat.round = 1;
+  state.combat.playerLastRoll = null;
+  state.combat.enemyLastRoll = null;
+  state.combat.playerAS = null;
+  state.combat.enemyAS = null;
+  selectedEnemyId = null;
+  saveState(); renderAll();
+}
+function manualDamageToEnemy(){
+  const e = targetEnemy();
+  if (!e){ alert("No alive enemy."); return; }
+  const dmg = Number(prompt("Damage to enemy stamina:", "2"));
+  if (!Number.isFinite(dmg)) return;
+  e.stamina = Math.max(0, Number(e.stamina) - dmg);
+
+  logCombatEvent({
+    type:"manual",
+    round: state.combat.round,
+    section: state.campaign.sectionNow || "",
+    enemyId: e.id,
+    enemyName: e.name,
+    note: `Manual damage to enemy: ${dmg}`,
+    enemyStaminaAfter: e.stamina,
+    playerStaminaAfter: state.meters.stamina.cur
+  });
+
+  saveState(); renderAll();
+}
+function manualDamageToPlayer(){
+  const dmg = Number(prompt("Damage to player stamina:", "2"));
+  if (!Number.isFinite(dmg)) return;
+
+  state.meters.stamina.cur = clamp(state.meters.stamina.cur - dmg, 0, state.meters.stamina.max);
+
+  logCombatEvent({
+    type:"manual",
+    round: state.combat.round,
+    section: state.campaign.sectionNow || "",
+    note: `Manual damage to player: ${dmg}`,
+    enemyId: targetEnemy()?.id || null,
+    enemyName: targetEnemy()?.name || null,
+    enemyStaminaAfter: targetEnemy()?.stamina ?? null,
+    playerStaminaAfter: state.meters.stamina.cur
+  });
+
+  saveState(); renderAll();
+}
+function logCombatEvent(evt){
+  state.combat.battleLog.push({
+    id: uid(),
+    ts: nowIso(),
+    ...evt
+  });
+}
+function clearBattleLog(){
+  if (!confirm("Clear battle log?")) return;
+  state.combat.battleLog = [];
+  saveState(); renderAll();
+}
+
+function renderEnemies(){
+  const el = $("enemies");
+  el.innerHTML = "";
+  if (!state.combat.enemies.length){
+    el.innerHTML = `<div class="muted">No enemies.</div>`;
+    return;
+  }
+  state.combat.enemies.forEach(e => {
+    const dead = Number(e.stamina) <= 0;
+    const selected = selectedEnemyId === e.id;
+    const row = document.createElement("div");
+    row.className = "item";
+    row.innerHTML = `
+      <div>
+        <h3>${escapeHtml(e.name)}
+          ${e.tag ? `<span class="tag">${escapeHtml(e.tag)}</span>` : ""}
+          ${dead ? `<span class="tag" style="border-color: rgba(224,92,92,.65)">defeated</span>` : ""}
+          ${selected ? `<span class="tag" style="border-color: rgba(215,182,107,.85)">target</span>` : ""}
+        </h3>
+        <div class="meta">SKILL <b>${Number(e.skill)}</b> • STAMINA <b>${Number(e.stamina)}</b> • DMG <b>${Number(e.damage)}</b>
+          ${e.notes ? `<br/>Notes: ${escapeHtml(e.notes)}` : ""}</div>
+      </div>
+      <div class="actions">
+        <button onclick="selectEnemy('${e.id}')">Target</button>
+        <button onclick="eAdjust('${e.id}', -2)">-2</button>
+        <button onclick="eAdjust('${e.id}', +2)">+2</button>
+        <button onclick="openNoteModal({scope:'combat', ref:{type:'enemy', id:'${e.id}', name:'${escapeHtml(e.name)}'}})">Note</button>
+        <button class="btnBad" onclick="removeEnemy('${e.id}')">Remove</button>
+      </div>
+    `;
+    el.appendChild(row);
+  });
+}
+function eAdjust(id, delta){
+  const e = state.combat.enemies.find(x => x.id === id);
+  if (!e) return;
+  e.stamina = Math.max(0, Number(e.stamina) + delta);
+  saveState(); renderAll();
+}
+
+function renderBattleLog(){
+  $("logCount").textContent = state.combat.battleLog.length;
+  const el = $("battleLog");
+  el.innerHTML = "";
+  const list = state.combat.battleLog.slice(-50).reverse(); // show last 50
+  if (!list.length){
+    el.innerHTML = `<div class="muted">No log entries yet.</div>`;
+    return;
+  }
+  list.forEach(x => {
+    const row = document.createElement("div");
+    row.className = "item";
+    const title = x.type === "resolve" ? "Resolve" : (x.type === "roll" ? "Roll" : "Manual");
+    const scope = x.enemyName ? ` • ${escapeHtml(x.enemyName)}` : "";
+    const sec = x.section ? ` • ${escapeHtml(x.section)}` : "";
+    row.innerHTML = `
+      <div>
+        <h3>${title}${scope} <span class="tag">${fmtTs(x.ts)}</span></h3>
+        <div class="meta">
+          ${escapeHtml(sec)}
+          ${renderLogLine(x)}
+        </div>
+      </div>
+      <div class="actions">
+        <button onclick="openNoteModal({scope:'combat', ref:{type:'log', id:'${x.id}'}})">Note</button>
+      </div>
+    `;
+    el.appendChild(row);
+  });
+}
+function renderLogLine(x){
+  if (x.type === "roll"){
+    return `<br/>${escapeHtml(x.who)} roll ${x.roll} (mod ${x.mod || 0}) → AS ${x.as}`;
+  }
+  if (x.type === "resolve"){
+    const out = x.outcome === "tie" ? "Tie (no damage)" :
+      (x.outcome === "playerHit" ? `Player hits for ${x.dmgToEnemy}` : `Enemy hits for ${x.dmgToPlayer}`);
+    return `<br/>Player AS ${x.playerAS} vs Enemy AS ${x.enemyAS} → ${escapeHtml(out)}`
+      + `<br/>After: Player STAMINA ${x.playerStaminaAfter}/${state.meters.stamina.max} • Enemy STAMINA ${x.enemyStaminaAfter}`;
+  }
+  return `<br/>${escapeHtml(x.note || "Manual action")}`;
+}
+
+/* =========================
+   Map (grid + pan threshold + note tool)
+========================= */
+const mapCanvas = $("mapCanvas");
+const mapCtx = mapCanvas.getContext("2d");
+const mapWrap = $("mapWrap");
+
+const TILE = 22;
+const GAP  = 6;
+
+const ROOM_COLORS = {
+  normal: "rgba(215,182,107,.78)",
+  save:   "rgba(108,207,124,.80)",
+  shop:   "rgba(224,179,93,.82)",
+  boss:   "rgba(224,92,92,.82)",
+  key:    "rgba(120,167,233,.80)",
+  special:"rgba(212,106,63,.82)"
+};
+
+function tileKey(x,y){ return `${x},${y}`; }
+function countRooms(){ return Object.keys(state.map.tiles||{}).length; }
+
+function setMapTool(tool){
+  state.map.tool = tool;
+  $("mapToolOut").textContent = tool;
+  saveState(); drawMap();
+}
+function toggleGridLines(){
+  state.map.showGrid = !state.map.showGrid;
+  saveState(); drawMap();
+}
+function clearMap(){
+  if (!confirm("Clear the entire map (rooms + current)? Notes remain, but tile references may no longer match.")) return;
+  state.map.tiles = {};
+  state.map.current = null;
+  saveState(); drawMap(); renderAll();
+}
+function zoomMap(f){
+  state.map.zoom = clamp(state.map.zoom * f, 0.5, 3.0);
+  saveState(); drawMap();
+}
+function resetView(){
+  state.map.zoom = 1;
+  state.map.panX = 0;
+  state.map.panY = 0;
+  saveState(); drawMap();
+}
+function applyMapUI(){
+  $("roomType").value = state.map.roomType || "normal";
+  $("roomTypeOut").textContent = $("roomType").value;
+  $("zoomOut").textContent = `${Math.round((state.map.zoom||1)*100)}%`;
+  $("mapToolOut").textContent = state.map.tool;
+}
+$("roomType").addEventListener("change", () => {
+  state.map.roomType = getVal("roomType");
+  $("roomTypeOut").textContent = state.map.roomType;
+  saveState();
+});
+
+function screenToGrid(px, py){
+  const rect = mapCanvas.getBoundingClientRect();
+  const cx = (px - rect.left) * (mapCanvas.width / rect.width);
+  const cy = (py - rect.top) * (mapCanvas.height / rect.height);
+
+  const z = state.map.zoom || 1;
+  const x = (cx - state.map.panX) / z;
+  const y = (cy - state.map.panY) / z;
+
+  const step = TILE + GAP;
+
+  // Use floor-based cell picking to reduce jitter at some zoom levels
+  const gx = Math.round(x / step);
+  const gy = Math.round(y / step);
+  return { gx, gy };
+}
+function gridToCanvas(gx, gy){
+  const step = TILE + GAP;
+  return { x: gx * step, y: gy * step };
+}
+
+function drawMap(){
+  applyMapUI();
+
+  const w = mapCanvas.width, h = mapCanvas.height;
+  mapCtx.setTransform(1,0,0,1,0,0);
+  mapCtx.clearRect(0,0,w,h);
+
+  const z = state.map.zoom || 1;
+  mapCtx.setTransform(z,0,0,z, state.map.panX, state.map.panY);
+
+  // background
+  mapCtx.fillStyle = "rgba(7,6,10,1)";
+  mapCtx.fillRect(-2400,-2400, 4800, 4800);
+
+  // grid lines
+  if (state.map.showGrid){
+    mapCtx.strokeStyle = "rgba(239,233,218,.06)";
+    mapCtx.lineWidth = 1;
+    const step = TILE + GAP;
+    for (let x=-2400; x<=2400; x+=step){
+      mapCtx.beginPath(); mapCtx.moveTo(x,-2400); mapCtx.lineTo(x,2400); mapCtx.stroke();
+    }
+    for (let y=-2400; y<=2400; y+=step){
+      mapCtx.beginPath(); mapCtx.moveTo(-2400,y); mapCtx.lineTo(2400,y); mapCtx.stroke();
+    }
+  }
+
+  const keys = Object.keys(state.map.tiles || {});
+
+  // connections (right + down only to avoid duplicates)
+  mapCtx.strokeStyle = "rgba(239,233,218,.26)";
+  mapCtx.lineWidth = 3;
+  keys.forEach(k => {
+    const [x,y] = k.split(",").map(Number);
+    const n = [[x+1,y],[x,y+1]];
+    const {x:cx,y:cy} = gridToCanvas(x,y);
+    const mx = cx + TILE/2, my = cy + TILE/2;
+    n.forEach(([nx,ny]) => {
+      if (!state.map.tiles[tileKey(nx,ny)]) return;
+      const {x:dx,y:dy} = gridToCanvas(nx,ny);
+      const ex = dx + TILE/2, ey = dy + TILE/2;
+      mapCtx.beginPath(); mapCtx.moveTo(mx,my); mapCtx.lineTo(ex,ey); mapCtx.stroke();
+    });
+  });
+
+  // tiles
+  keys.forEach(k => {
+    const t = state.map.tiles[k];
+    const [x,y] = k.split(",").map(Number);
+    const {x:cx,y:cy} = gridToCanvas(x,y);
+    const col = ROOM_COLORS[t.type] || ROOM_COLORS.normal;
+
+    mapCtx.fillStyle = col;
+    mapCtx.fillRect(cx,cy, TILE, TILE);
+
+    mapCtx.strokeStyle = "rgba(0,0,0,.45)";
+    mapCtx.lineWidth = 1.5;
+    mapCtx.strokeRect(cx,cy, TILE, TILE);
+
+    // small inner highlight
+    mapCtx.strokeStyle = "rgba(239,233,218,.18)";
+    mapCtx.lineWidth = 1;
+    mapCtx.strokeRect(cx+2,cy+2, TILE-4, TILE-4);
+  });
+
+  // current
+  if (state.map.current){
+    const {x,y} = state.map.current;
+    const {x:cx,y:cy} = gridToCanvas(x,y);
+    mapCtx.strokeStyle = "rgba(239,233,218,.9)";
+    mapCtx.lineWidth = 3;
+    mapCtx.strokeRect(cx-3, cy-3, TILE+6, TILE+6);
+  }
+
+  // update diagnostics
+  $("diagRooms").textContent = countRooms();
+  $("zoomOut").textContent = `${Math.round((state.map.zoom||1)*100)}%`;
+}
+
+let pointerDown = null;
+let isDragging = false;
+
+mapCanvas.addEventListener("pointerdown", (e) => {
+  mapCanvas.setPointerCapture(e.pointerId);
+  pointerDown = { x:e.clientX, y:e.clientY, panX: state.map.panX, panY: state.map.panY };
+  isDragging = false;
+});
+mapCanvas.addEventListener("pointermove", (e) => {
+  if (!pointerDown) return;
+
+  const dx = e.clientX - pointerDown.x;
+  const dy = e.clientY - pointerDown.y;
+  const dist = Math.hypot(dx,dy);
+
+  const tool = state.map.tool;
+
+  // Threshold to prevent accidental painting while panning
+  if (!isDragging && dist > 7){
+    isDragging = true;
+  }
+
+  if (tool === "pan" || isDragging){
+    state.map.panX = pointerDown.panX + dx;
+    state.map.panY = pointerDown.panY + dy;
+    saveState(); drawMap();
+    mapWrap.classList.add("panning");
+  }
+});
+mapCanvas.addEventListener("pointerup", (e) => {
+  if (!pointerDown) return;
+
+  const dx = e.clientX - pointerDown.x;
+  const dy = e.clientY - pointerDown.y;
+  const dist = Math.hypot(dx,dy);
+
+  // If no drag (or very small), treat as click action
+  if (dist <= 7 && state.map.tool !== "pan"){
+    handleMapClick(e.clientX, e.clientY);
+  }
+
+  pointerDown = null;
+  isDragging = false;
+  mapWrap.classList.remove("panning");
+});
+mapCanvas.addEventListener("contextmenu", (e) => {
+  e.preventDefault();
+  // Right click: quick erase
+  const prev = state.map.tool;
+  state.map.tool = "erase";
+  handleMapClick(e.clientX, e.clientY);
+  state.map.tool = prev;
+});
+
+function handleMapClick(clientX, clientY){
+  const { gx, gy } = screenToGrid(clientX, clientY);
+  const k = tileKey(gx,gy);
+  const tool = state.map.tool;
+
+  if (tool === "paint"){
+    state.map.tiles[k] = state.map.tiles[k] || { type:"normal" };
+    state.map.tiles[k].type = state.map.roomType || "normal";
+  } else if (tool === "erase"){
+    delete state.map.tiles[k];
+    if (state.map.current && state.map.current.x === gx && state.map.current.y === gy) state.map.current = null;
+  } else if (tool === "current"){
+    if (!state.map.tiles[k]) state.map.tiles[k] = { type: state.map.roomType || "normal" };
+    state.map.current = { x: gx, y: gy };
+  } else if (tool === "note"){
+    if (!state.map.tiles[k]) state.map.tiles[k] = { type: state.map.roomType || "normal" };
+    openNoteModal({ scope:"map", ref:{ tile:{x:gx,y:gy} } });
+    return; // modal will save itself
+  }
+
+  saveState(); drawMap(); renderAll();
+}
+
+/* =========================
+   Notes system (free text anywhere)
+========================= */
+let noteDraft = { scope:"campaign", ref:null };
+
+function openNoteModal(ctx){
+  noteDraft = ctx || {scope:"campaign", ref:null};
+
+  $("noteModalBack").style.display = "flex";
+  $("noteScope").value = noteDraft.scope || "campaign";
+  $("noteSection").value = state.campaign.sectionNow || "";
+  $("noteText").value = "";
+
+  const refStr = noteRefToString(noteDraft.ref);
+  $("noteModalTitle").textContent = "Add note";
+  $("noteModalSub").textContent =
+    `Scope: ${$("noteScope").value}${refStr ? " • " + refStr : ""}`;
+  $("noteText").focus();
+}
+function closeNoteModal(){
+  $("noteModalBack").style.display = "none";
+}
+$("noteScope").addEventListener("change", () => {
+  noteDraft.scope = $("noteScope").value;
+  $("noteModalSub").textContent = `Scope: ${noteDraft.scope}${noteRefToString(noteDraft.ref) ? " • " + noteRefToString(noteDraft.ref) : ""}`;
+});
+
+function saveNoteFromModal(){
+  const scope = $("noteScope").value;
+  const section = $("noteSection").value.trim();
+  const text = $("noteText").value.trim();
+  if (!text){ alert("Write a note first."); return; }
+
+  addNote({
+    scope,
+    ref: noteDraft.ref || null,
+    section,
+    text
+  });
+
+  closeNoteModal();
+  saveState(); renderAll();
+  if (!$("view-notes").classList.contains("hidden")) renderNotes();
+}
+
+function addNote({scope, ref, section, text}){
+  state.notes.push({
+    id: uid(),
+    ts: nowIso(),
+    scope: scope || "campaign",
+    ref: ref || null,
+    section: section || "",
+    text: text || ""
+  });
+}
+
+function noteRefToString(ref){
+  if (!ref) return "";
+  try{
+    if (ref.type === "enemy") return `Enemy: ${ref.name || ref.id}`;
+    if (ref.type === "round") return `Round: ${ref.round}`;
+    if (ref.type === "log") return `Log entry`;
+    if (ref.type === "customStat") return `Custom stat: ${ref.name || ref.id}`;
+    if (ref.type === "item") return `Item: ${ref.name || ref.id}`;
+    if (ref.type === "init") return "Initial roll";
+    if (ref.type === "luckTest") return "Luck test";
+    if (ref.type === "defeat") return `Defeated: ${ref.enemyName || ref.enemyId}`;
+    if (ref.tile) return `Tile: (${ref.tile.x},${ref.tile.y})`;
+    return "Reference";
+  }catch{
+    return "Reference";
+  }
+}
+
+function renderNotes(){
+  const scope = getVal("noteScopeFilter");
+  const q = (getVal("noteSearch") || "").trim().toLowerCase();
+
+  let notes = state.notes.slice().reverse();
+
+  if (scope !== "all"){
+    notes = notes.filter(n => n.scope === scope);
+  }
+  if (q){
+    notes = notes.filter(n =>
+      (n.text || "").toLowerCase().includes(q) ||
+      (n.section || "").toLowerCase().includes(q) ||
+      noteRefToString(n.ref).toLowerCase().includes(q)
+    );
+  }
+
+  const el = $("notesList");
+  el.innerHTML = "";
+
+  if (!notes.length){
+    el.innerHTML = `<div class="muted">No notes match your filter.</div>`;
+    return;
+  }
+
+  notes.slice(0, 200).forEach(n => {
+    const row = document.createElement("div");
+    row.className = "item";
+    const refStr = noteRefToString(n.ref);
+    const sec = n.section ? ` • ${escapeHtml(n.section)}` : "";
+    row.innerHTML = `
+      <div>
+        <h3>${escapeHtml(n.scope)} <span class="tag">${fmtTs(n.ts)}</span></h3>
+        <div class="meta">
+          ${refStr ? `<span class="tag">${escapeHtml(refStr)}</span>` : ""}
+          ${sec ? `<span class="tag">${sec.slice(3)}</span>` : ""}
+          <br/>${escapeHtml(n.text).replaceAll("\n","<br/>")}
+        </div>
+      </div>
+      <div class="actions">
+        <button onclick="deleteNote('${n.id}')">Delete</button>
+      </div>
+    `;
+    el.appendChild(row);
+  });
+}
+
+function deleteNote(id){
+  if (!confirm("Delete this note?")) return;
+  state.notes = state.notes.filter(n => n.id !== id);
+  saveState(); renderAll(); renderNotes();
+}
+
+function clearNotes(){
+  if (!confirm("Clear all notes?")) return;
+  state.notes = [];
+  saveState(); renderAll(); renderNotes();
+}
+
+function exportNotesText(){
+  const lines = state.notes
+    .slice()
+    .sort((a,b) => (a.ts < b.ts ? -1 : 1))
+    .map(n => {
+      const ref = noteRefToString(n.ref);
+      const sec = n.section ? ` [${n.section}]` : "";
+      return `${fmtTs(n.ts)} • ${n.scope}${ref ? " • " + ref : ""}${sec}\n${n.text}\n`;
+    });
+  $("ioBox").value = lines.join("\n---\n\n");
+  showView("data");
+}
+
+function addBattleOrNoteHint(scope, ref, text){
+  // Lightweight “auto-notes” for helpful events; keep minimal.
+  addNote({ scope, ref, section: state.campaign.sectionNow || "", text });
+}
+
+/* =========================
+   Checkpoints (snapshots)
+========================= */
+function createCheckpoint(){
+  const label = prompt("Checkpoint label (optional):", "") ?? "";
+  const cp = {
+    id: uid(),
+    ts: nowIso(),
+    label: label.trim().slice(0, 60),
+    section: state.campaign.sectionNow || "",
+    snapshot: {
+      meters: JSON.parse(JSON.stringify(state.meters)),
+      stats: JSON.parse(JSON.stringify(state.stats)),
+      customStats: JSON.parse(JSON.stringify(state.customStats)),
+      inventory: JSON.parse(JSON.stringify(state.inventory)),
+      mapCurrent: state.map.current ? {...state.map.current} : null
+    }
+  };
+  state.checkpoints.push(cp);
+  addNote({
+    scope:"checkpoint",
+    ref:{type:"checkpoint", id:cp.id},
+    section: cp.section,
+    text: `Checkpoint created${cp.label ? `: ${cp.label}` : ""}.`
+  });
+  saveState(); renderAll();
+}
+
+/* =========================
+   Export / Import
+========================= */
+function exportJSON(){
+  syncFromUI();
+  $("ioBox").value = JSON.stringify(state, null, 2);
+}
+function importJSON(){
+  const raw = $("ioBox").value.trim();
+  if (!raw){ alert("Paste JSON first."); return; }
+  try{
+    const parsed = JSON.parse(raw);
+    const merged = deepMerge(DEFAULT_STATE(), parsed);
+    state = migrateState(merged);
+    saveState(); renderAll(); drawMap();
+    alert("Import complete.");
+  }catch{
+    alert("Invalid JSON.");
+  }
+}
+function wipeAll(){
+  if (!confirm("Wipe all locally saved data?")) return;
+  localStorage.removeItem(STORAGE_KEY);
+  state = DEFAULT_STATE();
+  saveState(); renderAll(); drawMap();
+}
+
+/* =========================
+   UI sync/render
+========================= */
+function syncFromUI(){
+  syncCampaignFromUI();
+
+  // Character tab meters
+  state.meters.stamina.cur = Number(getVal("staminaCur") || 0);
+  state.meters.stamina.max = Number(getVal("staminaMax") || 0);
+
+  state.meters.luck.cur = Number(getVal("luckCur") || 0);
+  state.meters.luck.max = Number(getVal("luckMax") || 0);
+
+  state.meters.energy.cur = Number(getVal("energyCur") || 0);
+  state.meters.energy.max = Number(getVal("energyMax") || 0);
+
+  state.meters.magic.cur = Number(getVal("magicCur") || 0);
+  state.meters.magic.max = Number(getVal("magicMax") || 0);
+
+  // Clamp currents
+  ["stamina","luck","magic","energy"].forEach(k => {
+    state.meters[k].cur = clamp(state.meters[k].cur, 0, state.meters[k].max);
+  });
+
+  state.stats.skill = Number(getVal("skill") || 0);
+  state.stats.provisions = Math.max(0, Number(getVal("provisions") || 0));
+
+  // Dice settings
+  state.dice.expr = getVal("diceExpr");
+  state.dice.initSkill = getVal("initSkill");
+  state.dice.initStamina = getVal("initStamina");
+  state.dice.initLuck = getVal("initLuck");
+  state.dice.initMagic = getVal("initMagic");
+  state.dice.initEnergy = getVal("initEnergy");
+  state.dice.provisionHeal = Number(getVal("provisionHeal") || 0);
+  state.dice.luckMode = getVal("luckMode");
+
+  // Map room type
+  state.map.roomType = getVal("roomType");
+
+  saveState();
+}
+
+function renderAll(){
+  // Campaign
+  setVal("campName", state.campaign.name);
+  setVal("preset", state.campaign.preset);
+  setVal("ruleNotes", state.campaign.ruleNotes);
+  setVal("sectionNow", state.campaign.sectionNow);
+
+  // Dice
+  setVal("diceExpr", state.dice.expr);
+  setVal("initSkill", state.dice.initSkill);
+  setVal("initStamina", state.dice.initStamina);
+  setVal("initLuck", state.dice.initLuck);
+  setVal("initMagic", state.dice.initMagic);
+  setVal("initEnergy", state.dice.initEnergy);
+  setVal("provisionHeal", state.dice.provisionHeal);
+  setVal("luckMode", state.dice.luckMode);
+
+  // Character core
+  setVal("staminaCur", state.meters.stamina.cur);
+  setVal("staminaMax", state.meters.stamina.max);
+  setVal("luckCur", state.meters.luck.cur);
+  setVal("luckMax", state.meters.luck.max);
+  setVal("energyCur", state.meters.energy.cur);
+  setVal("energyMax", state.meters.energy.max);
+  setVal("magicCur", state.meters.magic.cur);
+  setVal("magicMax", state.meters.magic.max);
+  setVal("skill", state.stats.skill);
+  setVal("provisions", state.stats.provisions);
+
+  // Overview stat tiles
+  $("staminaOut").textContent = `${state.meters.stamina.cur} / ${state.meters.stamina.max}`;
+  $("luckOut").textContent    = `${state.meters.luck.cur} / ${state.meters.luck.max}`;
+  $("energyOut").textContent  = `${state.meters.energy.cur} / ${state.meters.energy.max}`;
+  $("magicOut").textContent   = `${state.meters.magic.cur} / ${state.meters.magic.max}`;
+  $("skillOut").textContent   = `${state.stats.skill}`;
+  $("provOut").textContent    = `${state.stats.provisions}`;
+
+  // Header pills
+  $("campPill").textContent = state.campaign.name?.trim() ? state.campaign.name.trim() : "—";
+  $("stamPill").textContent = `${state.meters.stamina.cur}/${state.meters.stamina.max}`;
+  $("skillPill").textContent = state.stats.skill;
+  $("luckPill").textContent = `${state.meters.luck.cur}/${state.meters.luck.max}`;
+
+  // Combat KPIs
+  $("roundNum").textContent = state.combat.round;
+  $("pRoll").textContent = state.combat.playerLastRoll ?? "—";
+  $("eRoll").textContent = state.combat.enemyLastRoll ?? "—";
+  $("pAS").textContent = state.combat.playerAS ?? "—";
+  $("eAS").textContent = state.combat.enemyAS ?? "—";
+  $("targetOut").textContent = (targetEnemy()?.name) ?? "—";
+  $("flowOut").textContent = `AS = SKILL + 2d6 + mod`;
+
+  // Checkpoints
+  $("cpCount").textContent = state.checkpoints.length;
+
+  // Diagnostics
+  $("diagEnemies").textContent = state.combat.enemies.length;
+  $("diagInv").textContent = state.inventory.length;
+  $("diagCustom").textContent = state.customStats.length;
+  $("diagRooms").textContent = countRooms();
+  $("diagNotes").textContent = state.notes.length;
+  $("diagLog").textContent = state.combat.battleLog.length;
+  $("diagCP").textContent = state.checkpoints.length;
+
+  $("logCount").textContent = state.combat.battleLog.length;
+
+  // Map UI
+  $("roomType").value = state.map.roomType || "normal";
+  $("roomTypeOut").textContent = state.map.roomType || "normal";
+  $("mapToolOut").textContent = state.map.tool || "paint";
+  $("zoomOut").textContent = `${Math.round((state.map.zoom||1)*100)}%`;
+
+  // Render lists
+  renderCustomStats();
+  renderInventory();
+  renderEnemies();
+  renderBattleLog();
+
+  // Persist (safe)
+  saveState();
+}
+
+/* =========================
+   Wire up common inputs
+========================= */
+[
+  "campName","preset","ruleNotes","sectionNow",
+  "staminaCur","staminaMax","luckCur","luckMax","energyCur","energyMax","magicCur","magicMax","skill","provisions",
+  "diceExpr","initSkill","initStamina","initLuck","initMagic","initEnergy","provisionHeal","luckMode",
+  "roomType"
+].forEach(id => {
+  $(id).addEventListener("change", () => { syncFromUI(); renderAll(); if (!$("view-map").classList.contains("hidden")) drawMap(); });
+});
+
+$("preset").addEventListener("change", () => {
+  state.campaign.preset = getVal("preset");
+  // No forced magic changes; you control it via formulas and meters.
+  saveState(); renderAll();
+});
+
+$("noteScopeFilter").addEventListener("change", renderNotes);
+$("noteSearch").addEventListener("keydown", (e) => { if (e.key === "Enter") renderNotes(); });
+
+/* =========================
+   Init
+========================= */
+mountTabs();
+renderAll();
+showView("overview");
+drawMap();
+</script>
+</body>
+</html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Fighting Fantasy – Campaign Tracker (Fantasy Edition)</title>
+  <style>
+    :root{
+      /* LOTRO-ish: dark leather + brass + parchment */
+      --bg0:#07060a;
+      --bg1:#0c0a10;
+      --panel:#14101b;
+      --panel2:#0f0b14;
+      --line:#3a2f46;
+      --line2:#5a4a63;
+
+      --text:#efe9da;
+      --muted:#c9bb9c;
+
+      --gold:#d7b66b;
+      --gold2:#a7863f;
+      --ember:#d46a3f;
+      --good:#6ccf7c;
+      --warn:#e0b35d;
+      --bad:#e05c5c;
+
+      --shadow: 0 18px 44px rgba(0,0,0,.5);
+
+      --r:16px;
+      --r2:999px;
+
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;
+      --serif: ui-serif, "Palatino Linotype", Palatino, Georgia, "Times New Roman", Times, serif;
+    }
+
+    *{ box-sizing:border-box; }
+    body{
+      margin:0;
+      color:var(--text);
+      font-family: var(--serif);
+      background:
+        radial-gradient(1200px 700px at 18% -10%, rgba(215,182,107,.12), transparent 55%),
+        radial-gradient(900px 500px at 92% 0%, rgba(212,106,63,.08), transparent 60%),
+        linear-gradient(180deg, var(--bg0), var(--bg1));
+    }
+
+    /* Subtle “grain” */
+    body:before{
+      content:"";
+      position:fixed; inset:0;
+      pointer-events:none;
+      background:
+        repeating-linear-gradient(0deg, rgba(255,255,255,.015), rgba(255,255,255,.015) 1px, transparent 1px, transparent 3px);
+      mix-blend-mode: overlay;
+      opacity:.25;
+    }
+
+    header{
+      position:sticky; top:0; z-index:20;
+      background: rgba(16,11,22,.72);
+      border-bottom: 1px solid rgba(90,74,99,.85);
+      backdrop-filter: blur(10px);
+    }
+
+    .top{
+      padding:14px 16px 10px;
+      display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap;
+    }
+
+    .brand{
+      display:flex; flex-direction:column; gap:4px;
+    }
+    .brand h1{
+      margin:0;
+      font-size:14px;
+      font-weight: 750;
+      letter-spacing: .35px;
+      color: var(--text);
+    }
+    .brand p{
+      margin:0;
+      font-size:12px;
+      color: rgba(201,187,156,.9);
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
+
+    .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    .spacer{ flex:1; }
+
+    .tabs{
+      display:flex; gap:6px; flex-wrap:wrap;
+      padding:0 12px 12px;
+    }
+
+    .tab{
+      border:1px solid rgba(90,74,99,.9);
+      background: rgba(20,16,27,.55);
+      color: rgba(201,187,156,.95);
+      border-radius: var(--r2);
+      padding: 8px 12px;
+      cursor:pointer;
+      font-size:12px;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      transition: transform .05s ease, background .12s ease, border-color .12s ease, color .12s ease;
+      position:relative;
+    }
+    .tab:hover{
+      border-color: rgba(215,182,107,.75);
+      color: var(--text);
+      background: rgba(20,16,27,.72);
+    }
+    .tab.active{
+      background: rgba(215,182,107,.12);
+      border-color: rgba(215,182,107,.85);
+      color: var(--text);
+      box-shadow: 0 10px 28px rgba(0,0,0,.35) inset;
+    }
+
+    main{
+      padding:16px;
+      max-width: 1240px;
+      margin:0 auto;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
+
+    .card{
+      background:
+        radial-gradient(900px 500px at 20% -20%, rgba(215,182,107,.08), transparent 60%),
+        linear-gradient(180deg, rgba(20,16,27,.92), rgba(15,11,22,.92));
+      border: 1px solid rgba(90,74,99,.85);
+      border-radius: var(--r);
+      box-shadow: var(--shadow);
+      padding: 14px;
+      position:relative;
+      overflow:hidden;
+    }
+
+    /* Decorative corner glints */
+    .card:before{
+      content:"";
+      position:absolute; inset:-1px;
+      pointer-events:none;
+      border-radius: var(--r);
+      background:
+        linear-gradient(135deg, rgba(215,182,107,.18), transparent 35%),
+        linear-gradient(315deg, rgba(215,182,107,.10), transparent 35%);
+      opacity:.55;
+      mix-blend-mode: screen;
+    }
+
+    .grid{ display:grid; gap:12px; }
+    .grid2{ grid-template-columns: 1fr 1fr; }
+    .grid3{ grid-template-columns: 1fr 1fr 1fr; }
+    @media (max-width: 980px){ .grid2,.grid3{ grid-template-columns: 1fr; } }
+
+    h2{
+      margin:0 0 10px;
+      font-size:14px;
+      letter-spacing:.25px;
+      font-family: var(--serif);
+      color: var(--text);
+    }
+
+    label{
+      display:block;
+      font-size:12px;
+      color: rgba(201,187,156,.95);
+      margin: 0 0 6px;
+      font-family: var(--serif);
+    }
+
+    input[type="text"], input[type="number"], textarea, select{
+      width:100%;
+      padding:10px 11px;
+      border-radius: 12px;
+      border:1px solid rgba(90,74,99,.9);
+      background: rgba(10,8,14,.65);
+      color: var(--text);
+      outline:none;
+      box-shadow: 0 8px 18px rgba(0,0,0,.35) inset;
+    }
+    textarea{ min-height:76px; resize: vertical; }
+
+    button{
+      padding:9px 11px;
+      border-radius: 12px;
+      border: 1px solid rgba(90,74,99,.9);
+      background: rgba(10,8,14,.55);
+      color: var(--text);
+      cursor:pointer;
+      transition: transform .05s ease, background .12s ease, border-color .12s ease, box-shadow .12s ease;
+      font-size: 12px;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
+    button:hover{
+      border-color: rgba(215,182,107,.75);
+      box-shadow: 0 0 0 2px rgba(215,182,107,.10);
+    }
+    button:active{ transform: translateY(1px); }
+
+    .btnGold{
+      background: rgba(215,182,107,.14);
+      border-color: rgba(215,182,107,.75);
+    }
+    .btnGood{
+      background: rgba(108,207,124,.12);
+      border-color: rgba(108,207,124,.65);
+    }
+    .btnWarn{
+      background: rgba(224,179,93,.12);
+      border-color: rgba(224,179,93,.65);
+    }
+    .btnBad{
+      background: rgba(224,92,92,.12);
+      border-color: rgba(224,92,92,.65);
+    }
+
+    .pill{
+      display:inline-flex; gap:8px; align-items:center;
+      padding: 6px 10px;
+      border-radius: var(--r2);
+      border: 1px solid rgba(90,74,99,.9);
+      background: rgba(10,8,14,.55);
+      color: rgba(201,187,156,.95);
+      font-size: 12px;
+      white-space: nowrap;
+      box-shadow: 0 8px 18px rgba(0,0,0,.28) inset;
+    }
+    .pill b{ color: var(--text); font-weight:800; }
+
+    .muted{
+      color: rgba(201,187,156,.92);
+      font-size:12px;
+      line-height:1.4;
+    }
+
+    .hr{ height:1px; background: rgba(90,74,99,.85); margin: 12px 0; }
+
+    .hidden{ display:none !important; }
+
+    /* Stat tiles */
+    .statGrid{
+      display:grid;
+      grid-template-columns: repeat(6, minmax(120px,1fr));
+      gap:10px;
+    }
+    @media (max-width: 1100px){ .statGrid{ grid-template-columns: repeat(3, minmax(120px,1fr)); } }
+    @media (max-width: 640px){ .statGrid{ grid-template-columns: repeat(2, minmax(120px,1fr)); } }
+
+    .stat{
+      border:1px solid rgba(90,74,99,.85);
+      background: rgba(10,8,14,.45);
+      border-radius: 14px;
+      padding:10px;
+      display:flex; flex-direction:column; gap:6px;
+      box-shadow: 0 12px 26px rgba(0,0,0,.28) inset;
+    }
+    .stat .k{ font-size:11px; color: rgba(201,187,156,.95); font-family: var(--serif); }
+    .stat .v{ font-family: var(--mono); font-size:18px; letter-spacing:.3px; font-weight:800; }
+    .stat .miniRow{ display:flex; gap:8px; flex-wrap:wrap; }
+    .stat .miniRow button{ padding:6px 8px; border-radius: 10px; }
+
+    .list{ display:flex; flex-direction:column; gap:8px; }
+    .item{
+      border:1px solid rgba(90,74,99,.85);
+      background: rgba(10,8,14,.45);
+      border-radius: 12px;
+      padding: 10px;
+      display:grid;
+      grid-template-columns: 1fr auto;
+      gap:10px;
+      align-items:start;
+      box-shadow: 0 12px 26px rgba(0,0,0,.25) inset;
+    }
+    .item h3{
+      margin:0;
+      font-size:13px;
+      font-weight:850;
+      letter-spacing:.18px;
+      font-family: var(--serif);
+    }
+    .meta{ margin-top:4px; font-size:12px; color: rgba(201,187,156,.9); line-height:1.4; }
+    .actions{ display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
+
+    .tag{
+      font-size:11px;
+      color: rgba(201,187,156,.95);
+      border:1px dashed rgba(90,74,99,.95);
+      padding:2px 8px;
+      border-radius: var(--r2);
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
+
+    /* Map */
+    .mapWrap{
+      border:1px solid rgba(90,74,99,.85);
+      background: rgba(10,8,14,.35);
+      border-radius: var(--r);
+      overflow:hidden;
+      box-shadow: 0 18px 44px rgba(0,0,0,.45) inset;
+    }
+    .mapBar{
+      padding:10px;
+      display:flex; gap:8px; flex-wrap:wrap; align-items:center;
+      border-bottom: 1px solid rgba(90,74,99,.85);
+    }
+    .mapCanvasWrap{
+      position:relative;
+      height: 640px;
+      background:
+        radial-gradient(900px 500px at 20% -20%, rgba(215,182,107,.08), transparent 60%),
+        radial-gradient(900px 500px at 100% 0%, rgba(212,106,63,.06), transparent 60%),
+        #07060a;
+      cursor: crosshair;
+      user-select:none;
+    }
+    .mapCanvasWrap.panning{ cursor: grabbing; }
+    canvas{ display:block; width:100%; height:100%; }
+
+    .hint{
+      position:absolute;
+      right:10px; bottom:10px;
+      background: rgba(0,0,0,.45);
+      border:1px solid rgba(255,255,255,.12);
+      padding:8px 10px;
+      border-radius: 12px;
+      color: rgba(239,233,218,.92);
+      font-size:12px;
+      max-width: 380px;
+    }
+
+    /* Modal (notes) */
+    .modalBack{
+      position:fixed; inset:0; z-index:999;
+      background: rgba(0,0,0,.6);
+      display:none;
+      align-items:center; justify-content:center;
+      padding:16px;
+    }
+    .modal{
+      width: min(720px, 100%);
+      background:
+        radial-gradient(900px 500px at 20% -20%, rgba(215,182,107,.10), transparent 60%),
+        linear-gradient(180deg, rgba(20,16,27,.98), rgba(15,11,22,.98));
+      border: 1px solid rgba(215,182,107,.65);
+      border-radius: 18px;
+      box-shadow: 0 22px 60px rgba(0,0,0,.65);
+      padding: 14px;
+    }
+    .modal h3{
+      margin:0 0 10px;
+      font-family: var(--serif);
+      letter-spacing:.25px;
+    }
+    .modal .sub{
+      color: rgba(201,187,156,.92);
+      font-size:12px;
+      margin-top:-4px;
+      margin-bottom:10px;
+      line-height:1.35;
+    }
+    .modal .row{ margin-top:10px; }
+  </style>
+</head>
+
+<body>
+<header>
+  <div class="top">
+    <div class="brand">
+      <h1>Fighting Fantasy – Campaign Tracker</h1>
+      <p>Local-only • extensible rules • battle log + notes • Metroid-style grid map</p>
+    </div>
+
+    <div class="row">
+      <span class="pill">Campaign <b id="campPill">—</b></span>
+      <span class="pill">STAMINA <b id="stamPill">0</b></span>
+      <span class="pill">SKILL <b id="skillPill">0</b></span>
+      <span class="pill">LUCK <b id="luckPill">0</b></span>
+
+      <button class="btnGold" onclick="openNoteModal({scope:'campaign', ref:null})">Add note</button>
+      <button class="btnGold" onclick="rollInitial()">Auto-roll</button>
+    </div>
+  </div>
+
+  <div class="tabs" id="tabs"></div>
+</header>
+
+<main>
+  <!-- OVERVIEW -->
+  <section class="card" id="view-overview">
+    <div class="row">
+      <div style="min-width:260px; flex:1;">
+        <label>Campaign name</label>
+        <input id="campName" type="text" placeholder="e.g., The Warlock of Firetop Mountain" />
+      </div>
+      <div style="min-width:220px;">
+        <label>Preset</label>
+        <select id="preset">
+          <option value="classic">Classic (SKILL / STAMINA / LUCK)</option>
+          <option value="magic">Classic + MAGIC (generic)</option>
+          <option value="custom">Custom (you define everything)</option>
+        </select>
+      </div>
+      <div style="min-width:220px;">
+        <label>Section / paragraph (optional)</label>
+        <input id="sectionNow" type="text" placeholder="e.g., § 142" />
+      </div>
+    </div>
+
+    <div class="hr"></div>
+
+    <div class="statGrid">
+      <div class="stat">
+        <div class="k">STAMINA (current / max)</div>
+        <div class="v" id="staminaOut">0 / 0</div>
+        <div class="miniRow">
+          <button class="btnGood" onclick="adjustMeter('stamina', +1)">+1</button>
+          <button class="btnBad" onclick="adjustMeter('stamina', -1)">-1</button>
+          <button class="btnWarn" onclick="adjustMeter('stamina', -2)">-2</button>
+          <button onclick="setToMax('stamina')">To max</button>
+        </div>
+      </div>
+
+      <div class="stat">
+        <div class="k">ENERGY (current / max)</div>
+        <div class="v" id="energyOut">0 / 0</div>
+        <div class="miniRow">
+          <button class="btnGood" onclick="adjustMeter('energy', +1)">+1</button>
+          <button class="btnBad" onclick="adjustMeter('energy', -1)">-1</button>
+          <button onclick="setToMax('energy')">To max</button>
+        </div>
+      </div>
+
+      <div class="stat">
+        <div class="k">SKILL</div>
+        <div class="v" id="skillOut">0</div>
+        <div class="miniRow">
+          <button onclick="adjustStat('skill', +1)">+1</button>
+          <button onclick="adjustStat('skill', -1)">-1</button>
+        </div>
+      </div>
+
+      <div class="stat">
+        <div class="k">LUCK (current / max)</div>
+        <div class="v" id="luckOut">0 / 0</div>
+        <div class="miniRow">
+          <button onclick="adjustMeter('luck', +1)">+1</button>
+          <button class="btnBad" onclick="adjustMeter('luck', -1)">-1</button>
+          <button onclick="setToMax('luck')">To max</button>
+        </div>
+      </div>
+
+      <div class="stat">
+        <div class="k">MAGIC (current / max)</div>
+        <div class="v" id="magicOut">0 / 0</div>
+        <div class="miniRow">
+          <button onclick="adjustMeter('magic', +1)">+1</button>
+          <button class="btnBad" onclick="adjustMeter('magic', -1)">-1</button>
+          <button onclick="setToMax('magic')">To max</button>
+        </div>
+      </div>
+
+      <div class="stat">
+        <div class="k">PROVISIONS</div>
+        <div class="v" id="provOut">0</div>
+        <div class="miniRow">
+          <button class="btnGood" onclick="adjustStat('provisions', +1)">+1</button>
+          <button class="btnBad" onclick="adjustStat('provisions', -1)">-1</button>
+          <button class="btnGold" onclick="eatProvision()">Eat</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="hr"></div>
+
+    <div class="grid grid2">
+      <div>
+        <label>Rule notes (book-specific exceptions)</label>
+        <textarea id="ruleNotes" placeholder="Write special rules here (extra attributes, variant combat, timers, etc.)."></textarea>
+        <div class="row" style="margin-top:10px;">
+          <button class="btnGold" onclick="openNoteModal({scope:'campaign', ref:null})">Add note</button>
+          <button onclick="createCheckpoint()">Checkpoint</button>
+          <span class="pill">Checkpoints <b id="cpCount">0</b></span>
+        </div>
+      </div>
+      <div>
+        <label>Quick actions</label>
+        <div class="row">
+          <button onclick="testLuck()">Test luck</button>
+          <span class="pill">Luck test <b id="luckTestOut">—</b></span>
+        </div>
+
+        <div class="hr"></div>
+
+        <div class="muted">
+          This tool stays generic by design. For unusual books: add <b>Custom Stats</b>, write exceptions in <b>Rule notes</b>,
+          and use <b>Notes</b> to document decisions and outcomes.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CHARACTER -->
+  <section class="card hidden" id="view-character">
+    <div class="grid grid2">
+      <div>
+        <h2>Core stats</h2>
+        <div class="grid grid3">
+          <div>
+            <label>STAMINA current</label>
+            <input id="staminaCur" type="number">
+          </div>
+          <div>
+            <label>STAMINA max</label>
+            <input id="staminaMax" type="number">
+          </div>
+          <div>
+            <label>SKILL</label>
+            <input id="skill" type="number">
+          </div>
+        </div>
+
+        <div class="grid grid3" style="margin-top:10px;">
+          <div>
+            <label>LUCK current</label>
+            <input id="luckCur" type="number">
+          </div>
+          <div>
+            <label>LUCK max</label>
+            <input id="luckMax" type="number">
+          </div>
+          <div>
+            <label>PROVISIONS</label>
+            <input id="provisions" type="number">
+          </div>
+        </div>
+
+        <div class="grid grid3" style="margin-top:10px;">
+          <div>
+            <label>ENERGY current</label>
+            <input id="energyCur" type="number">
+          </div>
+          <div>
+            <label>ENERGY max</label>
+            <input id="energyMax" type="number">
+          </div>
+          <div>
+            <label>MAGIC current</label>
+            <input id="magicCur" type="number">
+          </div>
+        </div>
+
+        <div class="grid grid3" style="margin-top:10px;">
+          <div>
+            <label>MAGIC max</label>
+            <input id="magicMax" type="number">
+          </div>
+          <div>
+            <label>—</label>
+            <button style="width:100%;" onclick="setAllToMax()">Set all meters to max</button>
+          </div>
+          <div>
+            <label>—</label>
+            <button class="btnBad" style="width:100%;" onclick="resetCore()">Reset core</button>
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:12px;">
+          <button class="btnGold" onclick="rollInitial()">Auto-roll</button>
+          <button onclick="openNoteModal({scope:'character', ref:null})">Add note</button>
+        </div>
+
+        <div class="hr"></div>
+
+        <div class="muted">
+          Meters (STAMINA/LUCK/MAGIC/ENERGY) have <b>current</b> and <b>max</b>. Healing is clamped to max.
+        </div>
+      </div>
+
+      <div>
+        <h2>Custom stats</h2>
+        <div class="muted" style="margin-bottom:10px;">
+          Add any book-specific parameters (Fear, Honor, Time, Sanity, Keys, etc.). You can attach notes to each entry.
+        </div>
+
+        <div class="grid grid2">
+          <div><label>Stat name</label><input id="customStatName" type="text" placeholder="e.g., Fear"></div>
+          <div><label>Initial value</label><input id="customStatValue" type="number" value="0"></div>
+        </div>
+        <div class="row" style="margin-top:10px;">
+          <button class="btnGold" onclick="addCustomStat()">Add</button>
+          <button class="btnBad" onclick="clearCustomStats()">Clear all</button>
+        </div>
+
+        <div id="customStats" class="list" style="margin-top:12px;"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- INVENTORY -->
+  <section class="card hidden" id="view-inventory">
+    <div class="grid grid2">
+      <div>
+        <h2>Add item</h2>
+        <div class="grid grid2">
+          <div><label>Item</label><input id="invName" type="text" placeholder="e.g., Rope"></div>
+          <div><label>Qty</label><input id="invQty" type="number" value="1"></div>
+        </div>
+        <div style="margin-top:10px;">
+          <label>Notes</label>
+          <input id="invNotes" type="text" placeholder="Weapon bonus, clues, keywords, etc.">
+        </div>
+        <div class="row" style="margin-top:10px;">
+          <button class="btnGold" onclick="addInventory()">Add</button>
+          <button onclick="openNoteModal({scope:'inventory', ref:null})">Add note</button>
+          <button class="btnBad" onclick="clearInventory()">Clear all</button>
+        </div>
+      </div>
+
+      <div>
+        <h2>Inventory</h2>
+        <div id="inventory" class="list"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DICE -->
+  <section class="card hidden" id="view-dice">
+    <div class="grid grid2">
+      <div>
+        <h2>Dice</h2>
+        <label>Expression (NdM ± C)</label>
+        <input id="diceExpr" type="text" value="2d6" />
+        <div class="row" style="margin-top:10px;">
+          <button class="btnGold" onclick="rollDice()">Roll</button>
+          <span class="pill">Result <b id="diceOut">—</b></span>
+          <button onclick="openNoteModal({scope:'dice', ref:null})">Add note</button>
+        </div>
+
+        <div class="hr"></div>
+
+        <h2>Initial parameters</h2>
+        <div class="grid grid3">
+          <div><label>SKILL formula</label><input id="initSkill" type="text" value="1d6+6"></div>
+          <div><label>STAMINA formula</label><input id="initStamina" type="text" value="2d6+12"></div>
+          <div><label>LUCK formula</label><input id="initLuck" type="text" value="1d6+6"></div>
+        </div>
+
+        <div class="grid grid3" style="margin-top:10px;">
+          <div><label>MAGIC formula (optional)</label><input id="initMagic" type="text" value="0"></div>
+          <div><label>ENERGY formula (optional)</label><input id="initEnergy" type="text" value="0"></div>
+          <div><label>—</label><button class="btnGold" style="width:100%;" onclick="rollInitial()">Roll initial now</button></div>
+        </div>
+      </div>
+
+      <div>
+        <h2>Rules knobs</h2>
+        <div class="grid grid2">
+          <div>
+            <label>Provision heal amount</label>
+            <input id="provisionHeal" type="number" value="4" />
+          </div>
+          <div>
+            <label>Luck test mode</label>
+            <select id="luckMode">
+              <option value="classic">Classic: 2d6 ≤ LUCK, then LUCK-1</option>
+              <option value="manual">Manual</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="hr"></div>
+
+        <div class="muted">
+          The dice parser is intentionally conservative (NdM ± C) to remain reliable and predictable.
+          For unusual mechanics, use notes + manual rolls.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- COMBAT -->
+  <section class="card hidden" id="view-combat">
+    <div class="grid grid2">
+      <div>
+        <h2>Add enemy</h2>
+        <div class="grid grid2">
+          <div><label>Name</label><input id="eName" type="text" placeholder="e.g., Goblin"></div>
+          <div><label>Group tag</label><input id="eTag" type="text" placeholder="e.g., Room 12"></div>
+        </div>
+        <div class="grid grid3" style="margin-top:10px;">
+          <div><label>Enemy SKILL</label><input id="eSkill" type="number" value="6"></div>
+          <div><label>Enemy STAMINA</label><input id="eStamina" type="number" value="6"></div>
+          <div><label>Damage (default)</label><input id="eDmg" type="number" value="2"></div>
+        </div>
+        <div style="margin-top:10px;">
+          <label>Notes</label>
+          <input id="eNotes" type="text" placeholder="Poison, armor, modifiers, special rules...">
+        </div>
+        <div class="row" style="margin-top:10px;">
+          <button class="btnGold" onclick="addEnemy()">Add</button>
+          <button onclick="openNoteModal({scope:'combat', ref:null})">Add note</button>
+          <button class="btnBad" onclick="clearEnemies()">Clear all</button>
+        </div>
+      </div>
+
+      <div>
+        <h2>Round</h2>
+        <div class="row">
+          <span class="pill">Round <b id="roundNum">1</b></span>
+          <span class="pill">Target <b id="targetOut">—</b></span>
+          <span class="pill">Flow <b id="flowOut">—</b></span>
+
+          <div class="spacer"></div>
+          <button onclick="nextRound()">Next round</button>
+          <button class="btnBad" onclick="resetCombat()">Reset</button>
+        </div>
+
+        <div class="hr"></div>
+
+        <div class="grid grid2">
+          <div>
+            <label>Player AS roll (2d6) + modifier</label>
+            <div class="row">
+              <input id="pMod" type="number" value="0" style="max-width:110px;">
+              <button class="btnGold" style="flex:1;" onclick="rollPlayerAS()">Roll</button>
+            </div>
+            <div class="row" style="margin-top:8px;">
+              <span class="pill">Roll <b id="pRoll">—</b></span>
+              <span class="pill">AS <b id="pAS">—</b></span>
+            </div>
+          </div>
+
+          <div>
+            <label>Enemy AS roll (2d6) + modifier</label>
+            <div class="row">
+              <input id="eMod" type="number" value="0" style="max-width:110px;">
+              <button class="btnGold" style="flex:1;" onclick="rollEnemyAS()">Roll</button>
+            </div>
+            <div class="row" style="margin-top:8px;">
+              <span class="pill">Roll <b id="eRoll">—</b></span>
+              <span class="pill">AS <b id="eAS">—</b></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:10px;">
+          <button class="btnGood" onclick="resolveRound()">Resolve</button>
+          <button onclick="manualDamageToEnemy()">Manual: damage enemy</button>
+          <button onclick="manualDamageToPlayer()">Manual: damage player</button>
+          <button onclick="openNoteModal({scope:'combat', ref:{type:'round', round:state.combat.round}})">Note this round</button>
+        </div>
+
+        <div class="hr"></div>
+
+        <div class="muted">
+          Default combat: AS = SKILL + 2d6 + modifier. Higher AS deals <b>enemy Damage</b> (ties: no damage).
+          Use modifiers for weapon bonuses / situational effects, and notes for special rules.
+        </div>
+      </div>
+    </div>
+
+    <div class="hr"></div>
+
+    <div class="grid grid2">
+      <div>
+        <h2>Enemies</h2>
+        <div id="enemies" class="list"></div>
+      </div>
+
+      <div>
+        <h2>Battle log (saved + exported)</h2>
+        <div class="row">
+          <button onclick="clearBattleLog()">Clear log</button>
+          <span class="pill">Entries <b id="logCount">0</b></span>
+        </div>
+        <div id="battleLog" class="list" style="margin-top:10px;"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MAP -->
+  <section class="card hidden" id="view-map">
+    <div class="mapWrap">
+      <div class="mapBar">
+        <span class="pill">Tool <b id="mapToolOut">paint</b></span>
+        <button class="btnGold" onclick="setMapTool('paint')">Paint</button>
+        <button onclick="setMapTool('erase')">Erase</button>
+        <button onclick="setMapTool('current')">Set current</button>
+        <button onclick="setMapTool('note')">Note</button>
+        <button onclick="setMapTool('pan')">Pan</button>
+
+        <span class="pill">Room <b id="roomTypeOut">normal</b></span>
+        <select id="roomType" style="max-width:200px;">
+          <option value="normal">Normal</option>
+          <option value="save">Save</option>
+          <option value="shop">Shop</option>
+          <option value="boss">Boss</option>
+          <option value="key">Key</option>
+          <option value="special">Special</option>
+        </select>
+
+        <span class="pill">Zoom <b id="zoomOut">100%</b></span>
+        <button onclick="zoomMap(1.1)">+</button>
+        <button onclick="zoomMap(1/1.1)">−</button>
+        <button onclick="resetView()">Reset view</button>
+
+        <div class="spacer"></div>
+
+        <button onclick="toggleGridLines()">Grid lines</button>
+        <button class="btnGold" onclick="openNoteModal({scope:'map', ref: state.map.current ? {tile: state.map.current} : null})">Add note</button>
+        <button class="btnBad" onclick="clearMap()">Clear map</button>
+      </div>
+
+      <div class="mapCanvasWrap" id="mapWrap">
+        <canvas id="mapCanvas" width="1700" height="1050"></canvas>
+        <div class="hint">
+          <b>Map:</b> click to paint/erase rooms • connections auto-draw • set “current” tile • “Note” tool attaches a free text note to a tile.<br/>
+          <b>Pan:</b> use the Pan tool, or drag beyond a small threshold (prevents accidental painting).
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- NOTES -->
+  <section class="card hidden" id="view-notes">
+    <div class="row">
+      <h2 style="margin:0;">Notes</h2>
+      <div class="spacer"></div>
+      <button class="btnGold" onclick="openNoteModal({scope:'campaign', ref:null})">Add note</button>
+      <button onclick="exportNotesText()">Export notes as text</button>
+      <button class="btnBad" onclick="clearNotes()">Clear notes</button>
+    </div>
+
+    <div class="hr"></div>
+
+    <div class="grid grid3">
+      <div>
+        <label>Filter by scope</label>
+        <select id="noteScopeFilter">
+          <option value="all">All</option>
+          <option value="campaign">Campaign</option>
+          <option value="character">Character</option>
+          <option value="inventory">Inventory</option>
+          <option value="dice">Dice</option>
+          <option value="combat">Combat</option>
+          <option value="map">Map</option>
+          <option value="checkpoint">Checkpoint</option>
+        </select>
+      </div>
+      <div>
+        <label>Search text</label>
+        <input id="noteSearch" type="text" placeholder="Search…" />
+      </div>
+      <div>
+        <label>—</label>
+        <button style="width:100%;" onclick="renderNotes()">Apply</button>
+      </div>
+    </div>
+
+    <div id="notesList" class="list" style="margin-top:12px;"></div>
+  </section>
+
+  <!-- DATA -->
+  <section class="card hidden" id="view-data">
+    <div class="grid grid2">
+      <div>
+        <h2>Export / Import</h2>
+        <div class="muted">Saved automatically in this browser. Export JSON to move between devices.</div>
+        <div class="row" style="margin-top:10px;">
+          <button onclick="exportJSON()">Export JSON</button>
+          <button onclick="importJSON()">Import JSON</button>
+          <button class="btnBad" onclick="wipeAll()">Wipe local data</button>
+        </div>
+        <textarea id="ioBox" placeholder="Export appears here. Paste JSON here to import." style="margin-top:10px;"></textarea>
+      </div>
+      <div>
+        <h2>Diagnostics</h2>
+        <div class="muted">LocalStorage is limited. If you store huge maps or logs, exports are safer than long-term accumulation.</div>
+        <div class="hr"></div>
+        <div class="row">
+          <span class="pill">Enemies <b id="diagEnemies">0</b></span>
+          <span class="pill">Inventory <b id="diagInv">0</b></span>
+          <span class="pill">Custom stats <b id="diagCustom">0</b></span>
+          <span class="pill">Rooms <b id="diagRooms">0</b></span>
+          <span class="pill">Notes <b id="diagNotes">0</b></span>
+          <span class="pill">Log <b id="diagLog">0</b></span>
+          <span class="pill">Checkpoints <b id="diagCP">0</b></span>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- NOTE MODAL -->
+<div class="modalBack" id="noteModalBack" role="dialog" aria-modal="true">
+  <div class="modal">
+    <h3 id="noteModalTitle">Add note</h3>
+    <div class="sub" id="noteModalSub">—</div>
+
+    <div class="grid grid2">
+      <div>
+        <label>Scope</label>
+        <select id="noteScope">
+          <option value="campaign">Campaign</option>
+          <option value="character">Character</option>
+          <option value="inventory">Inventory</option>
+          <option value="dice">Dice</option>
+          <option value="combat">Combat</option>
+          <option value="map">Map</option>
+          <option value="checkpoint">Checkpoint</option>
+        </select>
+      </div>
+      <div>
+        <label>Section / paragraph (optional)</label>
+        <input id="noteSection" type="text" placeholder="e.g., § 142">
+      </div>
+    </div>
+
+    <div style="margin-top:10px;">
+      <label>Text</label>
+      <textarea id="noteText" placeholder="Write your note…"></textarea>
+    </div>
+
+    <div class="row">
+      <button class="btnGold" onclick="saveNoteFromModal()">Save note</button>
+      <button onclick="closeNoteModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =========================
+   Versioned state
+========================= */
+const STORAGE_KEY = "ff_tracker_fantasy_v3";
+const STATE_VERSION = 3;
+
+const DEFAULT_STATE = () => ({
+  version: STATE_VERSION,
+  campaign: { name:"", preset:"classic", ruleNotes:"", sectionNow:"" },
+
+  // Meters have current/max to prevent accidental “overhealing”.
+  meters: {
+    stamina: { cur:0, max:0 },
+    luck:    { cur:0, max:0 },
+    magic:   { cur:0, max:0 },
+    energy:  { cur:0, max:0 }
+  },
+
+  // Non-meter core stats
+  stats: { skill:0, provisions:0 },
+
+  customStats: [], // {id,name,value}
+
+  inventory: [],   // {id,name,qty,notes}
+
+  dice: {
+    expr:"2d6",
+    initSkill:"1d6+6",
+    initStamina:"2d6+12",
+    initLuck:"1d6+6",
+    initMagic:"0",
+    initEnergy:"0",
+    provisionHeal: 4,
+    luckMode: "classic"
+  },
+
+  combat: {
+    round: 1,
+    playerLastRoll: null, enemyLastRoll: null,
+    playerAS: null, enemyAS: null,
+    enemies: [],      // {id,name,tag,skill,stamina,damage,notes}
+    battleLog: []     // events (saved + exported)
+  },
+
+  map: {
+    tiles: {},        // key "x,y" => {type}
+    current: null,    // {x,y}
+    showGrid: true,
+    tool: "paint",
+    roomType: "normal",
+    zoom: 1,
+    panX: 0,
+    panY: 0
+  },
+
+  // Free text notes everywhere (campaign, map tiles, combat rounds, etc.)
+  notes: [],          // {id,ts,scope,ref,section,text}
+
+  // Checkpoints store a snapshot of key state (not a full “save slot” engine, but useful)
+  checkpoints: []     // {id,ts,label,section,snapshot}
+});
+
+let state = loadState();
+let selectedEnemyId = null;
+
+/* =========================
+   Tabs
+========================= */
+const VIEWS = [
+  { id:"overview",  label:"Overview" },
+  { id:"character", label:"Character" },
+  { id:"inventory", label:"Inventory" },
+  { id:"dice",      label:"Dice" },
+  { id:"combat",    label:"Combat" },
+  { id:"map",       label:"Map" },
+  { id:"notes",     label:"Notes" },
+  { id:"data",      label:"Data" }
+];
+
+function mountTabs(){
+  const tabs = $("tabs");
+  tabs.innerHTML = "";
+  VIEWS.forEach(v => {
+    const b = document.createElement("button");
+    b.className = "tab";
+    b.textContent = v.label;
+    b.onclick = () => showView(v.id);
+    b.dataset.view = v.id;
+    tabs.appendChild(b);
+  });
+}
+function showView(id){
+  VIEWS.forEach(v => {
+    $("view-"+v.id).classList.toggle("hidden", v.id !== id);
+    document.querySelector(`.tab[data-view="${v.id}"]`).classList.toggle("active", v.id === id);
+  });
+  if (id === "map") drawMap();
+  if (id === "notes") renderNotes();
+}
+
+/* =========================
+   Storage + migration
+========================= */
+function saveState(){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+function loadState(){
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (!raw) return DEFAULT_STATE();
+
+  try{
+    const parsed = JSON.parse(raw);
+
+    // Merge for forward compatibility
+    const merged = deepMerge(DEFAULT_STATE(), parsed);
+
+    // Migration from older shapes (if any)
+    return migrateState(merged);
+  }catch{
+    return DEFAULT_STATE();
+  }
+}
+function migrateState(s){
+  // If older versions stored numeric stats instead of meters, convert.
+  // (Safe even if already migrated.)
+  if (s.stats && typeof s.stats.stamina === "number"){
+    // Older format: stats.stamina, stats.luck, stats.magic, stats.energy
+    s.meters.stamina.cur = s.stats.stamina || 0;
+    s.meters.stamina.max = Math.max(s.meters.stamina.max, s.stats.stamina || 0);
+    delete s.stats.stamina;
+
+    if (typeof s.stats.luck === "number"){
+      s.meters.luck.cur = s.stats.luck || 0;
+      s.meters.luck.max = Math.max(s.meters.luck.max, s.stats.luck || 0);
+      delete s.stats.luck;
+    }
+    if (typeof s.stats.magic === "number"){
+      s.meters.magic.cur = s.stats.magic || 0;
+      s.meters.magic.max = Math.max(s.meters.magic.max, s.stats.magic || 0);
+      delete s.stats.magic;
+    }
+    if (typeof s.stats.energy === "number"){
+      s.meters.energy.cur = s.stats.energy || 0;
+      s.meters.energy.max = Math.max(s.meters.energy.max, s.stats.energy || 0);
+      delete s.stats.energy;
+    }
+    if (typeof s.stats.skill !== "number") s.stats.skill = 0;
+    if (typeof s.stats.provisions !== "number") s.stats.provisions = 0;
+  }
+
+  // Ensure arrays exist
+  s.notes = Array.isArray(s.notes) ? s.notes : [];
+  s.checkpoints = Array.isArray(s.checkpoints) ? s.checkpoints : [];
+  s.combat.battleLog = Array.isArray(s.combat.battleLog) ? s.combat.battleLog : [];
+
+  // Bump version
+  s.version = STATE_VERSION;
+  return s;
+}
+function deepMerge(target, source){
+  if (typeof source !== "object" || source === null) return target;
+  for (const k of Object.keys(source)){
+    if (Array.isArray(source[k])) target[k] = source[k];
+    else if (typeof source[k] === "object" && source[k] !== null){
+      if (typeof target[k] !== "object" || target[k] === null) target[k] = {};
+      target[k] = deepMerge(target[k], source[k]);
+    } else target[k] = source[k];
+  }
+  return target;
+}
+function uid(){ return Math.random().toString(16).slice(2) + Date.now().toString(16); }
+function nowIso(){ return new Date().toISOString(); }
+function clamp(n,min,max){ return Math.max(min, Math.min(max,n)); }
+
+/* =========================
+   DOM helpers
+========================= */
+function $(id){ return document.getElementById(id); }
+function setVal(id,v){ $(id).value = v; }
+function getVal(id){ return $(id).value; }
+function getNum(id){ return Number($(id).value || 0); }
+function escapeHtml(s){
+  return String(s).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;").replaceAll("'","&#039;");
+}
+function fmtTs(iso){
+  try{
+    const d = new Date(iso);
+    return d.toLocaleString();
+  }catch{
+    return iso;
+  }
+}
+
+/* =========================
+   Dice (conservative parser: NdM ± C)
+========================= */
+function parseDice(exprRaw){
+  const expr = (exprRaw || "").replace(/\s+/g,"").toLowerCase();
+  if (/^\d+$/.test(expr)) return { type:"const", c: Number(expr) };
+  const m = expr.match(/^(\d+)d(\d+)([+-]\d+)?$/);
+  if (!m) return null;
+  const n = Number(m[1]), faces = Number(m[2]), mod = m[3] ? Number(m[3]) : 0;
+  if (n<=0 || faces<=0 || faces>1000 || n>200) return null;
+  return { type:"dice", n, faces, mod };
+}
+function rollExpr(exprRaw){
+  const p = parseDice(exprRaw);
+  if (!p) return { ok:false, error:"Invalid dice expression (use NdM ± C)." };
+  if (p.type === "const") return { ok:true, total:p.c, detail:[p.c], mod:0 };
+  const rolls = [];
+  for (let i=0;i<p.n;i++) rolls.push(1 + Math.floor(Math.random()*p.faces));
+  const sum = rolls.reduce((a,b)=>a+b,0);
+  return { ok:true, total: sum + p.mod, detail: rolls, mod:p.mod };
+}
+function fmtRoll(r){
+  const det = (r.detail||[]).join(",");
+  const mod = (r.mod && r.mod!==0) ? (r.mod>0?` +${r.mod}`:` ${r.mod}`) : "";
+  return `${r.total} (${det}${mod})`;
+}
+
+/* =========================
+   Core stats + meters
+========================= */
+function adjustStat(key, delta){
+  state.stats[key] = Number(state.stats[key]||0) + delta;
+  if (key === "provisions" && state.stats.provisions < 0) state.stats.provisions = 0;
+  saveState(); renderAll();
+}
+function adjustMeter(key, delta){
+  const m = state.meters[key];
+  m.cur = Number(m.cur||0) + delta;
+  m.cur = clamp(m.cur, 0, Number(m.max||0));
+  saveState(); renderAll();
+}
+function setToMax(key){
+  const m = state.meters[key];
+  m.cur = Number(m.max||0);
+  saveState(); renderAll();
+}
+function setAllToMax(){
+  ["stamina","luck","magic","energy"].forEach(k => { state.meters[k].cur = Number(state.meters[k].max||0); });
+  saveState(); renderAll();
+}
+function resetCore(){
+  if (!confirm("Reset core stats and meters to zero?")) return;
+  state.meters = {
+    stamina:{cur:0,max:0}, luck:{cur:0,max:0}, magic:{cur:0,max:0}, energy:{cur:0,max:0}
+  };
+  state.stats = { skill:0, provisions:0 };
+  saveState(); renderAll();
+}
+function eatProvision(){
+  const heal = Number(state.dice.provisionHeal || 0);
+  if (state.stats.provisions <= 0){ alert("No provisions."); return; }
+  state.stats.provisions -= 1;
+  state.meters.stamina.cur = clamp(state.meters.stamina.cur + heal, 0, state.meters.stamina.max);
+  addBattleOrNoteHint("campaign", null, `Ate a provision: +${heal} STAMINA (clamped to max).`);
+  saveState(); renderAll();
+}
+
+/* =========================
+   Campaign / rule notes / section
+========================= */
+function syncCampaignFromUI(){
+  state.campaign.name = getVal("campName");
+  state.campaign.preset = getVal("preset");
+  state.campaign.ruleNotes = getVal("ruleNotes");
+  state.campaign.sectionNow = getVal("sectionNow");
+}
+
+/* =========================
+   Initial rolls
+========================= */
+function rollInitial(){
+  // Pull formulas from UI
+  state.dice.initSkill = getVal("initSkill");
+  state.dice.initStamina = getVal("initStamina");
+  state.dice.initLuck = getVal("initLuck");
+  state.dice.initMagic = getVal("initMagic");
+  state.dice.initEnergy = getVal("initEnergy");
+
+  const rs = rollExpr(state.dice.initSkill);
+  const rsta = rollExpr(state.dice.initStamina);
+  const rl = rollExpr(state.dice.initLuck);
+  const rmag = rollExpr(state.dice.initMagic);
+  const reng = rollExpr(state.dice.initEnergy);
+
+  if (!rs.ok || !rsta.ok || !rl.ok || !rmag.ok || !reng.ok){
+    alert("One of the initial formulas is invalid (Dice tab).");
+    return;
+  }
+
+  state.stats.skill = rs.total;
+
+  state.meters.stamina.max = rsta.total;
+  state.meters.stamina.cur = rsta.total;
+
+  state.meters.luck.max = rl.total;
+  state.meters.luck.cur = rl.total;
+
+  // Preset: magic is optional, but allow formula-driven
+  if (state.campaign.preset === "magic" || rmag.total !== 0){
+    state.meters.magic.max = Math.max(0, rmag.total);
+    state.meters.magic.cur = Math.max(0, rmag.total);
+  }
+
+  if (reng.total !== 0){
+    state.meters.energy.max = Math.max(0, reng.total);
+    state.meters.energy.cur = Math.max(0, reng.total);
+  }
+
+  // Ensure current does not exceed max
+  ["stamina","luck","magic","energy"].forEach(k => {
+    state.meters[k].cur = clamp(state.meters[k].cur, 0, state.meters[k].max);
+  });
+
+  addNote({
+    scope:"campaign",
+    ref:{type:"init"},
+    section: state.campaign.sectionNow || "",
+    text: `Auto-roll: SKILL=${state.stats.skill}, STAMINA=${state.meters.stamina.max}, LUCK=${state.meters.luck.max}` +
+          ((state.meters.magic.max||0) ? `, MAGIC=${state.meters.magic.max}` : "") +
+          ((state.meters.energy.max||0) ? `, ENERGY=${state.meters.energy.max}` : "")
+  });
+
+  saveState(); renderAll();
+}
+function rollDice(){
+  state.dice.expr = getVal("diceExpr");
+  const r = rollExpr(state.dice.expr);
+  if (!r.ok){ alert(r.error); return; }
+  $("diceOut").textContent = fmtRoll(r);
+  saveState();
+}
+function testLuck(){
+  state.dice.luckMode = getVal("luckMode");
+  if (state.dice.luckMode === "manual"){
+    $("luckTestOut").textContent = "Manual";
+    saveState(); return;
+  }
+  const r = rollExpr("2d6");
+  const ok = r.total <= Number(state.meters.luck.cur || 0);
+  $("luckTestOut").textContent = `${ok ? "Success" : "Fail"} (${r.total})`;
+  // Classic: decrement current Luck after each test
+  state.meters.luck.cur = clamp(state.meters.luck.cur - 1, 0, state.meters.luck.max);
+
+  addNote({
+    scope:"dice",
+    ref:{type:"luckTest"},
+    section: state.campaign.sectionNow || "",
+    text: `Luck test: roll ${r.total} vs LUCK ${ok ? "success" : "fail"}. LUCK now ${state.meters.luck.cur}/${state.meters.luck.max}.`
+  });
+
+  saveState(); renderAll();
+}
+
+/* =========================
+   Custom stats
+========================= */
+function addCustomStat(){
+  const name = getVal("customStatName").trim();
+  const value = getNum("customStatValue");
+  if (!name){ alert("Provide a stat name."); return; }
+  state.customStats.push({ id: uid(), name, value });
+  setVal("customStatName",""); setVal("customStatValue",0);
+  saveState(); renderAll();
+}
+function bumpCustom(id, delta){
+  const s = state.customStats.find(x => x.id === id);
+  if (!s) return;
+  s.value = Number(s.value||0) + delta;
+  saveState(); renderAll();
+}
+function removeCustom(id){
+  state.customStats = state.customStats.filter(x => x.id !== id);
+  saveState(); renderAll();
+}
+function clearCustomStats(){
+  if (!confirm("Clear all custom stats?")) return;
+  state.customStats = [];
+  saveState(); renderAll();
+}
+function renderCustomStats(){
+  const el = $("customStats");
+  el.innerHTML = "";
+  if (!state.customStats.length){
+    el.innerHTML = `<div class="muted">No custom stats.</div>`;
+    return;
+  }
+  state.customStats.forEach(s => {
+    const row = document.createElement("div");
+    row.className = "item";
+    row.innerHTML = `
+      <div>
+        <h3>${escapeHtml(s.name)} <span class="tag">custom</span></h3>
+        <div class="meta">Value: <b>${Number(s.value)}</b></div>
+      </div>
+      <div class="actions">
+        <button onclick="bumpCustom('${s.id}', +1)">+1</button>
+        <button onclick="bumpCustom('${s.id}', -1)">-1</button>
+        <button onclick="openNoteModal({scope:'character', ref:{type:'customStat', id:'${s.id}', name:'${escapeHtml(s.name)}'}})">Note</button>
+        <button class="btnBad" onclick="removeCustom('${s.id}')">Remove</button>
+      </div>
+    `;
+    el.appendChild(row);
+  });
+}
+
+/* =========================
+   Inventory
+========================= */
+function addInventory(){
+  const name = getVal("invName").trim();
+  const qty = getNum("invQty") || 1;
+  const notes = getVal("invNotes").trim();
+  if (!name){ alert("Provide an item name."); return; }
+  state.inventory.push({ id: uid(), name, qty, notes });
+  setVal("invName",""); setVal("invQty",1); setVal("invNotes","");
+  saveState(); renderAll();
+}
+function bumpInv(id, delta){
+  const it = state.inventory.find(x => x.id === id);
+  if (!it) return;
+  it.qty = Number(it.qty||0) + delta;
+  if (it.qty <= 0) state.inventory = state.inventory.filter(x => x.id !== id);
+  saveState(); renderAll();
+}
+function removeInv(id){
+  state.inventory = state.inventory.filter(x => x.id !== id);
+  saveState(); renderAll();
+}
+function clearInventory(){
+  if (!confirm("Clear inventory?")) return;
+  state.inventory = [];
+  saveState(); renderAll();
+}
+function renderInventory(){
+  const el = $("inventory");
+  el.innerHTML = "";
+  if (!state.inventory.length){
+    el.innerHTML = `<div class="muted">Inventory is empty.</div>`;
+    return;
+  }
+  state.inventory.forEach(it => {
+    const row = document.createElement("div");
+    row.className = "item";
+    row.innerHTML = `
+      <div>
+        <h3>${escapeHtml(it.name)}</h3>
+        <div class="meta">Qty: <b>${Number(it.qty)}</b>${it.notes ? ` • ${escapeHtml(it.notes)}` : ""}</div>
+      </div>
+      <div class="actions">
+        <button onclick="bumpInv('${it.id}', +1)">+1</button>
+        <button onclick="bumpInv('${it.id}', -1)">-1</button>
+        <button onclick="openNoteModal({scope:'inventory', ref:{type:'item', id:'${it.id}', name:'${escapeHtml(it.name)}'}})">Note</button>
+        <button class="btnBad" onclick="removeInv('${it.id}')">Remove</button>
+      </div>
+    `;
+    el.appendChild(row);
+  });
+}
+
+/* =========================
+   Combat + battle log
+========================= */
+function addEnemy(){
+  const name = getVal("eName").trim();
+  if (!name){ alert("Provide an enemy name."); return; }
+  state.combat.enemies.push({
+    id: uid(),
+    name,
+    tag: getVal("eTag").trim(),
+    skill: getNum("eSkill"),
+    stamina: getNum("eStamina"),
+    damage: getNum("eDmg") || 2,
+    notes: getVal("eNotes").trim()
+  });
+  setVal("eName",""); setVal("eTag",""); setVal("eNotes","");
+  saveState(); renderAll();
+}
+function clearEnemies(){
+  if (!confirm("Clear enemies?")) return;
+  state.combat.enemies = [];
+  selectedEnemyId = null;
+  saveState(); renderAll();
+}
+function removeEnemy(id){
+  state.combat.enemies = state.combat.enemies.filter(x => x.id !== id);
+  if (selectedEnemyId === id) selectedEnemyId = null;
+  saveState(); renderAll();
+}
+function selectEnemy(id){
+  selectedEnemyId = id;
+  saveState(); renderAll();
+}
+function aliveEnemies(){
+  return state.combat.enemies.filter(e => Number(e.stamina) > 0);
+}
+function targetEnemy(){
+  const alive = aliveEnemies();
+  if (!alive.length) return null;
+  let e = null;
+  if (selectedEnemyId) e = alive.find(x => x.id === selectedEnemyId) || null;
+  if (!e) e = alive[0];
+  return e;
+}
+
+function rollPlayerAS(){
+  const mod = getNum("pMod");
+  const r = rollExpr("2d6");
+  state.combat.playerLastRoll = r.total;
+  state.combat.playerAS = Number(state.stats.skill||0) + r.total + mod;
+  saveState(); renderAll();
+
+  logCombatEvent({
+    type:"roll",
+    who:"player",
+    round: state.combat.round,
+    section: state.campaign.sectionNow || "",
+    roll: r.total,
+    mod,
+    skill: Number(state.stats.skill||0),
+    as: state.combat.playerAS
+  });
+}
+function rollEnemyAS(){
+  const e = targetEnemy();
+  if (!e){ alert("No alive enemies."); return; }
+  const mod = getNum("eMod");
+  const r = rollExpr("2d6");
+  state.combat.enemyLastRoll = r.total;
+  state.combat.enemyAS = Number(e.skill||0) + r.total + mod;
+  saveState(); renderAll();
+
+  logCombatEvent({
+    type:"roll",
+    who:"enemy",
+    round: state.combat.round,
+    enemyId: e.id,
+    enemyName: e.name,
+    section: state.campaign.sectionNow || "",
+    roll: r.total,
+    mod,
+    skill: Number(e.skill||0),
+    as: state.combat.enemyAS
+  });
+}
+function resolveRound(){
+  const e = targetEnemy();
+  if (!e){ alert("No alive enemies."); return; }
+
+  // Auto-roll if missing
+  if (state.combat.playerAS == null) rollPlayerAS();
+  if (state.combat.enemyAS == null) rollEnemyAS();
+
+  const pAS = state.combat.playerAS;
+  const eAS = state.combat.enemyAS;
+
+  let outcome = "tie";
+  let dmgToEnemy = 0;
+  let dmgToPlayer = 0;
+
+  if (pAS > eAS){
+    outcome = "playerHit";
+    dmgToEnemy = Number(e.damage||2);
+    e.stamina = Math.max(0, Number(e.stamina) - dmgToEnemy);
+  } else if (eAS > pAS){
+    outcome = "enemyHit";
+    dmgToPlayer = Number(e.damage||2);
+    state.meters.stamina.cur = clamp(state.meters.stamina.cur - dmgToPlayer, 0, state.meters.stamina.max);
+  }
+
+  logCombatEvent({
+    type:"resolve",
+    round: state.combat.round,
+    section: state.campaign.sectionNow || "",
+    enemyId: e.id,
+    enemyName: e.name,
+    playerAS: pAS,
+    enemyAS: eAS,
+    outcome,
+    dmgToEnemy,
+    dmgToPlayer,
+    playerStaminaAfter: state.meters.stamina.cur,
+    enemyStaminaAfter: e.stamina
+  });
+
+  // Clear for next action
+  state.combat.playerAS = null;
+  state.combat.enemyAS = null;
+
+  // If enemy defeated, auto-log a note (lightweight)
+  if (e.stamina === 0){
+    addNote({
+      scope:"combat",
+      ref:{type:"defeat", enemyId:e.id, enemyName:e.name},
+      section: state.campaign.sectionNow || "",
+      text: `Defeated ${e.name}${e.tag ? ` (${e.tag})` : ""} on round ${state.combat.round}.`
+    });
+  }
+
+  saveState(); renderAll();
+}
+function nextRound(){
+  state.combat.round += 1;
+  state.combat.playerLastRoll = null;
+  state.combat.enemyLastRoll = null;
+  state.combat.playerAS = null;
+  state.combat.enemyAS = null;
+  saveState(); renderAll();
+}
+function resetCombat(){
+  if (!confirm("Reset round counters and last rolls? (Enemies and log remain.)")) return;
+  state.combat.round = 1;
+  state.combat.playerLastRoll = null;
+  state.combat.enemyLastRoll = null;
+  state.combat.playerAS = null;
+  state.combat.enemyAS = null;
+  selectedEnemyId = null;
+  saveState(); renderAll();
+}
+function manualDamageToEnemy(){
+  const e = targetEnemy();
+  if (!e){ alert("No alive enemy."); return; }
+  const dmg = Number(prompt("Damage to enemy stamina:", "2"));
+  if (!Number.isFinite(dmg)) return;
+  e.stamina = Math.max(0, Number(e.stamina) - dmg);
+
+  logCombatEvent({
+    type:"manual",
+    round: state.combat.round,
+    section: state.campaign.sectionNow || "",
+    enemyId: e.id,
+    enemyName: e.name,
+    note: `Manual damage to enemy: ${dmg}`,
+    enemyStaminaAfter: e.stamina,
+    playerStaminaAfter: state.meters.stamina.cur
+  });
+
+  saveState(); renderAll();
+}
+function manualDamageToPlayer(){
+  const dmg = Number(prompt("Damage to player stamina:", "2"));
+  if (!Number.isFinite(dmg)) return;
+
+  state.meters.stamina.cur = clamp(state.meters.stamina.cur - dmg, 0, state.meters.stamina.max);
+
+  logCombatEvent({
+    type:"manual",
+    round: state.combat.round,
+    section: state.campaign.sectionNow || "",
+    note: `Manual damage to player: ${dmg}`,
+    enemyId: targetEnemy()?.id || null,
+    enemyName: targetEnemy()?.name || null,
+    enemyStaminaAfter: targetEnemy()?.stamina ?? null,
+    playerStaminaAfter: state.meters.stamina.cur
+  });
+
+  saveState(); renderAll();
+}
+function logCombatEvent(evt){
+  state.combat.battleLog.push({
+    id: uid(),
+    ts: nowIso(),
+    ...evt
+  });
+}
+function clearBattleLog(){
+  if (!confirm("Clear battle log?")) return;
+  state.combat.battleLog = [];
+  saveState(); renderAll();
+}
+
+function renderEnemies(){
+  const el = $("enemies");
+  el.innerHTML = "";
+  if (!state.combat.enemies.length){
+    el.innerHTML = `<div class="muted">No enemies.</div>`;
+    return;
+  }
+  state.combat.enemies.forEach(e => {
+    const dead = Number(e.stamina) <= 0;
+    const selected = selectedEnemyId === e.id;
+    const row = document.createElement("div");
+    row.className = "item";
+    row.innerHTML = `
+      <div>
+        <h3>${escapeHtml(e.name)}
+          ${e.tag ? `<span class="tag">${escapeHtml(e.tag)}</span>` : ""}
+          ${dead ? `<span class="tag" style="border-color: rgba(224,92,92,.65)">defeated</span>` : ""}
+          ${selected ? `<span class="tag" style="border-color: rgba(215,182,107,.85)">target</span>` : ""}
+        </h3>
+        <div class="meta">SKILL <b>${Number(e.skill)}</b> • STAMINA <b>${Number(e.stamina)}</b> • DMG <b>${Number(e.damage)}</b>
+          ${e.notes ? `<br/>Notes: ${escapeHtml(e.notes)}` : ""}</div>
+      </div>
+      <div class="actions">
+        <button onclick="selectEnemy('${e.id}')">Target</button>
+        <button onclick="eAdjust('${e.id}', -2)">-2</button>
+        <button onclick="eAdjust('${e.id}', +2)">+2</button>
+        <button onclick="openNoteModal({scope:'combat', ref:{type:'enemy', id:'${e.id}', name:'${escapeHtml(e.name)}'}})">Note</button>
+        <button class="btnBad" onclick="removeEnemy('${e.id}')">Remove</button>
+      </div>
+    `;
+    el.appendChild(row);
+  });
+}
+function eAdjust(id, delta){
+  const e = state.combat.enemies.find(x => x.id === id);
+  if (!e) return;
+  e.stamina = Math.max(0, Number(e.stamina) + delta);
+  saveState(); renderAll();
+}
+
+function renderBattleLog(){
+  $("logCount").textContent = state.combat.battleLog.length;
+  const el = $("battleLog");
+  el.innerHTML = "";
+  const list = state.combat.battleLog.slice(-50).reverse(); // show last 50
+  if (!list.length){
+    el.innerHTML = `<div class="muted">No log entries yet.</div>`;
+    return;
+  }
+  list.forEach(x => {
+    const row = document.createElement("div");
+    row.className = "item";
+    const title = x.type === "resolve" ? "Resolve" : (x.type === "roll" ? "Roll" : "Manual");
+    const scope = x.enemyName ? ` • ${escapeHtml(x.enemyName)}` : "";
+    const sec = x.section ? ` • ${escapeHtml(x.section)}` : "";
+    row.innerHTML = `
+      <div>
+        <h3>${title}${scope} <span class="tag">${fmtTs(x.ts)}</span></h3>
+        <div class="meta">
+          ${escapeHtml(sec)}
+          ${renderLogLine(x)}
+        </div>
+      </div>
+      <div class="actions">
+        <button onclick="openNoteModal({scope:'combat', ref:{type:'log', id:'${x.id}'}})">Note</button>
+      </div>
+    `;
+    el.appendChild(row);
+  });
+}
+function renderLogLine(x){
+  if (x.type === "roll"){
+    return `<br/>${escapeHtml(x.who)} roll ${x.roll} (mod ${x.mod || 0}) → AS ${x.as}`;
+  }
+  if (x.type === "resolve"){
+    const out = x.outcome === "tie" ? "Tie (no damage)" :
+      (x.outcome === "playerHit" ? `Player hits for ${x.dmgToEnemy}` : `Enemy hits for ${x.dmgToPlayer}`);
+    return `<br/>Player AS ${x.playerAS} vs Enemy AS ${x.enemyAS} → ${escapeHtml(out)}`
+      + `<br/>After: Player STAMINA ${x.playerStaminaAfter}/${state.meters.stamina.max} • Enemy STAMINA ${x.enemyStaminaAfter}`;
+  }
+  return `<br/>${escapeHtml(x.note || "Manual action")}`;
+}
+
+/* =========================
+   Map (grid + pan threshold + note tool)
+========================= */
+const mapCanvas = $("mapCanvas");
+const mapCtx = mapCanvas.getContext("2d");
+const mapWrap = $("mapWrap");
+
+const TILE = 22;
+const GAP  = 6;
+
+const ROOM_COLORS = {
+  normal: "rgba(215,182,107,.78)",
+  save:   "rgba(108,207,124,.80)",
+  shop:   "rgba(224,179,93,.82)",
+  boss:   "rgba(224,92,92,.82)",
+  key:    "rgba(120,167,233,.80)",
+  special:"rgba(212,106,63,.82)"
+};
+
+function tileKey(x,y){ return `${x},${y}`; }
+function countRooms(){ return Object.keys(state.map.tiles||{}).length; }
+
+function setMapTool(tool){
+  state.map.tool = tool;
+  $("mapToolOut").textContent = tool;
+  saveState(); drawMap();
+}
+function toggleGridLines(){
+  state.map.showGrid = !state.map.showGrid;
+  saveState(); drawMap();
+}
+function clearMap(){
+  if (!confirm("Clear the entire map (rooms + current)? Notes remain, but tile references may no longer match.")) return;
+  state.map.tiles = {};
+  state.map.current = null;
+  saveState(); drawMap(); renderAll();
+}
+function zoomMap(f){
+  state.map.zoom = clamp(state.map.zoom * f, 0.5, 3.0);
+  saveState(); drawMap();
+}
+function resetView(){
+  state.map.zoom = 1;
+  state.map.panX = 0;
+  state.map.panY = 0;
+  saveState(); drawMap();
+}
+function applyMapUI(){
+  $("roomType").value = state.map.roomType || "normal";
+  $("roomTypeOut").textContent = $("roomType").value;
+  $("zoomOut").textContent = `${Math.round((state.map.zoom||1)*100)}%`;
+  $("mapToolOut").textContent = state.map.tool;
+}
+$("roomType").addEventListener("change", () => {
+  state.map.roomType = getVal("roomType");
+  $("roomTypeOut").textContent = state.map.roomType;
+  saveState();
+});
+
+function screenToGrid(px, py){
+  const rect = mapCanvas.getBoundingClientRect();
+  const cx = (px - rect.left) * (mapCanvas.width / rect.width);
+  const cy = (py - rect.top) * (mapCanvas.height / rect.height);
+
+  const z = state.map.zoom || 1;
+  const x = (cx - state.map.panX) / z;
+  const y = (cy - state.map.panY) / z;
+
+  const step = TILE + GAP;
+
+  // Use floor-based cell picking to reduce jitter at some zoom levels
+  const gx = Math.round(x / step);
+  const gy = Math.round(y / step);
+  return { gx, gy };
+}
+function gridToCanvas(gx, gy){
+  const step = TILE + GAP;
+  return { x: gx * step, y: gy * step };
+}
+
+function drawMap(){
+  applyMapUI();
+
+  const w = mapCanvas.width, h = mapCanvas.height;
+  mapCtx.setTransform(1,0,0,1,0,0);
+  mapCtx.clearRect(0,0,w,h);
+
+  const z = state.map.zoom || 1;
+  mapCtx.setTransform(z,0,0,z, state.map.panX, state.map.panY);
+
+  // background
+  mapCtx.fillStyle = "rgba(7,6,10,1)";
+  mapCtx.fillRect(-2400,-2400, 4800, 4800);
+
+  // grid lines
+  if (state.map.showGrid){
+    mapCtx.strokeStyle = "rgba(239,233,218,.06)";
+    mapCtx.lineWidth = 1;
+    const step = TILE + GAP;
+    for (let x=-2400; x<=2400; x+=step){
+      mapCtx.beginPath(); mapCtx.moveTo(x,-2400); mapCtx.lineTo(x,2400); mapCtx.stroke();
+    }
+    for (let y=-2400; y<=2400; y+=step){
+      mapCtx.beginPath(); mapCtx.moveTo(-2400,y); mapCtx.lineTo(2400,y); mapCtx.stroke();
+    }
+  }
+
+  const keys = Object.keys(state.map.tiles || {});
+
+  // connections (right + down only to avoid duplicates)
+  mapCtx.strokeStyle = "rgba(239,233,218,.26)";
+  mapCtx.lineWidth = 3;
+  keys.forEach(k => {
+    const [x,y] = k.split(",").map(Number);
+    const n = [[x+1,y],[x,y+1]];
+    const {x:cx,y:cy} = gridToCanvas(x,y);
+    const mx = cx + TILE/2, my = cy + TILE/2;
+    n.forEach(([nx,ny]) => {
+      if (!state.map.tiles[tileKey(nx,ny)]) return;
+      const {x:dx,y:dy} = gridToCanvas(nx,ny);
+      const ex = dx + TILE/2, ey = dy + TILE/2;
+      mapCtx.beginPath(); mapCtx.moveTo(mx,my); mapCtx.lineTo(ex,ey); mapCtx.stroke();
+    });
+  });
+
+  // tiles
+  keys.forEach(k => {
+    const t = state.map.tiles[k];
+    const [x,y] = k.split(",").map(Number);
+    const {x:cx,y:cy} = gridToCanvas(x,y);
+    const col = ROOM_COLORS[t.type] || ROOM_COLORS.normal;
+
+    mapCtx.fillStyle = col;
+    mapCtx.fillRect(cx,cy, TILE, TILE);
+
+    mapCtx.strokeStyle = "rgba(0,0,0,.45)";
+    mapCtx.lineWidth = 1.5;
+    mapCtx.strokeRect(cx,cy, TILE, TILE);
+
+    // small inner highlight
+    mapCtx.strokeStyle = "rgba(239,233,218,.18)";
+    mapCtx.lineWidth = 1;
+    mapCtx.strokeRect(cx+2,cy+2, TILE-4, TILE-4);
+  });
+
+  // current
+  if (state.map.current){
+    const {x,y} = state.map.current;
+    const {x:cx,y:cy} = gridToCanvas(x,y);
+    mapCtx.strokeStyle = "rgba(239,233,218,.9)";
+    mapCtx.lineWidth = 3;
+    mapCtx.strokeRect(cx-3, cy-3, TILE+6, TILE+6);
+  }
+
+  // update diagnostics
+  $("diagRooms").textContent = countRooms();
+  $("zoomOut").textContent = `${Math.round((state.map.zoom||1)*100)}%`;
+}
+
+let pointerDown = null;
+let isDragging = false;
+
+mapCanvas.addEventListener("pointerdown", (e) => {
+  mapCanvas.setPointerCapture(e.pointerId);
+  pointerDown = { x:e.clientX, y:e.clientY, panX: state.map.panX, panY: state.map.panY };
+  isDragging = false;
+});
+mapCanvas.addEventListener("pointermove", (e) => {
+  if (!pointerDown) return;
+
+  const dx = e.clientX - pointerDown.x;
+  const dy = e.clientY - pointerDown.y;
+  const dist = Math.hypot(dx,dy);
+
+  const tool = state.map.tool;
+
+  // Threshold to prevent accidental painting while panning
+  if (!isDragging && dist > 7){
+    isDragging = true;
+  }
+
+  if (tool === "pan" || isDragging){
+    state.map.panX = pointerDown.panX + dx;
+    state.map.panY = pointerDown.panY + dy;
+    saveState(); drawMap();
+    mapWrap.classList.add("panning");
+  }
+});
+mapCanvas.addEventListener("pointerup", (e) => {
+  if (!pointerDown) return;
+
+  const dx = e.clientX - pointerDown.x;
+  const dy = e.clientY - pointerDown.y;
+  const dist = Math.hypot(dx,dy);
+
+  // If no drag (or very small), treat as click action
+  if (dist <= 7 && state.map.tool !== "pan"){
+    handleMapClick(e.clientX, e.clientY);
+  }
+
+  pointerDown = null;
+  isDragging = false;
+  mapWrap.classList.remove("panning");
+});
+mapCanvas.addEventListener("contextmenu", (e) => {
+  e.preventDefault();
+  // Right click: quick erase
+  const prev = state.map.tool;
+  state.map.tool = "erase";
+  handleMapClick(e.clientX, e.clientY);
+  state.map.tool = prev;
+});
+
+function handleMapClick(clientX, clientY){
+  const { gx, gy } = screenToGrid(clientX, clientY);
+  const k = tileKey(gx,gy);
+  const tool = state.map.tool;
+
+  if (tool === "paint"){
+    state.map.tiles[k] = state.map.tiles[k] || { type:"normal" };
+    state.map.tiles[k].type = state.map.roomType || "normal";
+  } else if (tool === "erase"){
+    delete state.map.tiles[k];
+    if (state.map.current && state.map.current.x === gx && state.map.current.y === gy) state.map.current = null;
+  } else if (tool === "current"){
+    if (!state.map.tiles[k]) state.map.tiles[k] = { type: state.map.roomType || "normal" };
+    state.map.current = { x: gx, y: gy };
+  } else if (tool === "note"){
+    if (!state.map.tiles[k]) state.map.tiles[k] = { type: state.map.roomType || "normal" };
+    openNoteModal({ scope:"map", ref:{ tile:{x:gx,y:gy} } });
+    return; // modal will save itself
+  }
+
+  saveState(); drawMap(); renderAll();
+}
+
+/* =========================
+   Notes system (free text anywhere)
+========================= */
+let noteDraft = { scope:"campaign", ref:null };
+
+function openNoteModal(ctx){
+  noteDraft = ctx || {scope:"campaign", ref:null};
+
+  $("noteModalBack").style.display = "flex";
+  $("noteScope").value = noteDraft.scope || "campaign";
+  $("noteSection").value = state.campaign.sectionNow || "";
+  $("noteText").value = "";
+
+  const refStr = noteRefToString(noteDraft.ref);
+  $("noteModalTitle").textContent = "Add note";
+  $("noteModalSub").textContent =
+    `Scope: ${$("noteScope").value}${refStr ? " • " + refStr : ""}`;
+  $("noteText").focus();
+}
+function closeNoteModal(){
+  $("noteModalBack").style.display = "none";
+}
+$("noteScope").addEventListener("change", () => {
+  noteDraft.scope = $("noteScope").value;
+  $("noteModalSub").textContent = `Scope: ${noteDraft.scope}${noteRefToString(noteDraft.ref) ? " • " + noteRefToString(noteDraft.ref) : ""}`;
+});
+
+function saveNoteFromModal(){
+  const scope = $("noteScope").value;
+  const section = $("noteSection").value.trim();
+  const text = $("noteText").value.trim();
+  if (!text){ alert("Write a note first."); return; }
+
+  addNote({
+    scope,
+    ref: noteDraft.ref || null,
+    section,
+    text
+  });
+
+  closeNoteModal();
+  saveState(); renderAll();
+  if (!$("view-notes").classList.contains("hidden")) renderNotes();
+}
+
+function addNote({scope, ref, section, text}){
+  state.notes.push({
+    id: uid(),
+    ts: nowIso(),
+    scope: scope || "campaign",
+    ref: ref || null,
+    section: section || "",
+    text: text || ""
+  });
+}
+
+function noteRefToString(ref){
+  if (!ref) return "";
+  try{
+    if (ref.type === "enemy") return `Enemy: ${ref.name || ref.id}`;
+    if (ref.type === "round") return `Round: ${ref.round}`;
+    if (ref.type === "log") return `Log entry`;
+    if (ref.type === "customStat") return `Custom stat: ${ref.name || ref.id}`;
+    if (ref.type === "item") return `Item: ${ref.name || ref.id}`;
+    if (ref.type === "init") return "Initial roll";
+    if (ref.type === "luckTest") return "Luck test";
+    if (ref.type === "defeat") return `Defeated: ${ref.enemyName || ref.enemyId}`;
+    if (ref.tile) return `Tile: (${ref.tile.x},${ref.tile.y})`;
+    return "Reference";
+  }catch{
+    return "Reference";
+  }
+}
+
+function renderNotes(){
+  const scope = getVal("noteScopeFilter");
+  const q = (getVal("noteSearch") || "").trim().toLowerCase();
+
+  let notes = state.notes.slice().reverse();
+
+  if (scope !== "all"){
+    notes = notes.filter(n => n.scope === scope);
+  }
+  if (q){
+    notes = notes.filter(n =>
+      (n.text || "").toLowerCase().includes(q) ||
+      (n.section || "").toLowerCase().includes(q) ||
+      noteRefToString(n.ref).toLowerCase().includes(q)
+    );
+  }
+
+  const el = $("notesList");
+  el.innerHTML = "";
+
+  if (!notes.length){
+    el.innerHTML = `<div class="muted">No notes match your filter.</div>`;
+    return;
+  }
+
+  notes.slice(0, 200).forEach(n => {
+    const row = document.createElement("div");
+    row.className = "item";
+    const refStr = noteRefToString(n.ref);
+    const sec = n.section ? ` • ${escapeHtml(n.section)}` : "";
+    row.innerHTML = `
+      <div>
+        <h3>${escapeHtml(n.scope)} <span class="tag">${fmtTs(n.ts)}</span></h3>
+        <div class="meta">
+          ${refStr ? `<span class="tag">${escapeHtml(refStr)}</span>` : ""}
+          ${sec ? `<span class="tag">${sec.slice(3)}</span>` : ""}
+          <br/>${escapeHtml(n.text).replaceAll("\n","<br/>")}
+        </div>
+      </div>
+      <div class="actions">
+        <button onclick="deleteNote('${n.id}')">Delete</button>
+      </div>
+    `;
+    el.appendChild(row);
+  });
+}
+
+function deleteNote(id){
+  if (!confirm("Delete this note?")) return;
+  state.notes = state.notes.filter(n => n.id !== id);
+  saveState(); renderAll(); renderNotes();
+}
+
+function clearNotes(){
+  if (!confirm("Clear all notes?")) return;
+  state.notes = [];
+  saveState(); renderAll(); renderNotes();
+}
+
+function exportNotesText(){
+  const lines = state.notes
+    .slice()
+    .sort((a,b) => (a.ts < b.ts ? -1 : 1))
+    .map(n => {
+      const ref = noteRefToString(n.ref);
+      const sec = n.section ? ` [${n.section}]` : "";
+      return `${fmtTs(n.ts)} • ${n.scope}${ref ? " • " + ref : ""}${sec}\n${n.text}\n`;
+    });
+  $("ioBox").value = lines.join("\n---\n\n");
+  showView("data");
+}
+
+function addBattleOrNoteHint(scope, ref, text){
+  // Lightweight “auto-notes” for helpful events; keep minimal.
+  addNote({ scope, ref, section: state.campaign.sectionNow || "", text });
+}
+
+/* =========================
+   Checkpoints (snapshots)
+========================= */
+function createCheckpoint(){
+  const label = prompt("Checkpoint label (optional):", "") ?? "";
+  const cp = {
+    id: uid(),
+    ts: nowIso(),
+    label: label.trim().slice(0, 60),
+    section: state.campaign.sectionNow || "",
+    snapshot: {
+      meters: JSON.parse(JSON.stringify(state.meters)),
+      stats: JSON.parse(JSON.stringify(state.stats)),
+      customStats: JSON.parse(JSON.stringify(state.customStats)),
+      inventory: JSON.parse(JSON.stringify(state.inventory)),
+      mapCurrent: state.map.current ? {...state.map.current} : null
+    }
+  };
+  state.checkpoints.push(cp);
+  addNote({
+    scope:"checkpoint",
+    ref:{type:"checkpoint", id:cp.id},
+    section: cp.section,
+    text: `Checkpoint created${cp.label ? `: ${cp.label}` : ""}.`
+  });
+  saveState(); renderAll();
+}
+
+/* =========================
+   Export / Import
+========================= */
+function exportJSON(){
+  syncFromUI();
+  $("ioBox").value = JSON.stringify(state, null, 2);
+}
+function importJSON(){
+  const raw = $("ioBox").value.trim();
+  if (!raw){ alert("Paste JSON first."); return; }
+  try{
+    const parsed = JSON.parse(raw);
+    const merged = deepMerge(DEFAULT_STATE(), parsed);
+    state = migrateState(merged);
+    saveState(); renderAll(); drawMap();
+    alert("Import complete.");
+  }catch{
+    alert("Invalid JSON.");
+  }
+}
+function wipeAll(){
+  if (!confirm("Wipe all locally saved data?")) return;
+  localStorage.removeItem(STORAGE_KEY);
+  state = DEFAULT_STATE();
+  saveState(); renderAll(); drawMap();
+}
+
+/* =========================
+   UI sync/render
+========================= */
+function syncFromUI(){
+  syncCampaignFromUI();
+
+  // Character tab meters
+  state.meters.stamina.cur = Number(getVal("staminaCur") || 0);
+  state.meters.stamina.max = Number(getVal("staminaMax") || 0);
+
+  state.meters.luck.cur = Number(getVal("luckCur") || 0);
+  state.meters.luck.max = Number(getVal("luckMax") || 0);
+
+  state.meters.energy.cur = Number(getVal("energyCur") || 0);
+  state.meters.energy.max = Number(getVal("energyMax") || 0);
+
+  state.meters.magic.cur = Number(getVal("magicCur") || 0);
+  state.meters.magic.max = Number(getVal("magicMax") || 0);
+
+  // Clamp currents
+  ["stamina","luck","magic","energy"].forEach(k => {
+    state.meters[k].cur = clamp(state.meters[k].cur, 0, state.meters[k].max);
+  });
+
+  state.stats.skill = Number(getVal("skill") || 0);
+  state.stats.provisions = Math.max(0, Number(getVal("provisions") || 0));
+
+  // Dice settings
+  state.dice.expr = getVal("diceExpr");
+  state.dice.initSkill = getVal("initSkill");
+  state.dice.initStamina = getVal("initStamina");
+  state.dice.initLuck = getVal("initLuck");
+  state.dice.initMagic = getVal("initMagic");
+  state.dice.initEnergy = getVal("initEnergy");
+  state.dice.provisionHeal = Number(getVal("provisionHeal") || 0);
+  state.dice.luckMode = getVal("luckMode");
+
+  // Map room type
+  state.map.roomType = getVal("roomType");
+
+  saveState();
+}
+
+function renderAll(){
+  // Campaign
+  setVal("campName", state.campaign.name);
+  setVal("preset", state.campaign.preset);
+  setVal("ruleNotes", state.campaign.ruleNotes);
+  setVal("sectionNow", state.campaign.sectionNow);
+
+  // Dice
+  setVal("diceExpr", state.dice.expr);
+  setVal("initSkill", state.dice.initSkill);
+  setVal("initStamina", state.dice.initStamina);
+  setVal("initLuck", state.dice.initLuck);
+  setVal("initMagic", state.dice.initMagic);
+  setVal("initEnergy", state.dice.initEnergy);
+  setVal("provisionHeal", state.dice.provisionHeal);
+  setVal("luckMode", state.dice.luckMode);
+
+  // Character core
+  setVal("staminaCur", state.meters.stamina.cur);
+  setVal("staminaMax", state.meters.stamina.max);
+  setVal("luckCur", state.meters.luck.cur);
+  setVal("luckMax", state.meters.luck.max);
+  setVal("energyCur", state.meters.energy.cur);
+  setVal("energyMax", state.meters.energy.max);
+  setVal("magicCur", state.meters.magic.cur);
+  setVal("magicMax", state.meters.magic.max);
+  setVal("skill", state.stats.skill);
+  setVal("provisions", state.stats.provisions);
+
+  // Overview stat tiles
+  $("staminaOut").textContent = `${state.meters.stamina.cur} / ${state.meters.stamina.max}`;
+  $("luckOut").textContent    = `${state.meters.luck.cur} / ${state.meters.luck.max}`;
+  $("energyOut").textContent  = `${state.meters.energy.cur} / ${state.meters.energy.max}`;
+  $("magicOut").textContent   = `${state.meters.magic.cur} / ${state.meters.magic.max}`;
+  $("skillOut").textContent   = `${state.stats.skill}`;
+  $("provOut").textContent    = `${state.stats.provisions}`;
+
+  // Header pills
+  $("campPill").textContent = state.campaign.name?.trim() ? state.campaign.name.trim() : "—";
+  $("stamPill").textContent = `${state.meters.stamina.cur}/${state.meters.stamina.max}`;
+  $("skillPill").textContent = state.stats.skill;
+  $("luckPill").textContent = `${state.meters.luck.cur}/${state.meters.luck.max}`;
+
+  // Combat KPIs
+  $("roundNum").textContent = state.combat.round;
+  $("pRoll").textContent = state.combat.playerLastRoll ?? "—";
+  $("eRoll").textContent = state.combat.enemyLastRoll ?? "—";
+  $("pAS").textContent = state.combat.playerAS ?? "—";
+  $("eAS").textContent = state.combat.enemyAS ?? "—";
+  $("targetOut").textContent = (targetEnemy()?.name) ?? "—";
+  $("flowOut").textContent = `AS = SKILL + 2d6 + mod`;
+
+  // Checkpoints
+  $("cpCount").textContent = state.checkpoints.length;
+
+  // Diagnostics
+  $("diagEnemies").textContent = state.combat.enemies.length;
+  $("diagInv").textContent = state.inventory.length;
+  $("diagCustom").textContent = state.customStats.length;
+  $("diagRooms").textContent = countRooms();
+  $("diagNotes").textContent = state.notes.length;
+  $("diagLog").textContent = state.combat.battleLog.length;
+  $("diagCP").textContent = state.checkpoints.length;
+
+  $("logCount").textContent = state.combat.battleLog.length;
+
+  // Map UI
+  $("roomType").value = state.map.roomType || "normal";
+  $("roomTypeOut").textContent = state.map.roomType || "normal";
+  $("mapToolOut").textContent = state.map.tool || "paint";
+  $("zoomOut").textContent = `${Math.round((state.map.zoom||1)*100)}%`;
+
+  // Render lists
+  renderCustomStats();
+  renderInventory();
+  renderEnemies();
+  renderBattleLog();
+
+  // Persist (safe)
+  saveState();
+}
+
+/* =========================
+   Wire up common inputs
+========================= */
+[
+  "campName","preset","ruleNotes","sectionNow",
+  "staminaCur","staminaMax","luckCur","luckMax","energyCur","energyMax","magicCur","magicMax","skill","provisions",
+  "diceExpr","initSkill","initStamina","initLuck","initMagic","initEnergy","provisionHeal","luckMode",
+  "roomType"
+].forEach(id => {
+  $(id).addEventListener("change", () => { syncFromUI(); renderAll(); if (!$("view-map").classList.contains("hidden")) drawMap(); });
+});
+
+$("preset").addEventListener("change", () => {
+  state.campaign.preset = getVal("preset");
+  // No forced magic changes; you control it via formulas and meters.
+  saveState(); renderAll();
+});
+
+$("noteScopeFilter").addEventListener("change", renderNotes);
+$("noteSearch").addEventListener("keydown", (e) => { if (e.key === "Enter") renderNotes(); });
+
+/* =========================
+   Init
+========================= */
+mountTabs();
+renderAll();
+showView("overview");
+drawMap();
+</script>
+</body>
+</html>
