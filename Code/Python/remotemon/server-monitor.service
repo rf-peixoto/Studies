@@ -1,0 +1,16 @@
+# Put this at /etc/systemd/system/server-monitor.service
+[Unit]
+Description=Server Monitor (Telegram Alerts)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+Environment=TELEGRAM_BOT_TOKEN=YOUR_TOKEN_HERE
+Environment=TELEGRAM_CHAT_ID=YOUR_CHAT_ID_HERE
+ExecStart=/usr/bin/python3 /opt/remotemon.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
