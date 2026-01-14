@@ -3,35 +3,6 @@
   pip install requests beautifulsoup4 mmh3 rich pillow
 """
 
-#!/usr/bin/env python3
-"""
-favicon_pivots.py
-
-Given either:
-  A) a single domain/URL, fetch its favicon(s), compute multiple hashes, and print
-     ready-to-paste pivot queries for multiple Internet search engines; OR
-  B) a local favicon file path, compute hashes from the file and print the same pivots.
-
-Features preserved:
-- Accepts one positional argument
-- Discovers favicon candidates from HTML <link rel=...>, supports data: URIs, and falls back to /favicon.ico and /favicon.png
-- Computes multiple fingerprints:
-  - Shodan-compatible favicon hash (MMH3 over base64 WITH newline)
-  - FOFA icon_hash (MMH3 over base64 WITHOUT newline)
-  - MD5 / SHA-256
-  - dHash (useful for VT Intelligence pivots) when Pillow is available
-- Prints ready-to-paste queries for multiple engines + best-effort prefilled URLs
-- Colorized UX via Rich
-
-Install:
-  python3 -m pip install requests beautifulsoup4 mmh3 rich pillow
-
-Usage:
-  python3 favicon_pivots.py example.com
-  python3 favicon_pivots.py https://example.com
-  python3 favicon_pivots.py /path/to/favicon.ico
-"""
-
 from __future__ import annotations
 
 import argparse
