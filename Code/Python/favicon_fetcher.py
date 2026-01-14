@@ -3,12 +3,42 @@
   pip install requests beautifulsoup4 mmh3 rich pillow
 """
 
+#!/usr/bin/env python3
+"""
+favicon_pivots.py
+
+Given either:
+  A) a single domain/URL, fetch its favicon(s), compute multiple hashes, and print
+     ready-to-paste pivot queries for multiple Internet search engines; OR
+  B) a local favicon file path, compute hashes from the file and print the same pivots.
+
+Features preserved:
+- Accepts one positional argument
+- Discovers favicon candidates from HTML <link rel=...>, supports data: URIs, and falls back to /favicon.ico and /favicon.png
+- Computes multiple fingerprints:
+  - Shodan-compatible favicon hash (MMH3 over base64 WITH newline)
+  - FOFA icon_hash (MMH3 over base64 WITHOUT newline)
+  - MD5 / SHA-256
+  - dHash (useful for VT Intelligence pivots) when Pillow is available
+- Prints ready-to-paste queries for multiple engines + best-effort prefilled URLs
+- Colorized UX via Rich
+
+Install:
+  python3 -m pip install requests beautifulsoup4 mmh3 rich pillow
+
+Usage:
+  python3 favicon_pivots.py example.com
+  python3 favicon_pivots.py https://example.com
+  python3 favicon_pivots.py /path/to/favicon.ico
+"""
+
 from __future__ import annotations
 
 import argparse
 import base64
 import binascii
 import hashlib
+import os
 import re
 import sys
 from dataclasses import dataclass
@@ -36,8 +66,8 @@ console = Console()
 
 @dataclass
 class FaviconCandidate:
-    source: str               # where we found it (link rel, fallback, etc.)
-    url: str                  # resolved absolute URL or data: URI
+    source: str               # where we found it (link rel, fallback, file, etc.)
+    url: str                  # resolved absolute URL, data: URI, or file path
     content_type: str = ""
     size_bytes: int = 0
 
@@ -52,7 +82,6 @@ class FaviconHashes:
 
 
 ICON_RELS_PRIORITY = [
-    # Favor explicit icons first
     "icon",
     "shortcut icon",
     "apple-touch-icon",
@@ -78,9 +107,7 @@ def normalize_input_to_base_url(raw: str) -> str:
 
 
 def http_get(url: str, timeout: int = 12) -> requests.Response:
-    headers = {
-        "User-Agent": "favicon-pivots/1.0 (+https://example.invalid)"
-    }
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:146.0) Gecko/20100101 Firefox/146.0"}
     return requests.get(url, headers=headers, timeout=timeout, allow_redirects=True)
 
 
@@ -126,13 +153,41 @@ def fallback_candidates(base_url: str) -> List[FaviconCandidate]:
     ]
 
 
-_DATA_URI_RE = re.compile(r"^data:(?P<mime>[-\w.+/]+)?(;charset=[-\w]+)?(;base64)?,(?P<data>.*)$", re.IGNORECASE)
+_DATA_URI_RE = re.compile(
+    r"^data:(?P<mime>[-\w.+/]+)?(;charset=[-\w]+)?(;base64)?,(?P<data>.*)$",
+    re.IGNORECASE,
+)
 
 
-def fetch_favicon_bytes(candidate: FaviconCandidate) -> Tuple[bytes, str]:
+def fetch_favicon_bytes(candidate: FaviconCandidate, timeout: int = 12) -> Tuple[bytes, str]:
     """
     Returns (bytes, content_type)
+    Supports:
+      - data: URIs
+      - http/https URLs
+      - local files (path exists)
     """
+    # Local file path support
+    if os.path.isfile(candidate.url):
+        with open(candidate.url, "rb") as f:
+            data = f.read()
+
+        # best-effort content-type by extension
+        ext = os.path.splitext(candidate.url.lower())[1]
+        if ext == ".ico":
+            ctype = "image/x-icon"
+        elif ext == ".png":
+            ctype = "image/png"
+        elif ext in (".jpg", ".jpeg"):
+            ctype = "image/jpeg"
+        elif ext == ".svg":
+            ctype = "image/svg+xml"
+        else:
+            ctype = "application/octet-stream"
+
+        return data, ctype
+
+    # data: URI support
     if candidate.url.startswith("data:"):
         m = _DATA_URI_RE.match(candidate.url)
         if not m:
@@ -144,11 +199,11 @@ def fetch_favicon_bytes(candidate: FaviconCandidate) -> Tuple[bytes, str]:
         try:
             raw = base64.b64decode(data_part, validate=False)
         except binascii.Error:
-            # last resort: interpret as URL-encoded text
             raw = requests.utils.unquote_to_bytes(data_part)
         return raw, mime
 
-    r = http_get(candidate.url)
+    # http(s) URL support
+    r = http_get(candidate.url, timeout=timeout)
     r.raise_for_status()
     ctype = r.headers.get("Content-Type", "").split(";")[0].strip().lower()
     return r.content, ctype or "application/octet-stream"
@@ -227,25 +282,25 @@ def engine_queries(h: FaviconHashes) -> Dict[str, str]:
     # Censys has multiple favicon fields. Their dataset exposes a Shodan-compatible integer.
     q["Censys"] = f"services.http.response.favicons.shodan_hash:{h.shodan_mmh3}"
 
-    # BinaryEdge (API doc lists these fields under Web)
+    # BinaryEdge fields
     q["BinaryEdge (mmh3)"] = f"favicon.mmh3:{h.shodan_mmh3}"
     q["BinaryEdge (md5)"] = f"favicon.md5:{h.md5_hex}"
 
-    # Netlas supports sha256 + perceptual hash; we can provide sha256 exact match.
+    # Netlas supports sha256 + perceptual hash; provide sha256 exact match.
     q["Netlas (sha256)"] = f"http.favicon.hash_sha256:{h.sha256_hex}"
 
-    # ONYPHE: compatible fields for favicon mmh3 and md5
+    # ONYPHE fields for favicon
     q["ONYPHE (mmh3)"] = f"app.favicon.imagemmh3:{h.shodan_mmh3}"
     q["ONYPHE (md5)"] = f"app.favicon.imagemd5:{h.md5_hex}"
 
-    # Hunter.how (public guide snippet shows favicon_hash="..."; typically MD5)
+    # Hunter.how commonly uses MD5 for favicon hash
     q["Hunter.how"] = f'favicon_hash="{h.md5_hex}"'
 
     # VirusTotal Intelligence uses visual hashes for icon similarity; provide dHash when available.
     if h.dhash_hex:
         q["VirusTotal Intel"] = f"entity:url main_icon_dhash:{h.dhash_hex}"
     else:
-        q["VirusTotal Intel"] = "entity:url main_icon_dhash:<dhash_hex>  # (Install pillow to compute automatically)"
+        q["VirusTotal Intel"] = "entity:url main_icon_dhash:<dhash_hex>  # Install pillow to compute automatically"
 
     return q
 
@@ -261,13 +316,13 @@ def engine_urls(queries: Dict[str, str]) -> Dict[str, str]:
         if name == "Shodan":
             u[name] = f"https://www.shodan.io/search?query={qp}"
         elif name == "FOFA":
+            # FOFA web UI expects qbase64
             u[name] = f"https://en.fofa.info/result?qbase64={base64.b64encode(query.encode()).decode()}"
         elif name == "ZoomEye":
             u[name] = f"https://www.zoomeye.ai/searchResult?q={qp}"
         elif name.startswith("Censys"):
             u[name] = f"https://search.censys.io/search?resource=hosts&q={qp}"
         elif name.startswith("BinaryEdge"):
-            # Web UI is limited; keep as docs landing.
             u[name] = "https://app.binaryedge.io/"
         elif name.startswith("Netlas"):
             u[name] = f"https://app.netlas.io/responses/?q={qp}"
@@ -284,21 +339,108 @@ def engine_urls(queries: Dict[str, str]) -> Dict[str, str]:
 
 def pick_best_candidate(cands: List[FaviconCandidate]) -> List[FaviconCandidate]:
     """
-    Try each candidate in order; return the first one that downloads successfully,
-    but also keep a couple of fallbacks if present.
+    Try candidates in order; return a shortlist (still hash multiple candidates).
     """
     return cands[:5] if len(cands) > 5 else cands
 
 
+def is_probably_file_path(s: str) -> bool:
+    s = s.strip()
+    if not s:
+        return False
+
+    # If it exists as a file, treat as file input.
+    if os.path.isfile(s):
+        return True
+
+    # Also accept file:// URIs if the file exists
+    if s.lower().startswith("file://"):
+        path = s[7:]
+        return os.path.isfile(path)
+
+    return False
+
+
+def resolve_file_path(raw: str) -> str:
+    raw = raw.strip()
+    if raw.lower().startswith("file://"):
+        raw = raw[7:]
+    return raw
+
+
+def render_single_candidate_result(candidate: FaviconCandidate, h: FaviconHashes):
+    queries = engine_queries(h)
+    urls = engine_urls(queries)
+
+    info = Table(box=box.SIMPLE_HEAVY)
+    info.add_column("Field", style="bold magenta", no_wrap=True)
+    info.add_column("Value", style="white")
+
+    info.add_row("Source", candidate.source)
+    info.add_row("Location", candidate.url)
+    info.add_row("Content-Type", candidate.content_type or "unknown")
+    info.add_row("Size", f"{candidate.size_bytes} bytes")
+    info.add_row("MD5", h.md5_hex)
+    info.add_row("SHA-256", h.sha256_hex)
+    info.add_row("MMH3 (Shodan)", str(h.shodan_mmh3))
+    info.add_row("MMH3 (FOFA)", str(h.fofa_mmh3))
+    info.add_row("dHash (VT)", h.dhash_hex or "n/a (install pillow)")
+
+    console.print(Panel(info, title="[bold green]Favicon Hashes[/bold green]", border_style="green"))
+
+    t = Table(title="Ready-to-paste Queries", box=box.ROUNDED, header_style="bold cyan")
+    t.add_column("Engine", style="bold")
+    t.add_column("Query", style="white")
+    t.add_column("Prefilled URL", style="dim")
+
+    for eng, q in queries.items():
+        link = urls.get(eng, "")
+        t.add_row(eng, q, link)
+
+    console.print(t)
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Compute favicon hashes + print search-engine pivot queries.")
-    ap.add_argument("domain", help="Domain or URL (e.g., example.com or https://example.com)")
+    ap.add_argument("domain", help="Domain/URL (e.g., example.com or https://example.com) OR a local favicon file path")
     ap.add_argument("--timeout", type=int, default=12, help="HTTP timeout seconds")
     ap.add_argument("--max-icons", type=int, default=3, help="Max favicon candidates to hash (top-N)")
     args = ap.parse_args()
 
+    raw_target = args.domain
+
+    # New feature: local file input
+    if is_probably_file_path(raw_target):
+        file_path = resolve_file_path(raw_target)
+        header = Text()
+        header.append("Favicon Pivot Builder", style="bold")
+        header.append(f"\nInput: {file_path}", style="cyan")
+        header.append("\nMode: local file", style="bright_blue")
+        console.print(Panel(header, box=box.ROUNDED, border_style="bright_blue"))
+
+        try:
+            cand = FaviconCandidate(source="local_file", url=file_path)
+            data, ctype = fetch_favicon_bytes(cand, timeout=args.timeout)
+            cand.content_type = ctype
+            cand.size_bytes = len(data)
+
+            h = compute_hashes(data)
+            render_single_candidate_result(cand, h)
+
+            note = Text()
+            note.append("Notes\n", style="bold")
+            note.append("- Shodan’s favicon hash is MMH3 over base64 output that includes a trailing newline.\n", style="white")
+            note.append("- FOFA icon_hash is commonly computed as MMH3 over base64 without the newline.\n", style="white")
+            note.append("- Some engines store multiple favicon representations; pivots are strongest when you also combine title/body/ASN/SSL filters.\n", style="white")
+            console.print(Panel(note, border_style="bright_black", box=box.ROUNDED))
+            return 0
+        except Exception as e:
+            console.print(Panel(f"[bold red]Failed to read/hash local file:[/bold red] {file_path}\n{e}", border_style="red"))
+            return 4
+
+    # Domain/URL mode (existing behavior)
     try:
-        base_url = normalize_input_to_base_url(args.domain)
+        base_url = normalize_input_to_base_url(raw_target)
     except Exception as e:
         console.print(f"[bold red]Input error:[/bold red] {e}")
         return 2
@@ -328,6 +470,7 @@ def main() -> int:
     header = Text()
     header.append("Favicon Pivot Builder", style="bold")
     header.append(f"\nTarget: {base_url}", style="cyan")
+    header.append("\nMode: domain/url", style="bright_blue")
     if html_err:
         header.append("\nHTML fetch failed; using fallbacks only.", style="yellow")
         header.append(f"\nReason: {html_err}", style="dim")
@@ -337,12 +480,10 @@ def main() -> int:
 
     for idx, c in enumerate(cands, start=1):
         try:
-            data, ctype = fetch_favicon_bytes(c)
+            data, ctype = fetch_favicon_bytes(c, timeout=args.timeout)
             c.content_type = ctype
             c.size_bytes = len(data)
             h = compute_hashes(data)
-            queries = engine_queries(h)
-            urls = engine_urls(queries)
 
             info = Table(box=box.SIMPLE_HEAVY)
             info.add_column("Field", style="bold magenta", no_wrap=True)
@@ -360,6 +501,9 @@ def main() -> int:
             info.add_row("dHash (VT)", h.dhash_hex or "n/a (install pillow)")
 
             console.print(Panel(info, title="[bold green]Favicon Hashes[/bold green]", border_style="green"))
+
+            queries = engine_queries(h)
+            urls = engine_urls(queries)
 
             t = Table(title="Ready-to-paste Queries", box=box.ROUNDED, header_style="bold cyan")
             t.add_column("Engine", style="bold")
