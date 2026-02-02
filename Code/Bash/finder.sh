@@ -2,22 +2,15 @@
 set -euo pipefail
 
 # finder.sh
+#
 # Usage:
 #   ./finder.sh "example.com" /path/to/root
 #   ./finder.sh --generate-filelist /path/to/root
-#
-# Notes:
-# - Always uses fixed-string search (-F). Dots in domains are literal.
-# - Skips file paths > 96 chars.
-# - Drops matched lines > 96 chars.
-#
-# Env tuning (HDD-friendly defaults):
-#   RG_THREADS=2
-#   XARGS_P=1
+
 
 MAX_LEN=96
 
-for cmd in rg find xargs awk wc sed mv rm mkdir; do
+for cmd in rg find xargs awk wc sed date mkdir rm mv bash; do
   command -v "$cmd" >/dev/null 2>&1 || { echo "Error: $cmd not found in PATH." >&2; exit 1; }
 done
 
@@ -31,6 +24,7 @@ FINAL_FILE="${TMP_DIR}/final.txt"
 
 RG_THREADS="${RG_THREADS:-2}"
 XARGS_P="${XARGS_P:-1}"
+XARGS_N="${XARGS_N:-200}"
 
 generate_filelist() {
   local root="$1"
@@ -42,10 +36,7 @@ generate_filelist() {
   local tmp_list="${FILELIST}.tmp.$$"
   rm -f -- "$tmp_list"
 
-  # Newline-delimited file list as requested (-print).
-  # - Case-insensitive .txt: -iname '*.txt'
-  # - Suppress permission errors: 2>/dev/null
-  # - Skip file paths longer than MAX_LEN.
+  # NOTE: Newline-delimited lists cannot represent file paths containing newlines.
   find "$root" -type f -iname '*.txt' -print 2>/dev/null \
     | awk -v m="$MAX_LEN" 'length($0) <= m' \
     > "$tmp_list"
@@ -56,7 +47,7 @@ generate_filelist() {
     echo "Possible causes:" >&2
     echo "  - No *.txt files under: $root" >&2
     echo "  - Permission issues prevented traversal" >&2
-    echo "  - Most paths exceed ${MAX_LEN} characters" >&2
+    echo "  - Most file paths exceed ${MAX_LEN} characters" >&2
     exit 1
   fi
 
@@ -64,7 +55,7 @@ generate_filelist() {
   echo "Filelist generated at: $FILELIST"
 }
 
-# Option: generate filelist only
+# Generate filelist only
 if [[ "${1:-}" == "--generate-filelist" ]]; then
   ROOT="${2:-.}"
   generate_filelist "$ROOT"
@@ -89,7 +80,7 @@ if [[ ! -d "$ROOT" ]]; then
   exit 1
 fi
 
-# Ensure cached filelist exists
+# Ensure cached filelist exists (and is non-empty)
 if [[ ! -f "$FILELIST" || ! -s "$FILELIST" ]]; then
   generate_filelist "$ROOT"
 fi
@@ -97,33 +88,37 @@ fi
 # Fresh search cleanup (keep filelist cache)
 rm -f -- "$RAW_FILE" "$FINAL_FILE"
 
-# Search:
-# - Use GNU xargs delimiter as newline to preserve spaces in paths.
-# - Always -F, suppress filenames, suppress errors.
-# - Filter out matched lines longer than MAX_LEN immediately.
-#
-# Exit codes: rg returns 0 matches found, 1 no matches; both are acceptable.
+# Start timer for the query phase (not including filelist generation).
+START_NS="$(date +%s%N)"
+
 set +e
-START_NS=$(date +%s%N)
-xargs -d $'\n' -a "$FILELIST" -P "$XARGS_P" rg -F --threads "$RG_THREADS" --no-filename --no-messages -- "$DOMAIN" \
+xargs -d $'\n' -a "$FILELIST" -P "$XARGS_P" -n "$XARGS_N" \
+  bash -c '
+    rg -F --threads "'"$RG_THREADS"'" --no-filename --no-messages -- "'"$DOMAIN"'" "$@"
+    ec=$?
+    if [[ $ec -eq 1 ]]; then
+      exit 0   # "no matches" is normal; do not poison xargs
+    fi
+    exit $ec   # propagate real errors (e.g., 2)
+  ' _ \
   | awk -v m="$MAX_LEN" 'length($0) <= m' \
   > "$RAW_FILE"
-RG_EXIT=${PIPESTATUS[0]}
+XARGS_EXIT=$?
 set -e
 
-if [[ "$RG_EXIT" -ne 0 && "$RG_EXIT" -ne 1 ]]; then
-  echo "Error: rg failed with exit code $RG_EXIT" >&2
-  exit "$RG_EXIT"
+if [[ "$XARGS_EXIT" -ne 0 ]]; then
+  echo "Error: search pipeline failed (xargs exit code $XARGS_EXIT)" >&2
+  exit "$XARGS_EXIT"
 fi
 
-# Deduplicate (fast for thousands of lines)
+# Deduplicate (fast for "thousands" of lines)
 awk '!seen[$0]++' "$RAW_FILE" > "$FINAL_FILE"
 
-# Calculate time:
-END_NS=$(date +%s%N)
+# End timer
+END_NS="$(date +%s%N)"
 ELAPSED_NS=$((END_NS - START_NS))
 
-# Convert to human-readable: HH:MM:SS.mmm
+# Human-readable: HH:MM:SS.mmm
 ELAPSED_MS=$((ELAPSED_NS / 1000000))
 MS=$((ELAPSED_MS % 1000))
 TOTAL_S=$((ELAPSED_MS / 1000))
@@ -131,9 +126,9 @@ S=$((TOTAL_S % 60))
 TOTAL_M=$((TOTAL_S / 60))
 M=$((TOTAL_M % 60))
 H=$((TOTAL_M / 60))
-
-TIME_FMT=$(printf "%02d:%02d:%02d.%03d" "$H" "$M" "$S" "$MS")
+TIME_FMT="$(printf "%02d:%02d:%02d.%03d" "$H" "$M" "$S" "$MS")"
 
 LINE_COUNT="$(wc -l < "$FINAL_FILE" | tr -d '[:space:]')"
 ESCAPED_FINAL_FILE="$(printf '%s' "$FINAL_FILE" | sed 's/\\/\\\\/g; s/"/\\"/g')"
+
 printf '{"output":"%s","lines":%s,"time":"%s"}\n' "$ESCAPED_FINAL_FILE" "$LINE_COUNT" "$TIME_FMT"
