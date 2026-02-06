@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>ISO 20022 pacs.008 — FI to FI Customer Credit Transfer (Documentation)</title>
+  <meta name="description" content="Comprehensive documentation for ISO 20022 pacs.008 (FIToFICstmrCdtTrf): structure, validation, network transport, security controls, and cryptographic protections." />
+  <style>
+    :root{
+      --bg:#0b0f17;
+      --panel:#0f1623;
+      --panel2:#0c1320;
+      --text:#e8eefc;
+      --muted:#a9b7d6;
+      --faint:#7e8aa7;
+      --accent:#7aa2ff;
+      --accent2:#5fe1c4;
+      --warn:#ffcc66;
+      --danger:#ff6b6b;
+      --ok:#2bd576;
+      --border:rgba(255,255,255,.08);
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      --radius:14px;
+      --radius2:18px;
+      --line:1.55;
+    }
+    * { box-sizing:border-box; }
+    body{
+      margin:0;
+      font-family:var(--sans);
+      background: radial-gradient(1200px 600px at 20% -10%, rgba(122,162,255,.25), transparent 60%),
+                  radial-gradient(900px 500px at 100% 0%, rgba(95,225,196,.18), transparent 55%),
+                  var(--bg);
+      color:var(--text);
+      line-height:var(--line);
+    }
+    a{ color:var(--accent); text-decoration:none; }
+    a:hover{ text-decoration:underline; }
+    header{
+      padding: 36px 18px 18px;
+      border-bottom:1px solid var(--border);
+      background: linear-gradient(180deg, rgba(15,22,35,.9), rgba(11,15,23,0));
+      position: sticky;
+      top:0;
+      backdrop-filter: blur(8px);
+      z-index:5;
+    }
+    .wrap{
+      max-width: 1120px;
+      margin:0 auto;
+      padding:0 18px;
+    }
+    .top{
+      display:flex;
+      align-items:flex-start;
+      gap:18px;
+      justify-content:space-between;
+      flex-wrap:wrap;
+    }
+    h1{
+      font-size: clamp(22px, 3.2vw, 34px);
+      margin:0 0 8px 0;
+      letter-spacing:.2px;
+    }
+    .subtitle{
+      color:var(--muted);
+      margin:0;
+      max-width: 72ch;
+    }
+    .badges{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+    }
+    .badge{
+      font-size:12px;
+      padding:6px 10px;
+      border:1px solid var(--border);
+      border-radius:999px;
+      background: rgba(255,255,255,.03);
+      color: var(--muted);
+      white-space:nowrap;
+    }
+    .badge strong{ color:var(--text); font-weight:600; }
+    .grid{
+      display:grid;
+      grid-template-columns: 280px 1fr;
+      gap: 18px;
+      padding: 18px 0 44px;
+    }
+    @media (max-width: 980px){
+      .grid{ grid-template-columns: 1fr; }
+    }
+    nav{
+      position: sticky;
+      top: 128px;
+      align-self:start;
+      background: rgba(15,22,35,.6);
+      border:1px solid var(--border);
+      border-radius: var(--radius2);
+      padding: 14px;
+      box-shadow: var(--shadow);
+    }
+    @media (max-width: 980px){
+      nav{ position: relative; top:auto; }
+    }
+    .nav-title{
+      font-weight:700;
+      margin: 0 0 8px 0;
+      font-size: 14px;
+      color: var(--text);
+      letter-spacing:.2px;
+    }
+    .nav-note{
+      margin:0 0 12px 0;
+      color: var(--faint);
+      font-size: 12px;
+    }
+    .toc{
+      list-style:none;
+      padding:0;
+      margin:0;
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+    }
+    .toc a{
+      display:block;
+      padding:8px 10px;
+      border-radius:10px;
+      border:1px solid transparent;
+      color:var(--muted);
+      font-size: 13px;
+      line-height:1.35;
+    }
+    .toc a:hover{
+      background: rgba(255,255,255,.03);
+      border-color: var(--border);
+      color: var(--text);
+      text-decoration:none;
+    }
+    main{
+      min-width:0;
+      display:flex;
+      flex-direction:column;
+      gap:18px;
+    }
+    section{
+      background: rgba(15,22,35,.65);
+      border:1px solid var(--border);
+      border-radius: var(--radius2);
+      padding: 18px;
+      box-shadow: var(--shadow);
+    }
+    section h2{
+      margin:0 0 10px 0;
+      font-size: 18px;
+      letter-spacing:.2px;
+    }
+    section h3{
+      margin: 16px 0 8px 0;
+      font-size: 15px;
+      color: var(--text);
+    }
+    p{ margin: 8px 0; color: var(--muted); }
+    ul,ol{ margin: 8px 0 8px 20px; color: var(--muted); }
+    li{ margin: 4px 0; }
+    .callout{
+      border:1px solid var(--border);
+      background: rgba(12,19,32,.75);
+      padding: 12px 14px;
+      border-radius: var(--radius);
+      margin: 12px 0;
+      color: var(--muted);
+    }
+    .callout strong{ color: var(--text); }
+    .callout.warn{ border-color: rgba(255,204,102,.25); background: rgba(255,204,102,.08); }
+    .callout.danger{ border-color: rgba(255,107,107,.25); background: rgba(255,107,107,.08); }
+    .callout.ok{ border-color: rgba(43,213,118,.25); background: rgba(43,213,118,.08); }
+
+    pre{
+      background: rgba(10,14,22,.85);
+      border:1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 14px;
+      overflow:auto;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.02);
+    }
+    code, pre code{
+      font-family: var(--mono);
+      font-size: 12.5px;
+      color: #dbe7ff;
+    }
+    .kbd{
+      font-family: var(--mono);
+      font-size: 12px;
+      padding:2px 6px;
+      border-radius: 8px;
+      border:1px solid var(--border);
+      background: rgba(255,255,255,.04);
+      color: var(--text);
+    }
+    table{
+      width:100%;
+      border-collapse: collapse;
+      margin: 10px 0;
+      overflow:hidden;
+      border-radius: var(--radius);
+      border:1px solid var(--border);
+    }
+    th, td{
+      padding: 10px 10px;
+      border-bottom:1px solid var(--border);
+      vertical-align: top;
+      text-align:left;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    th{
+      color: var(--text);
+      background: rgba(255,255,255,.03);
+      font-weight: 700;
+    }
+    tr:last-child td{ border-bottom:none; }
+    .small{ font-size: 12px; color: var(--faint); }
+    .pill{
+      display:inline-block;
+      padding:2px 8px;
+      border-radius:999px;
+      border:1px solid var(--border);
+      background: rgba(255,255,255,.03);
+      color: var(--muted);
+      font-size: 12px;
+      margin-left: 6px;
+    }
+    footer{
+      border-top:1px solid var(--border);
+      padding: 22px 18px 40px;
+      color: var(--faint);
+      font-size: 12px;
+    }
+    .two-col{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+    @media (max-width: 860px){
+      .two-col{ grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+
+<body>
+<header>
+  <div class="wrap top">
+    <div>
+      <h1>ISO 20022 <span class="pill">pacs.008</span> — FI to FI Customer Credit Transfer</h1>
+      <p class="subtitle">
+        A practical documentation page describing <strong>pacs.008</strong> message structure, validation, transport, operational flows,
+        and the most common security and cryptographic protections used in real-world payment networks.
+      </p>
+    </div>
+    <div class="badges" aria-label="document metadata">
+      <div class="badge"><strong>Audience:</strong> engineers / security</div>
+      <div class="badge"><strong>Focus:</strong> structure + operations</div>
+      <div class="badge"><strong>Applies to:</strong> RTGS / HVPS / SWIFT</div>
+      <div class="badge"><strong>Style:</strong> static page</div>
+    </div>
+  </div>
+</header>
+
+<div class="wrap grid">
+  <nav aria-label="Table of contents">
+    <div class="nav-title">Contents</div>
+    <p class="nav-note">Use <span class="kbd">Ctrl</span> + <span class="kbd">F</span> to search within this page.</p>
+    <ul class="toc">
+      <li><a href="#overview">1. Overview</a></li>
+      <li><a href="#variants">2. Variants & Versions</a></li>
+      <li><a href="#roles">3. Actors & Roles</a></li>
+      <li><a href="#structure">4. XML Structure</a></li>
+      <li><a href="#mandatory">5. Typical Mandatory Fields</a></li>
+      <li><a href="#validation">6. Validation Layers</a></li>
+      <li><a href="#flows">7. Message Flows & Related Messages</a></li>
+      <li><a href="#transport">8. Transport & Network Packaging</a></li>
+      <li><a href="#crypto">9. Cryptographic Protections</a></li>
+      <li><a href="#signatures">10. Signatures & Non-Repudiation</a></li>
+      <li><a href="#integrity">11. Integrity, Idempotency, Replay</a></li>
+      <li><a href="#security">12. Security Considerations</a></li>
+      <li><a href="#ops">13. Operational Guidance</a></li>
+      <li><a href="#appendix">14. Appendix (Example + Field Map)</a></li>
+    </ul>
+  </nav>
+
+  <main>
+
+    <section id="overview">
+      <h2>1. Overview</h2>
+      <p>
+        <strong>pacs.008</strong> is an ISO 20022 message used to communicate a <em>customer credit transfer</em> instruction
+        <strong>between financial institutions</strong> (<span class="kbd">FI → FI</span>), typically for clearing and settlement
+        in payment infrastructures.
+      </p>
+
+      <div class="callout ok">
+        <strong>Conceptual meaning:</strong> “Bank A instructs Bank B (or an infrastructure) to settle a customer payment from Debtor to Creditor.”
+      </div>
+
+      <h3>1.1 Not “just XML”</h3>
+      <p>
+        Although it is serialized as XML, acceptance depends on multiple layers:
+        the XSD schema, market practice rules, network rulebooks, bilateral agreements, and compliance controls.
+        A message may be valid XML and still be rejected.
+      </p>
+
+      <h3>1.2 Typical usage contexts</h3>
+      <ul>
+        <li>SWIFT CBPR+ cross-border payment rails</li>
+        <li>RTGS / high-value payment systems</li>
+        <li>Retail clearing systems that adopted ISO 20022 payloads</li>
+      </ul>
+    </section>
+
+    <section id="variants">
+      <h2>2. Variants & Versions</h2>
+      <p>
+        ISO 20022 identifiers follow the pattern <code>pacs.008.001.xx</code>, where <code>xx</code> indicates the schema version.
+        The network/infrastructure usually states which versions are accepted.
+      </p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Identifier</th>
+            <th>Meaning</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>pacs.008</code></td>
+            <td>FI-to-FI Customer Credit Transfer</td>
+            <td>Core settlement instruction for customer payment</td>
+          </tr>
+          <tr>
+            <td><code>pacs.008.001.08</code></td>
+            <td>One commonly deployed schema variant</td>
+            <td>Often used in CBPR+ and other migrations</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="callout warn">
+        <strong>Important:</strong> “Compliant” must be interpreted against a specific rulebook (CBPR+, SEPA, local RTGS).
+        ISO schema conformance alone is insufficient.
+      </div>
+    </section>
+
+    <section id="roles">
+      <h2>3. Actors & Roles</h2>
+      <p>
+        In pacs.008, parties appear at two layers: (a) customer entities (debtor/creditor) and (b) financial institutions (agents).
+      </p>
+
+      <div class="two-col">
+        <div class="callout">
+          <strong>Customer layer</strong>
+          <ul>
+            <li><code>Dbtr</code> — Debtor (payer)</li>
+            <li><code>DbtrAcct</code> — Debtor account</li>
+            <li><code>Cdtr</code> — Creditor (payee)</li>
+            <li><code>CdtrAcct</code> — Creditor account</li>
+          </ul>
+        </div>
+        <div class="callout">
+          <strong>FI layer</strong>
+          <ul>
+            <li><code>DbtrAgt</code> — Debtor agent (payer’s bank)</li>
+            <li><code>CdtrAgt</code> — Creditor agent (payee’s bank)</li>
+            <li><code>InstgAgt</code> — Instructing agent</li>
+            <li><code>InstdAgt</code> — Instructed agent</li>
+          </ul>
+        </div>
+      </div>
+
+      <p class="small">
+        Note: Which agent fields are mandatory and how they are interpreted varies by rulebook and corridor.
+      </p>
+    </section>
+
+    <section id="structure">
+      <h2>4. XML Structure</h2>
+      <p>
+        A pacs.008 document consists of a root <code>Document</code> element (with an ISO 20022 namespace),
+        then <code>FIToFICstmrCdtTrf</code> containing a group header and one or more transaction blocks.
+      </p>
+
+      <pre><code>&lt;Document xmlns="urn:iso:std:iso:20022:tech:xsd:pacs.008.001.08"&gt;
+  &lt;FIToFICstmrCdtTrf&gt;
+    &lt;GrpHdr&gt;...&lt;/GrpHdr&gt;
+    &lt;CdtTrfTxInf&gt;...&lt;/CdtTrfTxInf&gt;
+    &lt;CdtTrfTxInf&gt;...&lt;/CdtTrfTxInf&gt;
+  &lt;/FIToFICstmrCdtTrf&gt;
+&lt;/Document&gt;</code></pre>
+
+      <h3>4.1 Group header (<code>GrpHdr</code>)</h3>
+      <p>
+        Contains message-level metadata such as message id, creation timestamp, settlement method, and instructing/instructed agents.
+      </p>
+
+      <h3>4.2 Transaction information (<code>CdtTrfTxInf</code>)</h3>
+      <p>
+        Each <code>CdtTrfTxInf</code> is one credit transfer instruction, including payment identifiers, interbank settlement amount/date,
+        debtor/creditor parties, accounts, agents, and remittance.
+      </p>
+    </section>
+
+    <section id="mandatory">
+      <h2>5. Typical Mandatory Fields</h2>
+      <p>
+        Exact requirements vary, but the following are widely required in operational networks.
+        Always validate against your network’s implementation guide.
+      </p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Area</th>
+            <th>Element</th>
+            <th>Purpose</th>
+            <th>Common notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Header</td>
+            <td><code>GrpHdr/MsgId</code></td>
+            <td>Message identifier</td>
+            <td>Must be unique per sender policy</td>
+          </tr>
+          <tr>
+            <td>Header</td>
+            <td><code>GrpHdr/CreDtTm</code></td>
+            <td>Creation timestamp</td>
+            <td>Used for audit and routing logic</td>
+          </tr>
+          <tr>
+            <td>Tx</td>
+            <td><code>PmtId/EndToEndId</code></td>
+            <td>End-to-end tracking id</td>
+            <td>Critical for reconciliation</td>
+          </tr>
+          <tr>
+            <td>Tx</td>
+            <td><code>PmtId/UETR</code></td>
+            <td>Unique end-to-end transaction reference</td>
+            <td>Common in cross-border implementations</td>
+          </tr>
+          <tr>
+            <td>Tx</td>
+            <td><code>IntrBkSttlmAmt</code></td>
+            <td>Interbank settlement amount</td>
+            <td>Currency attribute required</td>
+          </tr>
+          <tr>
+            <td>Tx</td>
+            <td><code>Dbtr</code>, <code>Cdtr</code></td>
+            <td>Customer entities</td>
+            <td>Name/address constraints can be strict</td>
+          </tr>
+          <tr>
+            <td>Tx</td>
+            <td><code>DbtrAgt</code>, <code>CdtrAgt</code></td>
+            <td>Bank/agent identifiers</td>
+            <td>BICFI or clearing ids</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="callout">
+        <strong>Practical note:</strong> The “mandatory set” is not only XSD-based. It is also determined by:
+        sanctions/AML screening fields, routing requirements, and local settlement constraints.
+      </div>
+    </section>
+
+    <section id="validation">
+      <h2>6. Validation Layers</h2>
+      <ol>
+        <li><strong>XML well-formedness</strong> — correct syntax, namespaces, encoding.</li>
+        <li><strong>XSD validation</strong> — structure and datatypes.</li>
+        <li><strong>Rulebook validation</strong> — market practice constraints (mandatory fields, code lists, conditional logic).</li>
+        <li><strong>Network validation</strong> — envelope format, headers, authentication, size limits, duplication checks.</li>
+        <li><strong>Compliance validation</strong> — sanctions screening, AML red flags, KYC completeness (implementation-specific).</li>
+        <li><strong>Core banking validation</strong> — account status, limits, cutoffs, fee models, FX models, etc.</li>
+      </ol>
+
+      <div class="callout warn">
+        <strong>Security relevance:</strong> Many payment incidents are not “crypto breaks” but validation inconsistencies:
+        different components interpreting the same message differently (parsing, normalization, truncation, code-list drift).
+      </div>
+    </section>
+
+    <section id="flows">
+      <h2>7. Message Flows & Related Messages</h2>
+      <p>
+        pacs.008 does not live alone. Typical ecosystems include acknowledgements, status updates, and reporting messages.
+      </p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Message</th>
+            <th>Role</th>
+            <th>Where it appears</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>pacs.008</code></td>
+            <td>Payment instruction (customer credit transfer)</td>
+            <td>Forward flow</td>
+          </tr>
+          <tr>
+            <td><code>pacs.002</code></td>
+            <td>Status report (accepted/rejected/processing)</td>
+            <td>Return/status flow</td>
+          </tr>
+          <tr>
+            <td><code>pacs.004</code></td>
+            <td>Payment return</td>
+            <td>Returns</td>
+          </tr>
+          <tr>
+            <td><code>camt.053/054</code></td>
+            <td>Statements / notifications</td>
+            <td>Reporting</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="callout">
+        <strong>Operational implication:</strong> End-to-end traceability is achieved by correlating identifiers across this set,
+        not by any single message alone.
+      </div>
+    </section>
+
+    <section id="transport">
+      <h2>8. Transport & Network Packaging</h2>
+      <p>
+        The pacs.008 XML is usually transported inside a network-specific envelope. The envelope carries routing metadata,
+        authentication context, and delivery semantics (store-and-forward vs direct submission).
+      </p>
+
+      <h3>8.1 Common transport models (high level)</h3>
+      <ul>
+        <li><strong>Store-and-forward networks</strong>: message queued and delivered through an intermediary network.</li>
+        <li><strong>Direct connectivity</strong>: API or MQ channel to an RTGS or clearing system.</li>
+        <li><strong>Hub-and-spoke</strong>: corporate/participant connects to a gateway which interfaces with the infrastructure.</li>
+      </ul>
+
+      <h3>8.2 Typical packaging layers</h3>
+      <ol>
+        <li><strong>Application envelope</strong> (network-specific headers / metadata)</li>
+        <li><strong>Transport security</strong> (e.g., TLS or network-level cryptography)</li>
+        <li><strong>Message-level controls</strong> (optional: XML signatures, hashes, business-level MAC)</li>
+        <li><strong>ISO 20022 payload</strong> (<code>pacs.008</code> XML)</li>
+      </ol>
+
+      <div class="callout warn">
+        <strong>Important:</strong> Many ecosystems rely primarily on transport security and network authentication.
+        Message-level signatures exist in some designs but are not universally required for ISO 20022 payloads.
+      </div>
+    </section>
+
+    <section id="crypto">
+      <h2>9. Cryptographic Protections</h2>
+      <p>
+        Cryptographic protections for pacs.008 occur at multiple layers. Which layers are used depends on the network, deployment model,
+        and regulatory requirements.
+      </p>
+
+      <h3>9.1 Transport-layer protection (most common)</h3>
+      <div class="callout">
+        <strong>TLS (or equivalent secure channel)</strong> provides:
+        <ul>
+          <li>Confidentiality (encryption in transit)</li>
+          <li>Integrity (MAC within the TLS record protocol)</li>
+          <li>Peer authentication (certificates / mutual TLS)</li>
+        </ul>
+        <p class="small">
+          This is usually the baseline for API/MQ connectivity to clearing systems and many gateway models.
+        </p>
+      </div>
+
+      <h3>9.2 Network-level authentication and authorization</h3>
+      <p>
+        Payment networks typically enforce:
+      </p>
+      <ul>
+        <li>Participant identity (certificates, HSM-backed keys, operator credentials)</li>
+        <li>Entitlements (who can send which message types)</li>
+        <li>Routing constraints (which BICs/participants are reachable)</li>
+      </ul>
+
+      <h3>9.3 Payload-level integrity / signing (less universal)</h3>
+      <p>
+        Some architectures apply message-level protection such as:
+      </p>
+      <ul>
+        <li>XML Digital Signature (XMLDSig)</li>
+        <li>Detached signatures over canonicalized payloads</li>
+        <li>Hash chaining / sequence MAC at the application layer</li>
+      </ul>
+
+      <div class="callout danger">
+        <strong>Critical pitfall:</strong> XML signatures are notoriously sensitive to canonicalization and parsing differences.
+        If deployed, they must be implemented with strict libraries, pinned algorithms, and hardened parsing settings.
+      </div>
+    </section>
+
+    <section id="signatures">
+      <h2>10. Signatures & Non-Repudiation</h2>
+      <p>
+        “Cryptographic signature” can mean different things depending on the ecosystem:
+      </p>
+
+      <h3>10.1 Transport vs message signatures</h3>
+      <ul>
+        <li><strong>Transport security</strong> proves the channel between endpoints is authenticated and protected.</li>
+        <li><strong>Message signature</strong> proves a specific payload was signed by a private key (stronger non-repudiation).</li>
+      </ul>
+
+      <h3>10.2 Non-repudiation in payment systems (practical view)</h3>
+      <p>
+        Non-repudiation is usually achieved by a combination of:
+      </p>
+      <ul>
+        <li>Network authentication logs and receipts (delivery evidence)</li>
+        <li>Participant key management and HSM enforcement</li>
+        <li>Immutable audit trails and correlation IDs (e.g., UETR)</li>
+        <li>Time synchronization and signed operational records (implementation-specific)</li>
+      </ul>
+
+      <div class="callout">
+        <strong>Implementation note:</strong> It is common for the payment network to provide non-repudiation via
+        network controls and evidentiary logs rather than requiring XMLDSig on ISO 20022 payloads.
+      </div>
+    </section>
+
+    <section id="integrity">
+      <h2>11. Integrity, Idempotency, Replay</h2>
+      <p>
+        Because payment systems must resist duplicates and replays, they apply idempotency logic using identifiers and timestamps.
+      </p>
+
+      <h3>11.1 Key identifiers used for correlation</h3>
+      <ul>
+        <li><code>GrpHdr/MsgId</code> — message-level id (often used for duplicate detection)</li>
+        <li><code>PmtId/InstrId</code> — instruction id (sender-defined)</li>
+        <li><code>PmtId/EndToEndId</code> — customer-level trace id</li>
+        <li><code>PmtId/UETR</code> — globally unique trace reference in many cross-border rails</li>
+      </ul>
+
+      <h3>11.2 Replay defenses (typical)</h3>
+      <ul>
+        <li>Duplicate detection windows (store recently seen IDs)</li>
+        <li>Sequence numbers and/or sender timestamps</li>
+        <li>Channel authentication + authorization (reject mismatched sender context)</li>
+      </ul>
+
+      <div class="callout warn">
+        <strong>Security note:</strong> Replay protection is often an operational policy problem:
+        inconsistent retention windows across components can allow duplicates to pass in edge cases.
+      </div>
+    </section>
+
+    <section id="security">
+      <h2>12. Security Considerations</h2>
+
+      <h3>12.1 Parsing and canonicalization risks</h3>
+      <ul>
+        <li>XML external entity (XXE) — must be disabled</li>
+        <li>Entity expansion / “billion laughs” — limit parser resources</li>
+        <li>Unicode normalization differences — enforce strict normalization policies</li>
+        <li>Signature wrapping attacks (if XMLDSig is used) — use hardened verification patterns</li>
+      </ul>
+
+      <h3>12.2 Business logic abuse</h3>
+      <ul>
+        <li>Beneficiary tampering by exploiting optional fields vs routed fields</li>
+        <li>Truncation attacks (field length mismatches, line folding in addresses)</li>
+        <li>Ambiguous agent identification (multiple possible identifiers)</li>
+        <li>Fee/charge bearer manipulation (corridor-specific)</li>
+      </ul>
+
+      <div class="callout danger">
+        <strong>Core point:</strong> The most damaging attacks are often “valid messages with malicious intent”
+        rather than malformed XML. Detection requires business-level controls and anomaly monitoring.
+      </div>
+
+      <h3>12.3 Logging and data handling</h3>
+      <ul>
+        <li>Protect PII and account identifiers in logs</li>
+        <li>Maintain immutable audit logs for disputes</li>
+        <li>Apply strict access control to message archives</li>
+      </ul>
+    </section>
+
+    <section id="ops">
+      <h2>13. Operational Guidance</h2>
+
+      <h3>13.1 Recommended engineering controls</h3>
+      <ul>
+        <li><strong>Schema validation</strong> + <strong>rulebook validation</strong> before submission</li>
+        <li>Centralized code-list management and version pinning</li>
+        <li>Strict XML parser hardening (XXE off, limits on depth/size)</li>
+        <li>Deterministic ID generation and de-duplication storage</li>
+        <li>Strong key management (HSM where required)</li>
+      </ul>
+
+      <h3>13.2 Recommended security controls</h3>
+      <ul>
+        <li>Mutual TLS with certificate pinning policy (where applicable)</li>
+        <li>Separation of duties for payment creation vs release</li>
+        <li>Out-of-band approval and risk scoring for high-value payments</li>
+        <li>Sanctions/AML screening integrated at the correct stage (pre- and post-routing)</li>
+      </ul>
+
+      <div class="callout ok">
+        <strong>Practical troubleshooting checklist:</strong>
+        confirm namespace/version, validate XSD, validate rulebook constraints, confirm BIC/clearing IDs,
+        confirm currency/amount formatting, confirm mandatory party data and code lists, then check network envelope requirements.
+      </div>
+    </section>
+
+    <section id="appendix">
+      <h2>14. Appendix — Example + Field Map</h2>
+
+      <h3>14.1 Realistic example (simplified)</h3>
+      <pre><code>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;Document xmlns="urn:iso:std:iso:20022:tech:xsd:pacs.008.001.08"&gt;
+  &lt;FIToFICstmrCdtTrf&gt;
+    &lt;GrpHdr&gt;
+      &lt;MsgId&gt;MSG202602060001&lt;/MsgId&gt;
+      &lt;CreDtTm&gt;2026-02-06T10:15:30Z&lt;/CreDtTm&gt;
+      &lt;NbOfTxs&gt;1&lt;/NbOfTxs&gt;
+      &lt;SttlmInf&gt;
+        &lt;SttlmMtd&gt;CLRG&lt;/SttlmMtd&gt;
+      &lt;/SttlmInf&gt;
+      &lt;InstgAgt&gt;&lt;FinInstnId&gt;&lt;BICFI&gt;BANKDEFFXXX&lt;/BICFI&gt;&lt;/FinInstnId&gt;&lt;/InstgAgt&gt;
+      &lt;InstdAgt&gt;&lt;FinInstnId&gt;&lt;BICFI&gt;BANKUS33XXX&lt;/BICFI&gt;&lt;/FinInstnId&gt;&lt;/InstdAgt&gt;
+    &lt;/GrpHdr&gt;
+
+    &lt;CdtTrfTxInf&gt;
+      &lt;PmtId&gt;
+        &lt;InstrId&gt;INSTR123456&lt;/InstrId&gt;
+        &lt;EndToEndId&gt;E2E20260206001&lt;/EndToEndId&gt;
+        &lt;UETR&gt;550e8400-e29b-41d4-a716-446655440000&lt;/UETR&gt;
+      &lt;/PmtId&gt;
+
+      &lt;IntrBkSttlmAmt Ccy="EUR"&gt;10000.00&lt;/IntrBkSttlmAmt&gt;
+      &lt;IntrBkSttlmDt&gt;2026-02-06&lt;/IntrBkSttlmDt&gt;
+      &lt;ChrgBr&gt;SLEV&lt;/ChrgBr&gt;
+
+      &lt;Dbtr&gt;&lt;Nm&gt;ACME Corporation GmbH&lt;/Nm&gt;&lt;/Dbtr&gt;
+      &lt;DbtrAcct&gt;&lt;Id&gt;&lt;IBAN&gt;DE89370400440532013000&lt;/IBAN&gt;&lt;/Id&gt;&lt;/DbtrAcct&gt;
+      &lt;DbtrAgt&gt;&lt;FinInstnId&gt;&lt;BICFI&gt;BANKDEFFXXX&lt;/BICFI&gt;&lt;/FinInstnId&gt;&lt;/DbtrAgt&gt;
+
+      &lt;CdtrAgt&gt;&lt;FinInstnId&gt;&lt;BICFI&gt;BANKUS33XXX&lt;/BICFI&gt;&lt;/FinInstnId&gt;&lt;/CdtrAgt&gt;
+      &lt;Cdtr&gt;&lt;Nm&gt;Global Supplies Inc.&lt;/Nm&gt;&lt;/Cdtr&gt;
+      &lt;CdtrAcct&gt;&lt;Id&gt;&lt;Othr&gt;&lt;Id&gt;987654321&lt;/Id&gt;&lt;/Othr&gt;&lt;/Id&gt;&lt;/CdtrAcct&gt;
+
+      &lt;RmtInf&gt;&lt;Ustrd&gt;Invoice 2026-001&lt;/Ustrd&gt;&lt;/RmtInf&gt;
+    &lt;/CdtTrfTxInf&gt;
+  &lt;/FIToFICstmrCdtTrf&gt;
+&lt;/Document&gt;</code></pre>
+
+      <h3>14.2 Field map (quick reference)</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Element</th>
+            <th>Meaning</th>
+            <th>Operational use</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>GrpHdr/MsgId</code></td>
+            <td>Message identifier</td>
+            <td>Duplicate detection, audit correlation</td>
+          </tr>
+          <tr>
+            <td><code>PmtId/EndToEndId</code></td>
+            <td>End-to-end reference</td>
+            <td>Customer reconciliation and investigation</td>
+          </tr>
+          <tr>
+            <td><code>PmtId/UETR</code></td>
+            <td>Unique trace reference</td>
+            <td>Cross-institution tracking and investigations</td>
+          </tr>
+          <tr>
+            <td><code>IntrBkSttlmAmt</code></td>
+            <td>Interbank settlement amount</td>
+            <td>Settlement booking and liquidity controls</td>
+          </tr>
+          <tr>
+            <td><code>Dbtr/Cdtr</code></td>
+            <td>Customer parties</td>
+            <td>Sanctions/AML screening, statements</td>
+          </tr>
+          <tr>
+            <td><code>DbtrAgt/CdtrAgt</code></td>
+            <td>Customer banks</td>
+            <td>Routing, reachability, entitlement checks</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="callout warn">
+        <strong>Disclaimer:</strong> This page is an engineering/security overview. For production conformance,
+        use your network’s official implementation guide and XSD set (CBPR+, SEPA, TARGET2, Fedwire ISO 20022, etc.).
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<footer>
+  <div class="wrap">
+    <p>
+      This is a static documentation page for <strong>ISO 20022 pacs.008</strong>.
+      It intentionally focuses on operational realities: validation layers, transport packaging, and cryptographic protections.
+    </p>
+    <p class="small">
+      Tip: If you want this tailored to a specific ecosystem (e.g., CBPR+, TARGET2, Fedwire, SEPA),
+      adapt sections 6–10 to match the rulebook’s envelope, authentication model, and evidentiary requirements.
+    </p>
+  </div>
+</footer>
+</body>
+</html>
