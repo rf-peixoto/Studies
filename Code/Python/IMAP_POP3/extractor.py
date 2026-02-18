@@ -10,7 +10,7 @@ import sys
 import socket
 import ssl
 import time
-from imaplib import IMAP4, IMAP4_SSL, IMAP4.error as IMAPError
+from imaplib import IMAP4, IMAP4_SSL
 from poplib import POP3, POP3_SSL, error_proto as POPError
 
 # ---------- Configuration ----------
@@ -80,7 +80,7 @@ def check_imap(domain, port, use_ssl, use_starttls):
             conn = IMAP4(domain, port, timeout=TIMEOUT)
             if use_starttls:
                 conn.starttls()
-    except (socket.error, IMAPError, ssl.SSLError) as e:
+    except (socket.error, IMAP4.error, ssl.SSLError) as e:
         return False
 
     for user, passwd in CREDENTIALS:
@@ -118,7 +118,7 @@ def check_imap(domain, port, use_ssl, use_starttls):
             target_mbox = "INBOX"
             try:
                 typ, data = conn.select(target_mbox)
-            except IMAPError:
+            except IMAP4.error:
                 # INBOX not found, try first mailbox
                 if mailboxes:
                     target_mbox = mailboxes[0].split()[-1].strip('"')
@@ -145,7 +145,7 @@ def check_imap(domain, port, use_ssl, use_starttls):
             conn.logout()
             return True
 
-        except (IMAPError, socket.error) as e:
+        except (IMAP4.error, socket.error) as e:
             continue  # try next credential
 
     return False
