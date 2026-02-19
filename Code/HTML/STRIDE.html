@@ -1,0 +1,2254 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>STRIDE Threat Modeling Guide (Single-Page)</title>
+  <style>
+    /* ===== "myBB default dark theme"-inspired styling (approximation) ===== */
+    :root{
+      --bg: #0f1216;
+      --panel: #151a21;
+      --panel2:#10151c;
+      --border:#2a3442;
+      --border2:#1f2732;
+      --text:#d7dde6;
+      --muted:#a7b1c2;
+      --link:#7aa7ff;
+      --accent:#4f86ff;
+      --accent2:#2fd3a6;
+      --warn:#ffcc66;
+      --bad:#ff6b6b;
+      --good:#62d96b;
+      --chip:#202a38;
+      --chipOn:#2a3b57;
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --radius: 10px;
+      --radiusSm: 8px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+    }
+    *{ box-sizing:border-box; }
+    html,body{ height:100%; }
+    body{
+      margin:0;
+      font-family: var(--sans);
+      background: radial-gradient(1200px 900px at 20% -10%, #1b2740 0%, rgba(27,39,64,0) 55%),
+                  radial-gradient(900px 700px at 90% 0%, #1a3a33 0%, rgba(26,58,51,0) 60%),
+                  var(--bg);
+      color:var(--text);
+    }
+    a{ color:var(--link); text-decoration:none; }
+    a:hover{ text-decoration:underline; }
+
+    header{
+      position:sticky; top:0; z-index:10;
+      background: linear-gradient(180deg, rgba(21,26,33,.98), rgba(15,18,22,.85));
+      border-bottom:1px solid var(--border);
+      backdrop-filter: blur(8px);
+    }
+    .header-inner{
+      display:flex; align-items:center; gap:14px;
+      padding:14px 18px;
+      max-width: 1280px;
+      margin:0 auto;
+    }
+    .brand{
+      display:flex; flex-direction:column; line-height:1.1;
+    }
+    .brand .title{
+      font-weight:700; letter-spacing:.2px;
+      font-size: 16px;
+    }
+    .brand .subtitle{
+      color:var(--muted); font-size:12px;
+    }
+    .header-actions{
+      margin-left:auto;
+      display:flex; gap:10px; align-items:center;
+    }
+    .btn{
+      display:inline-flex; align-items:center; justify-content:center;
+      gap:8px;
+      padding:9px 12px;
+      border:1px solid var(--border);
+      background: linear-gradient(180deg, #1b2330, #121823);
+      color:var(--text);
+      border-radius: 9px;
+      cursor:pointer;
+      box-shadow: 0 2px 0 rgba(0,0,0,.35);
+      font-weight:600;
+      font-size:13px;
+      user-select:none;
+    }
+    .btn:hover{ border-color:#3a4a62; }
+    .btn:active{ transform: translateY(1px); }
+    .btn.primary{
+      border-color: rgba(79,134,255,.55);
+      background: linear-gradient(180deg, rgba(79,134,255,.25), rgba(79,134,255,.12));
+    }
+    .btn.good{
+      border-color: rgba(47,211,166,.55);
+      background: linear-gradient(180deg, rgba(47,211,166,.22), rgba(47,211,166,.10));
+    }
+    .btn.bad{
+      border-color: rgba(255,107,107,.55);
+      background: linear-gradient(180deg, rgba(255,107,107,.18), rgba(255,107,107,.08));
+    }
+    .btn.small{ padding:7px 10px; font-size:12px; }
+    .btn .kbd{
+      font-family: var(--mono);
+      font-size: 11px;
+      opacity: .85;
+      padding: 1px 6px;
+      border:1px solid var(--border2);
+      border-radius: 999px;
+      background: rgba(0,0,0,.25);
+    }
+    .container{
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 16px 18px 48px;
+    }
+    .layout{
+      display:grid;
+      grid-template-columns: 260px 1fr;
+      gap: 14px;
+      align-items:start;
+    }
+    @media (max-width: 980px){
+      .layout{ grid-template-columns: 1fr; }
+      .sidebar{ position:relative !important; top:auto !important; }
+    }
+
+    .sidebar{
+      position: sticky;
+      top: 74px;
+      background: linear-gradient(180deg, rgba(21,26,33,.92), rgba(16,21,28,.92));
+      border:1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .side-head{
+      padding: 12px 12px 10px;
+      border-bottom:1px solid var(--border2);
+      background: linear-gradient(180deg, #1b2330, #121823);
+    }
+    .side-head .h{
+      font-weight:800; font-size:13px; letter-spacing:.3px;
+      display:flex; justify-content:space-between; align-items:center;
+    }
+    .pill{
+      font-size:11px;
+      color: var(--muted);
+      border:1px solid var(--border2);
+      background: rgba(0,0,0,.25);
+      padding:2px 8px;
+      border-radius: 999px;
+      font-family: var(--mono);
+    }
+    .nav{
+      padding: 10px;
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+    }
+    .nav a{
+      display:flex; gap:10px; align-items:center;
+      padding: 9px 10px;
+      border:1px solid transparent;
+      border-radius: 10px;
+      color: var(--text);
+      background: rgba(0,0,0,.10);
+    }
+    .nav a:hover{ border-color: var(--border); background: rgba(79,134,255,.08); }
+    .nav a.active{
+      border-color: rgba(79,134,255,.55);
+      background: rgba(79,134,255,.12);
+    }
+    .nav .dot{
+      width:10px; height:10px; border-radius: 999px;
+      background: var(--border);
+      box-shadow: 0 0 0 2px rgba(0,0,0,.25) inset;
+      flex:none;
+    }
+    .nav a.active .dot{ background: var(--accent); }
+    .nav .label{
+      display:flex; flex-direction:column; line-height:1.1;
+    }
+    .nav .label b{ font-size:13px; }
+    .nav .label span{ font-size:11px; color: var(--muted); }
+
+    .panel{
+      background: linear-gradient(180deg, rgba(21,26,33,.92), rgba(16,21,28,.92));
+      border:1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .panel-head{
+      padding: 14px 14px 10px;
+      border-bottom:1px solid var(--border2);
+      display:flex; align-items:flex-start; justify-content:space-between; gap:10px;
+      background: linear-gradient(180deg, #1b2330, #121823);
+    }
+    .panel-head h2{
+      margin:0;
+      font-size: 16px;
+      letter-spacing:.2px;
+    }
+    .panel-head p{
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+      max-width: 70ch;
+    }
+    .panel-body{ padding: 14px; }
+
+    .grid{
+      display:grid;
+      gap:12px;
+    }
+    .grid.cols2{ grid-template-columns: 1fr 1fr; }
+    .grid.cols3{ grid-template-columns: 1fr 1fr 1fr; }
+    @media (max-width: 980px){
+      .grid.cols2, .grid.cols3{ grid-template-columns: 1fr; }
+    }
+
+    .card{
+      border:1px solid var(--border2);
+      border-radius: var(--radiusSm);
+      background: rgba(0,0,0,.18);
+      padding:12px;
+    }
+    .card h3{
+      margin:0 0 8px;
+      font-size: 13px;
+      letter-spacing:.2px;
+    }
+    .card .desc{
+      margin: -2px 0 10px;
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.35;
+    }
+
+    label{ display:block; font-size:12px; color: var(--muted); margin-bottom:6px; }
+    input[type="text"], textarea, select{
+      width:100%;
+      background: rgba(0,0,0,.25);
+      border:1px solid var(--border2);
+      color: var(--text);
+      border-radius: 10px;
+      padding: 10px 10px;
+      outline:none;
+      font-size: 13px;
+    }
+    textarea{ min-height: 90px; resize: vertical; }
+    input[type="text"]:focus, textarea:focus, select:focus{
+      border-color: rgba(79,134,255,.55);
+      box-shadow: 0 0 0 3px rgba(79,134,255,.12);
+    }
+
+    .row{
+      display:flex; gap:10px; align-items:center; flex-wrap:wrap;
+    }
+    .row.right{ justify-content:flex-end; }
+    .row .spacer{ flex:1; }
+
+    .chips{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+    }
+    .chip{
+      display:inline-flex;
+      gap:8px;
+      align-items:center;
+      padding: 7px 10px;
+      border-radius: 999px;
+      border:1px solid var(--border2);
+      background: var(--chip);
+      color: var(--text);
+      cursor:pointer;
+      user-select:none;
+      font-size: 12px;
+    }
+    .chip:hover{ border-color:#3a4a62; }
+    .chip.on{
+      background: var(--chipOn);
+      border-color: rgba(79,134,255,.55);
+    }
+    .chip small{
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 11px;
+    }
+
+    .table{
+      width:100%;
+      border-collapse: collapse;
+      overflow:hidden;
+      border:1px solid var(--border2);
+      border-radius: 12px;
+      background: rgba(0,0,0,.15);
+    }
+    .table th, .table td{
+      padding: 10px 10px;
+      border-bottom: 1px solid rgba(255,255,255,.06);
+      vertical-align: top;
+      font-size: 12.5px;
+    }
+    .table th{
+      text-align:left;
+      color: var(--muted);
+      font-weight:700;
+      background: rgba(0,0,0,.18);
+    }
+    .table tr:last-child td{ border-bottom:none; }
+    .mono{ font-family: var(--mono); }
+
+    details{
+      border:1px solid var(--border2);
+      border-radius: 12px;
+      background: rgba(0,0,0,.18);
+      overflow:hidden;
+    }
+    details summary{
+      list-style:none;
+      cursor:pointer;
+      padding: 11px 12px;
+      font-weight:800;
+      font-size: 13px;
+      display:flex; align-items:center; justify-content:space-between;
+      background: rgba(0,0,0,.18);
+      border-bottom:1px solid rgba(255,255,255,.06);
+    }
+    details summary::-webkit-details-marker{ display:none; }
+    details .inner{ padding: 12px; }
+    .tag{
+      display:inline-flex; align-items:center; gap:8px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      border:1px solid var(--border2);
+      background: rgba(0,0,0,.25);
+      color: var(--muted);
+      font-size: 11px;
+      font-family: var(--mono);
+    }
+
+    .status{
+      display:flex; gap:10px; align-items:center; flex-wrap:wrap;
+      font-size: 12px; color: var(--muted);
+    }
+    .status b{ color: var(--text); }
+    .bar{
+      height: 8px; width: 160px;
+      border:1px solid var(--border2);
+      border-radius: 999px;
+      background: rgba(0,0,0,.25);
+      overflow:hidden;
+    }
+    .bar > i{
+      display:block;
+      height:100%;
+      width: 0%;
+      background: linear-gradient(90deg, rgba(79,134,255,.85), rgba(47,211,166,.85));
+    }
+
+    .toast{
+      position: fixed;
+      right: 16px;
+      bottom: 16px;
+      width: min(480px, calc(100vw - 32px));
+      background: rgba(16,21,28,.95);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      padding: 12px;
+      display:none;
+      z-index: 99;
+    }
+    .toast.show{ display:block; }
+    .toast .t{ font-weight:800; margin:0 0 6px; }
+    .toast .m{ margin:0; color: var(--muted); font-size:12px; line-height:1.35; }
+
+    .hint{
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.4;
+      margin-top: 8px;
+    }
+    .hint code{
+      font-family: var(--mono);
+      background: rgba(0,0,0,.25);
+      border:1px solid var(--border2);
+      padding: 1px 6px;
+      border-radius: 999px;
+      color: var(--text);
+    }
+
+    .danger-note{
+      border-left: 3px solid rgba(255,204,102,.85);
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: rgba(255,204,102,.08);
+      color: var(--text);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .divider{
+      height:1px; background: rgba(255,255,255,.07);
+      margin: 12px 0;
+    }
+
+    .kpi{
+      display:flex; gap:10px; flex-wrap:wrap; align-items:center;
+    }
+    .kpi .box{
+      border:1px solid var(--border2);
+      border-radius: 12px;
+      background: rgba(0,0,0,.18);
+      padding: 10px 12px;
+      min-width: 160px;
+    }
+    .kpi .box .n{
+      font-size: 18px; font-weight:900; letter-spacing:.2px;
+    }
+    .kpi .box .l{
+      color: var(--muted); font-size: 12px;
+    }
+
+    .footer{
+      margin-top: 14px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+  </style>
+</head>
+
+<body>
+<header>
+  <div class="header-inner">
+    <div class="brand">
+      <div class="title">STRIDE Threat Modeling Guide</div>
+      <div class="subtitle">A simple, complete workflow with predefined options and JSON export</div>
+    </div>
+    <div class="header-actions">
+      <button class="btn" id="btnNew" title="Reset the entire model"><span>New</span><span class="kbd">Ctrl</span><span class="kbd">N</span></button>
+      <button class="btn primary" id="btnValidate" title="Check completeness and common gaps"><span>Validate</span><span class="kbd">Ctrl</span><span class="kbd">V</span></button>
+      <button class="btn good" id="btnExport" title="Export the threat model as JSON"><span>Export JSON</span><span class="kbd">Ctrl</span><span class="kbd">E</span></button>
+    </div>
+  </div>
+</header>
+
+<div class="container">
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="side-head">
+        <div class="h">
+          <span>Workflow</span>
+          <span class="pill" id="modelIdPill">model: -</span>
+        </div>
+      </div>
+      <nav class="nav" id="nav">
+        <a href="#step-1" data-step="1" class="active">
+          <span class="dot"></span>
+          <span class="label"><b>1) Scope & Assumptions</b><span>Define the target and boundaries</span></span>
+        </a>
+        <a href="#step-2" data-step="2">
+          <span class="dot"></span>
+          <span class="label"><b>2) Components</b><span>Simple system breakdown</span></span>
+        </a>
+        <a href="#step-3" data-step="3">
+          <span class="dot"></span>
+          <span class="label"><b>3) Data & Secrets</b><span>What is handled and where</span></span>
+        </a>
+        <a href="#step-4" data-step="4">
+          <span class="dot"></span>
+          <span class="label"><b>4) Trust Boundaries</b><span>Where controls must exist</span></span>
+        </a>
+        <a href="#step-5" data-step="5">
+          <span class="dot"></span>
+          <span class="label"><b>5) STRIDE Threats</b><span>Enumerate and capture mitigations</span></span>
+        </a>
+        <a href="#step-6" data-step="6">
+          <span class="dot"></span>
+          <span class="label"><b>6) Review & Export</b><span>Summary and JSON output</span></span>
+        </a>
+      </nav>
+      <div class="divider"></div>
+      <div style="padding: 0 12px 12px;">
+        <div class="status">
+          <span><b>Progress</b></span>
+          <div class="bar" aria-label="progress"><i id="progressBar"></i></div>
+          <span class="pill" id="progressText">0%</span>
+        </div>
+        <div class="hint">
+          Keyboard: <code>Ctrl+E</code> export, <code>Ctrl+V</code> validate, <code>Ctrl+N</code> reset.
+        </div>
+      </div>
+    </aside>
+
+    <main class="panel">
+      <div class="panel-head">
+        <div>
+          <h2 id="panelTitle">1) Scope & Assumptions</h2>
+          <p id="panelDesc">Capture what you are modeling, what is out-of-scope, and the assumptions that shape threat discovery.</p>
+        </div>
+        <div class="kpi" id="kpiTop" style="display:none;">
+          <div class="box"><div class="n" id="kpiComponents">0</div><div class="l">Components</div></div>
+          <div class="box"><div class="n" id="kpiData">0</div><div class="l">Data/Secrets</div></div>
+          <div class="box"><div class="n" id="kpiThreats">0</div><div class="l">Threat entries</div></div>
+        </div>
+      </div>
+
+      <div class="panel-body" id="panelBody">
+        <!-- Step 1 -->
+        <section id="step-1" class="step">
+          <div class="grid cols2">
+            <div class="card">
+              <h3>System Identification</h3>
+              <div class="desc">Minimal identifying details. Use consistent naming for traceability.</div>
+              <label for="sysName">System / Product name</label>
+              <input id="sysName" type="text" placeholder="e.g., Customer Portal API" />
+              <div style="height:10px"></div>
+              <label for="sysOwner">Owner / Team</label>
+              <input id="sysOwner" type="text" placeholder="e.g., Platform Security / Team A" />
+              <div style="height:10px"></div>
+              <label for="sysEnv">Primary environment</label>
+              <select id="sysEnv">
+                <option value="">Select…</option>
+                <option>Production</option>
+                <option>Staging</option>
+                <option>Development</option>
+                <option>Multi-environment</option>
+              </select>
+            </div>
+
+            <div class="card">
+              <h3>Scope & Boundaries</h3>
+              <div class="desc">Choose predefined scope boundaries. Add explicit out-of-scope items.</div>
+
+              <label>In-scope boundary type</label>
+              <div class="chips" id="scopeBoundaryChips"></div>
+
+              <div style="height:10px"></div>
+              <label>Primary attack surface (select all that apply)</label>
+              <div class="chips" id="attackSurfaceChips"></div>
+
+              <div style="height:10px"></div>
+              <label for="outOfScope">Out of scope (free text)</label>
+              <textarea id="outOfScope" placeholder="e.g., 3rd-party payment gateway internals; client-side browser extensions; corporate SSO IdP"></textarea>
+            </div>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="grid cols2">
+            <div class="card">
+              <h3>Assumptions (predefined)</h3>
+              <div class="desc">These assumptions affect threat enumeration. Select only what you can justify.</div>
+              <div class="chips" id="assumptionsChips"></div>
+              <div class="hint">If an assumption is uncertain, document it explicitly; do not silently “assume secure”.</div>
+            </div>
+
+            <div class="card">
+              <h3>Security Objectives (predefined)</h3>
+              <div class="desc">This does not replace STRIDE; it helps you focus on what “must not fail”.</div>
+              <div class="chips" id="objectivesChips"></div>
+              <div class="hint">You can later filter threats by objective in the Review step.</div>
+            </div>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="danger-note">
+            <b>Critical guidance:</b> STRIDE is classification, not risk scoring. If you do not model trust boundaries and privileges
+            (even in simplified form), your STRIDE output will be incomplete and misleading.
+          </div>
+
+          <div class="row right" style="margin-top:12px;">
+            <button class="btn primary" data-next="2">Next: Components →</button>
+          </div>
+        </section>
+
+        <!-- Step 2 -->
+        <section id="step-2" class="step" style="display:none;">
+          <div class="grid cols2">
+            <div class="card">
+              <h3>Add a Component</h3>
+              <div class="desc">Use this to build a simple architecture inventory (no diagramming required).</div>
+
+              <label for="compName">Component name</label>
+              <input id="compName" type="text" placeholder="e.g., API Gateway" />
+
+              <div style="height:10px"></div>
+              <label for="compType">Component type (predefined)</label>
+              <select id="compType"></select>
+
+              <div style="height:10px"></div>
+              <label for="compTrustZone">Trust zone (simplified)</label>
+              <select id="compTrustZone"></select>
+
+              <div style="height:10px"></div>
+              <label>Exposures (predefined)</label>
+              <div class="chips" id="compExposureChips"></div>
+
+              <div style="height:10px"></div>
+              <label>AuthN / Identity (predefined)</label>
+              <div class="chips" id="compAuthChips"></div>
+
+              <div style="height:10px"></div>
+              <label>Authorization model (predefined)</label>
+              <div class="chips" id="compAuthzChips"></div>
+
+              <div style="height:10px"></div>
+              <label for="compNotes">Notes (optional)</label>
+              <textarea id="compNotes" placeholder="Any special constraints or security properties…"></textarea>
+
+              <div class="row right" style="margin-top:10px;">
+                <button class="btn good" id="btnAddComponent">Add component</button>
+              </div>
+            </div>
+
+            <div class="card">
+              <h3>Current Components</h3>
+              <div class="desc">Keep names stable; threats will reference components by ID.</div>
+              <table class="table" id="componentsTable" aria-label="components table">
+                <thead>
+                <tr>
+                  <th style="width:34%">Name</th>
+                  <th>Type</th>
+                  <th>Zone</th>
+                  <th style="width:12%">Actions</th>
+                </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+              <div class="hint">Minimum recommended: at least one “entry” component and one “data store” component.</div>
+            </div>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="grid cols2">
+            <div class="card">
+              <h3>Connections (simplified data flows)</h3>
+              <div class="desc">Define directional flows between components. Later, STRIDE will include data-flow threats.</div>
+              <div class="grid cols2">
+                <div>
+                  <label for="flowFrom">From</label>
+                  <select id="flowFrom"></select>
+                </div>
+                <div>
+                  <label for="flowTo">To</label>
+                  <select id="flowTo"></select>
+                </div>
+              </div>
+
+              <div style="height:10px"></div>
+              <label>Flow protocol / channel (predefined)</label>
+              <div class="chips" id="flowChannelChips"></div>
+
+              <div style="height:10px"></div>
+              <label>Flow protection (predefined)</label>
+              <div class="chips" id="flowProtectionChips"></div>
+
+              <div style="height:10px"></div>
+              <label for="flowPurpose">Purpose</label>
+              <input id="flowPurpose" type="text" placeholder="e.g., Auth token validation; order submission; log shipping" />
+
+              <div class="row right" style="margin-top:10px;">
+                <button class="btn good" id="btnAddFlow">Add flow</button>
+              </div>
+            </div>
+
+            <div class="card">
+              <h3>Current Flows</h3>
+              <div class="desc">Flows are directional. If both directions matter, add both.</div>
+              <table class="table" id="flowsTable" aria-label="flows table">
+                <thead>
+                <tr>
+                  <th style="width:28%">From → To</th>
+                  <th>Channel</th>
+                  <th>Protection</th>
+                  <th style="width:12%">Actions</th>
+                </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+              <div class="hint">Do not over-model. Capture only security-relevant flows (trust boundary crossings, secrets, admin paths, etc.).</div>
+            </div>
+          </div>
+
+          <div class="row" style="margin-top:12px;">
+            <button class="btn" data-prev="1">← Back</button>
+            <div class="spacer"></div>
+            <button class="btn primary" data-next="3">Next: Data & Secrets →</button>
+          </div>
+        </section>
+
+        <!-- Step 3 -->
+        <section id="step-3" class="step" style="display:none;">
+          <div class="grid cols2">
+            <div class="card">
+              <h3>Add Data / Secret</h3>
+              <div class="desc">Capture what the system processes. Keep it simple but complete.</div>
+
+              <label for="dataName">Data item name</label>
+              <input id="dataName" type="text" placeholder="e.g., Customer PII; JWT signing key; Password reset token" />
+
+              <div style="height:10px"></div>
+              <label for="dataClass">Classification (predefined)</label>
+              <select id="dataClass"></select>
+
+              <div style="height:10px"></div>
+              <label>Data types (predefined)</label>
+              <div class="chips" id="dataTypeChips"></div>
+
+              <div style="height:10px"></div>
+              <label for="dataAt">Where is it stored/processed?</label>
+              <select id="dataAt"></select>
+
+              <div style="height:10px"></div>
+              <label>Protection expectations (predefined)</label>
+              <div class="chips" id="dataProtectionChips"></div>
+
+              <div style="height:10px"></div>
+              <label for="dataNotes">Notes (optional)</label>
+              <textarea id="dataNotes" placeholder="Retention, key management, backup exposure, lawful access, etc."></textarea>
+
+              <div class="row right" style="margin-top:10px;">
+                <button class="btn good" id="btnAddData">Add data item</button>
+              </div>
+            </div>
+
+            <div class="card">
+              <h3>Current Data / Secrets</h3>
+              <div class="desc">Ensure secrets are explicitly tracked (keys, tokens, credentials).</div>
+              <table class="table" id="dataTable" aria-label="data table">
+                <thead>
+                <tr>
+                  <th style="width:34%">Name</th>
+                  <th>Class</th>
+                  <th>Location</th>
+                  <th style="width:12%">Actions</th>
+                </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+              <div class="hint">If you cannot name a secret, you almost certainly cannot protect it correctly.</div>
+            </div>
+          </div>
+
+          <div class="row" style="margin-top:12px;">
+            <button class="btn" data-prev="2">← Back</button>
+            <div class="spacer"></div>
+            <button class="btn primary" data-next="4">Next: Trust Boundaries →</button>
+          </div>
+        </section>
+
+        <!-- Step 4 -->
+        <section id="step-4" class="step" style="display:none;">
+          <div class="grid cols2">
+            <div class="card">
+              <h3>Trust Boundaries (simplified)</h3>
+              <div class="desc">Choose where trust changes (network, identity, admin, tenancy). You must model these for STRIDE to be meaningful.</div>
+
+              <label>Boundary types (predefined)</label>
+              <div class="chips" id="boundaryTypeChips"></div>
+
+              <div style="height:10px"></div>
+              <label for="boundaryBetween">Boundary crossing (predefined)</label>
+              <select id="boundaryBetween"></select>
+
+              <div style="height:10px"></div>
+              <label>Controls at boundary (predefined)</label>
+              <div class="chips" id="boundaryControlsChips"></div>
+
+              <div style="height:10px"></div>
+              <label for="boundaryNotes">Notes (optional)</label>
+              <textarea id="boundaryNotes" placeholder="e.g., public→private subnet with WAF; tenant context propagation; break-glass access"></textarea>
+
+              <div class="row right" style="margin-top:10px;">
+                <button class="btn good" id="btnAddBoundary">Add trust boundary</button>
+              </div>
+            </div>
+
+            <div class="card">
+              <h3>Current Trust Boundaries</h3>
+              <div class="desc">Boundaries are defined between zones or components and must have explicit controls.</div>
+              <table class="table" id="boundariesTable" aria-label="boundaries table">
+                <thead>
+                <tr>
+                  <th style="width:34%">Type(s)</th>
+                  <th>Crossing</th>
+                  <th>Controls</th>
+                  <th style="width:12%">Actions</th>
+                </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+              <div class="hint">If you have “Public” exposure but no trust boundary, you are missing a core threat modeling input.</div>
+            </div>
+          </div>
+
+          <div class="row" style="margin-top:12px;">
+            <button class="btn" data-prev="3">← Back</button>
+            <div class="spacer"></div>
+            <button class="btn primary" data-next="5">Next: STRIDE Threats →</button>
+          </div>
+        </section>
+
+        <!-- Step 5 -->
+        <section id="step-5" class="step" style="display:none;">
+          <div class="grid cols2">
+            <div class="card">
+              <h3>Threat Entry Builder</h3>
+              <div class="desc">Create concrete threats. You must pick at least one STRIDE category per entry.</div>
+
+              <label for="threatTargetKind">Threat target (predefined)</label>
+              <select id="threatTargetKind"></select>
+
+              <div style="height:10px"></div>
+              <label for="threatTargetId">Target item</label>
+              <select id="threatTargetId"></select>
+
+              <div style="height:10px"></div>
+              <label>STRIDE category (all six options)</label>
+              <div class="chips" id="strideChips"></div>
+
+              <div style="height:10px"></div>
+              <label>Common threat patterns (predefined)</label>
+              <div class="chips" id="patternChips"></div>
+
+              <div style="height:10px"></div>
+              <label for="threatDesc">Threat description (structured)</label>
+              <textarea id="threatDesc" placeholder="Describe the attacker goal and the security boundary violated. Example: 'Attacker reuses stolen refresh token to impersonate user, bypassing device binding.'"></textarea>
+
+              <div style="height:10px"></div>
+              <label>Recommended mitigations (predefined)</label>
+              <div class="chips" id="mitigationChips"></div>
+
+              <div style="height:10px"></div>
+              <label for="threatNotes">Notes / evidence (optional)</label>
+              <textarea id="threatNotes" placeholder="Links to design docs, assumptions, testing ideas, relevant boundary controls…"></textarea>
+
+              <div class="row right" style="margin-top:10px;">
+                <button class="btn good" id="btnAddThreat">Add threat entry</button>
+              </div>
+
+              <div class="hint">
+                Tip: Keep threats <b>specific</b>. “SQL injection” is not a threat; it is a technique. The threat is “tampering with order data by injecting…”.
+              </div>
+            </div>
+
+            <div class="card">
+              <h3>Threat Library (generated helpers)</h3>
+              <div class="desc">These helpers are not exhaustive. They exist to reduce omissions. You still own correctness.</div>
+
+              <details open>
+                <summary>
+                  <span>STRIDE prompts (what to ask)</span>
+                  <span class="tag">coverage helper</span>
+                </summary>
+                <div class="inner" id="stridePrompts"></div>
+              </details>
+
+              <div style="height:10px"></div>
+
+              <details>
+                <summary>
+                  <span>Mapping hint (element → likely STRIDE)</span>
+                  <span class="tag">sanity check</span>
+                </summary>
+                <div class="inner" id="mappingHints"></div>
+              </details>
+
+              <div style="height:10px"></div>
+
+              <details>
+                <summary>
+                  <span>Common “missed” threats</span>
+                  <span class="tag">quality</span>
+                </summary>
+                <div class="inner" id="missedThreats"></div>
+              </details>
+            </div>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="card">
+            <h3>Current Threat Entries</h3>
+            <div class="desc">Edit by removing and re-adding (single-file static page; no complex editor). Export JSON for tool-based editing.</div>
+            <table class="table" id="threatsTable" aria-label="threats table">
+              <thead>
+              <tr>
+                <th style="width:18%">Target</th>
+                <th style="width:14%">STRIDE</th>
+                <th style="width:22%">Pattern(s)</th>
+                <th>Description</th>
+                <th style="width:12%">Actions</th>
+              </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+
+            <div class="hint">Minimum bar: for each exposed entry component and boundary crossing flow, you should have at least one threat entry across relevant STRIDE categories.</div>
+          </div>
+
+          <div class="row" style="margin-top:12px;">
+            <button class="btn" data-prev="4">← Back</button>
+            <div class="spacer"></div>
+            <button class="btn primary" data-next="6">Next: Review & Export →</button>
+          </div>
+        </section>
+
+        <!-- Step 6 -->
+        <section id="step-6" class="step" style="display:none;">
+          <div class="grid cols2">
+            <div class="card">
+              <h3>Summary</h3>
+              <div class="desc">Quick completeness indicators. Use Validate for detailed findings.</div>
+
+              <div class="kpi">
+                <div class="box"><div class="n" id="sumComponents">0</div><div class="l">Components</div></div>
+                <div class="box"><div class="n" id="sumFlows">0</div><div class="l">Flows</div></div>
+                <div class="box"><div class="n" id="sumBoundaries">0</div><div class="l">Trust Boundaries</div></div>
+                <div class="box"><div class="n" id="sumData">0</div><div class="l">Data/Secrets</div></div>
+                <div class="box"><div class="n" id="sumThreats">0</div><div class="l">Threat Entries</div></div>
+              </div>
+
+              <div class="divider"></div>
+
+              <label>Filter threat entries by STRIDE</label>
+              <div class="chips" id="filterStrideChips"></div>
+
+              <div style="height:10px"></div>
+              <label for="filterTarget">Filter by target name contains</label>
+              <input id="filterTarget" type="text" placeholder="e.g., gateway, auth, db" />
+
+              <div class="row right" style="margin-top:10px;">
+                <button class="btn primary" id="btnApplyFilter">Apply filter</button>
+                <button class="btn" id="btnClearFilter">Clear</button>
+              </div>
+
+              <div class="hint">Filtering does not change your model; it only changes what is displayed below.</div>
+            </div>
+
+            <div class="card">
+              <h3>JSON Export</h3>
+              <div class="desc">This is the authoritative output of the page.</div>
+              <div class="row right">
+                <button class="btn good" id="btnCopyJson">Copy</button>
+                <button class="btn" id="btnDownloadJson">Download</button>
+              </div>
+              <div style="height:10px"></div>
+              <label for="jsonOut">Exported JSON</label>
+              <textarea id="jsonOut" class="mono" spellcheck="false"></textarea>
+              <div class="hint">If you need change control, store the JSON in version control and treat it like an artifact.</div>
+            </div>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="card">
+            <h3>Threat Entries (filtered view)</h3>
+            <div class="desc">Use this view to do a final pass before export.</div>
+            <table class="table" id="threatsTableFiltered" aria-label="filtered threats table">
+              <thead>
+              <tr>
+                <th style="width:18%">Target</th>
+                <th style="width:14%">STRIDE</th>
+                <th style="width:22%">Pattern(s)</th>
+                <th>Description</th>
+              </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+
+          <div class="footer">
+            <b>Reminder:</b> STRIDE outputs should be reviewed against your actual adversary model and operational telemetry. This page intentionally avoids risk scoring.
+          </div>
+
+          <div class="row" style="margin-top:12px;">
+            <button class="btn" data-prev="5">← Back</button>
+            <div class="spacer"></div>
+            <button class="btn bad" id="btnWipe">Wipe model</button>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite">
+  <p class="t" id="toastTitle">Notice</p>
+  <p class="m" id="toastMsg">Message</p>
+</div>
+
+<script>
+/* ===========================
+   STRIDE Threat Modeling SPA
+   Single-file: inline JS
+   =========================== */
+
+(function(){
+  // ---------- Data dictionaries (predefined options) ----------
+  const STRIDE = [
+    { id: "S", name: "Spoofing", hint: "Impersonation of users/services; identity or session abuse." },
+    { id: "T", name: "Tampering", hint: "Unauthorized modification of data, code, or configuration." },
+    { id: "R", name: "Repudiation", hint: "Ability to deny actions due to weak auditability or integrity of logs." },
+    { id: "I", name: "Information Disclosure", hint: "Exposure of sensitive data via access, leakage, or inference." },
+    { id: "D", name: "Denial of Service", hint: "Degraded availability via resource exhaustion or disruption." },
+    { id: "E", name: "Elevation of Privilege", hint: "Gaining unauthorized higher privileges or escaping boundaries." }
+  ];
+
+  const options = {
+    scopeBoundaries: [
+      "Single service / API",
+      "Full product (frontend + backend)",
+      "One critical flow (e.g., login, checkout)",
+      "Infrastructure boundary (network/cluster)",
+      "Shared platform capability"
+    ],
+    attackSurface: [
+      "Public internet endpoints",
+      "Partner / B2B APIs",
+      "Mobile client",
+      "Browser / Web UI",
+      "Admin console",
+      "Internal service-to-service",
+      "Batch jobs / workers",
+      "CI/CD pipeline",
+      "Supply chain (deps/images)",
+      "Logs/telemetry pipelines"
+    ],
+    assumptions: [
+      "Trusted cloud provider control plane",
+      "Time sync is reliable (NTP)",
+      "TLS is correctly deployed end-to-end",
+      "Secrets are stored in a managed secret store",
+      "Client devices are potentially hostile",
+      "Internal network is not inherently trusted",
+      "Admins can be phished (assume credential theft possible)",
+      "3rd-party dependencies may be compromised",
+      "Misconfiguration is a realistic failure mode",
+      "Attackers can replay captured traffic if not prevented"
+    ],
+    objectives: [
+      "Prevent account takeover",
+      "Protect sensitive data (confidentiality)",
+      "Protect data integrity",
+      "Maintain service availability",
+      "Ensure auditability / forensics",
+      "Contain blast radius",
+      "Protect privileged/admin operations",
+      "Protect cryptographic material"
+    ],
+    componentTypes: [
+      "External Actor (User/Partner/System)",
+      "Web Frontend",
+      "Mobile App",
+      "API Gateway / Reverse Proxy",
+      "Backend Service",
+      "Auth / Identity Provider (IdP)",
+      "Database (SQL/NoSQL)",
+      "Cache",
+      "Message Queue / Event Bus",
+      "Object Storage",
+      "Secrets Store / KMS",
+      "Worker / Batch Job",
+      "Admin Tooling",
+      "Logging / SIEM / Telemetry",
+      "CI/CD System",
+      "3rd-Party Service"
+    ],
+    trustZones: [
+      "Public / Untrusted",
+      "DMZ / Edge",
+      "Private / Internal",
+      "Restricted / Sensitive",
+      "Admin / Privileged",
+      "3rd-Party / External"
+    ],
+    exposures: [
+      "Inbound: Public",
+      "Inbound: Partner",
+      "Inbound: Internal",
+      "Outbound: Internet",
+      "Outbound: 3rd-Party",
+      "Admin-accessible",
+      "Runs untrusted input",
+      "Handles secrets",
+      "Stores sensitive data"
+    ],
+    authn: [
+      "None",
+      "Password",
+      "MFA / 2FA",
+      "OAuth2/OIDC",
+      "SAML",
+      "mTLS client certs",
+      "API keys",
+      "Signed tokens (JWT/PASETO)",
+      "Device binding / Attestation"
+    ],
+    authz: [
+      "None",
+      "RBAC",
+      "ABAC / Policy-based",
+      "ReBAC / Relationship-based",
+      "Tenant isolation checks",
+      "Resource ownership checks",
+      "Admin break-glass path"
+    ],
+    flowChannels: [
+      "HTTPS",
+      "gRPC",
+      "WebSocket",
+      "Message queue",
+      "Database protocol",
+      "SFTP/Batch",
+      "Internal RPC (custom)",
+      "Telemetry/log shipping"
+    ],
+    flowProtection: [
+      "No encryption",
+      "TLS (server-auth only)",
+      "mTLS (mutual)",
+      "Message signing",
+      "Replay protection (nonce/exp)",
+      "Request authentication (HMAC/JWT)",
+      "Input validation / schema",
+      "Rate limiting"
+    ],
+    dataClass: [
+      "Public",
+      "Internal",
+      "Confidential",
+      "Restricted",
+      "Regulated (PII/PCI/PHI)"
+    ],
+    dataTypes: [
+      "Credentials (passwords, hashes)",
+      "Auth tokens (access/refresh)",
+      "Cryptographic keys (KMS/HSM)",
+      "PII (names, emails, IDs)",
+      "Financial data (PCI-like)",
+      "Health data (PHI-like)",
+      "Business secrets",
+      "Operational telemetry/logs",
+      "Source code / build artifacts",
+      "Configuration (feature flags)"
+    ],
+    dataProtection: [
+      "Encryption at rest",
+      "Encryption in transit",
+      "Key rotation",
+      "Access logging",
+      "Least privilege access",
+      "Tokenization / masking",
+      "Short retention",
+      "Secure backup / restore"
+    ],
+    boundaryTypes: [
+      "Network boundary",
+      "Identity boundary",
+      "Privilege boundary",
+      "Tenancy boundary",
+      "Process boundary",
+      "Supply chain boundary"
+    ],
+    boundaryControls: [
+      "Firewall / Security group",
+      "WAF / API gateway policies",
+      "mTLS",
+      "OAuth/OIDC validation",
+      "Strong authorization checks",
+      "Input validation / schema",
+      "Rate limiting / quotas",
+      "Audit logging",
+      "Secrets management",
+      "Segmentation / sandboxing"
+    ],
+    threatTargetKinds: [
+      { id: "component", name: "Component" },
+      { id: "flow", name: "Flow" },
+      { id: "data", name: "Data/Secret" },
+      { id: "boundary", name: "Trust Boundary" }
+    ]
+  };
+
+  // Threat patterns are predefined and mapped to STRIDE categories to guarantee coverage.
+  // The UI allows selecting any patterns, and STRIDE categories must be explicitly selected.
+  const threatPatterns = [
+    // Spoofing
+    { id:"S1", stride:["S"], label:"Credential theft / reuse", tip:"Stolen creds/tokens used to impersonate." },
+    { id:"S2", stride:["S"], label:"Session hijacking", tip:"Fixation, cookie theft, token replay." },
+    { id:"S3", stride:["S"], label:"Service impersonation", tip:"DNS/TLS downgrade, fake service identity." },
+    { id:"S4", stride:["S"], label:"Token forgery", tip:"Weak signing/validation, alg confusion." },
+
+    // Tampering
+    { id:"T1", stride:["T"], label:"Message/data modification", tip:"MITM or intermediary modifies payload." },
+    { id:"T2", stride:["T"], label:"Config/infra drift", tip:"Unauthorized config change, IaC tampering." },
+    { id:"T3", stride:["T"], label:"Supply chain tampering", tip:"Dependency/image/build artifact modification." },
+    { id:"T4", stride:["T"], label:"Stored data manipulation", tip:"DB record or object alteration." },
+
+    // Repudiation
+    { id:"R1", stride:["R"], label:"Insufficient audit logging", tip:"Actions not recorded for attribution." },
+    { id:"R2", stride:["R"], label:"Log tampering", tip:"Logs can be deleted/edited without detection." },
+    { id:"R3", stride:["R"], label:"Missing correlation/trace", tip:"No request IDs, user IDs, or timestamps." },
+
+    // Information Disclosure
+    { id:"I1", stride:["I"], label:"Over-broad API responses", tip:"Excess fields, IDOR-style data exposure." },
+    { id:"I2", stride:["I"], label:"Sensitive data in logs", tip:"Tokens/PII written to logs/telemetry." },
+    { id:"I3", stride:["I"], label:"Misconfigured storage/access", tip:"Public buckets, permissive IAM." },
+    { id:"I4", stride:["I"], label:"Side channels / inference", tip:"Timing/error oracles, metadata leakage." },
+
+    // DoS
+    { id:"D1", stride:["D"], label:"Rate/volume exhaustion", tip:"Flooding, brute force, API abuse." },
+    { id:"D2", stride:["D"], label:"Cost-amplification", tip:"Expensive queries/operations per request." },
+    { id:"D3", stride:["D"], label:"Queue / lock contention", tip:"Backlogs, deadlocks, head-of-line blocking." },
+    { id:"D4", stride:["D"], label:"Dependency failure cascade", tip:"Upstream outage causing systemic outage." },
+
+    // EoP
+    { id:"E1", stride:["E"], label:"Broken authorization", tip:"Privilege checks missing/inconsistent." },
+    { id:"E2", stride:["E"], label:"Privilege escalation", tip:"Role abuse, policy misconfig." },
+    { id:"E3", stride:["E"], label:"Tenant escape / isolation break", tip:"Cross-tenant access via context errors." },
+    { id:"E4", stride:["E"], label:"Sandbox/container escape", tip:"Boundary breakout, host compromise." }
+  ];
+
+  const mitigations = [
+    // Spoofing mitigations
+    { id:"mS1", label:"Strong authentication (MFA, phishing-resistant where possible)", stride:["S"] },
+    { id:"mS2", label:"Token binding / rotation / short TTL", stride:["S"] },
+    { id:"mS3", label:"Mutual TLS / service identity verification", stride:["S"] },
+    { id:"mS4", label:"Secure session management (HttpOnly/SameSite, fixation prevention)", stride:["S"] },
+
+    // Tampering mitigations
+    { id:"mT1", label:"Integrity protection (TLS, signing, MACs)", stride:["T"] },
+    { id:"mT2", label:"Code signing / artifact verification (SBOM, provenance)", stride:["T"] },
+    { id:"mT3", label:"Immutable infra + change control (IaC, reviews)", stride:["T"] },
+    { id:"mT4", label:"Input validation + canonicalization", stride:["T"] },
+
+    // Repudiation mitigations
+    { id:"mR1", label:"Tamper-evident audit logs (append-only, WORM)", stride:["R"] },
+    { id:"mR2", label:"Strong event attribution (IDs, timestamps, trace IDs)", stride:["R"] },
+    { id:"mR3", label:"Centralized logging with restricted write access", stride:["R"] },
+
+    // Information Disclosure mitigations
+    { id:"mI1", label:"Least privilege access controls (IAM, DB roles)", stride:["I"] },
+    { id:"mI2", label:"Encryption in transit and at rest (KMS-managed keys)", stride:["I"] },
+    { id:"mI3", label:"Data minimization (response shaping, masking)", stride:["I"] },
+    { id:"mI4", label:"Sensitive logging controls (redaction, sampling)", stride:["I"] },
+
+    // DoS mitigations
+    { id:"mD1", label:"Rate limiting / quotas / WAF rules", stride:["D"] },
+    { id:"mD2", label:"Backpressure, timeouts, circuit breakers", stride:["D"] },
+    { id:"mD3", label:"Caching + resource limits", stride:["D"] },
+    { id:"mD4", label:"Graceful degradation + bulkheads", stride:["D"] },
+
+    // EoP mitigations
+    { id:"mE1", label:"Explicit authorization checks (deny-by-default)", stride:["E"] },
+    { id:"mE2", label:"Segmentation / sandboxing / least privilege", stride:["E"] },
+    { id:"mE3", label:"Tenant context enforcement and validation", stride:["E"] },
+    { id:"mE4", label:"Hardening + patching + restricted admin paths", stride:["E"] }
+  ];
+
+  // ---------- Model ----------
+  const newModel = () => ({
+    meta: {
+      id: "TM-" + Math.random().toString(16).slice(2,10).toUpperCase(),
+      created_at: new Date().toISOString(),
+      tool: "single-file-stride-page",
+      version: "1.0"
+    },
+    scope: {
+      system_name: "",
+      owner_team: "",
+      environment: "",
+      in_scope_boundary_types: [],
+      attack_surface: [],
+      out_of_scope: "",
+      assumptions: [],
+      security_objectives: []
+    },
+    components: [],  // {id,name,type,zone,exposures[],authn[],authz[],notes}
+    flows: [],       // {id,from,to,channels[],protections[],purpose}
+    data_items: [],  // {id,name,classification,types[],location_component_id,protections[],notes}
+    trust_boundaries: [], // {id,types[],crossing,controls[],notes}
+    threats: []      // {id,target_kind,target_id,stride[],patterns[],description,mitigations[],notes}
+  });
+
+  let model = loadOrCreate();
+  let filter = { stride: [], targetContains: "" };
+
+  // ---------- DOM helpers ----------
+  const $ = (sel) => document.querySelector(sel);
+  const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+
+  function toast(title, msg){
+    $("#toastTitle").textContent = title;
+    $("#toastMsg").textContent = msg;
+    const t = $("#toast");
+    t.classList.add("show");
+    clearTimeout(toast._t);
+    toast._t = setTimeout(()=>t.classList.remove("show"), 3200);
+  }
+
+  function esc(s){
+    return String(s||"").replace(/[&<>"']/g, c => ({
+      "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+    }[c]));
+  }
+
+  function persist(){
+    localStorage.setItem("stride_tm_model", JSON.stringify(model));
+    updateKPIs();
+    updateProgress();
+    if (location.hash === "#step-6") renderExport();
+  }
+
+  function loadOrCreate(){
+    try{
+      const raw = localStorage.getItem("stride_tm_model");
+      if(!raw) return newModel();
+      const parsed = JSON.parse(raw);
+      // Minimal sanity; upgrade path could go here.
+      if(!parsed || !parsed.meta || !parsed.scope) return newModel();
+      return parsed;
+    }catch(e){
+      return newModel();
+    }
+  }
+
+  function wipe(){
+    model = newModel();
+    filter = { stride: [], targetContains: "" };
+    persist();
+    renderAll();
+    toast("Model reset", "A new blank model has been created.");
+  }
+
+  function download(filename, content){
+    const blob = new Blob([content], {type:"application/json;charset=utf-8"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function copyToClipboard(text){
+    return navigator.clipboard?.writeText(text).then(()=>true).catch(()=>false);
+  }
+
+  // ---------- Chip rendering ----------
+  function renderChips(containerEl, items, selectedArr, {idFn, labelFn, smallFn} = {}){
+    containerEl.innerHTML = "";
+    items.forEach((it) => {
+      const id = idFn ? idFn(it) : it;
+      const label = labelFn ? labelFn(it) : it;
+      const small = smallFn ? smallFn(it) : "";
+      const on = selectedArr.includes(id);
+
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "chip" + (on ? " on" : "");
+      b.setAttribute("data-id", id);
+      b.innerHTML = `<span>${esc(label)}</span>${small ? `<small>${esc(small)}</small>` : ""}`;
+      b.addEventListener("click", () => {
+        const idx = selectedArr.indexOf(id);
+        if(idx >= 0) selectedArr.splice(idx,1);
+        else selectedArr.push(id);
+        b.classList.toggle("on");
+        persist();
+      });
+      containerEl.appendChild(b);
+    });
+  }
+
+  function renderSelect(selectEl, items, getValue, getLabel, placeholder="Select…"){
+    selectEl.innerHTML = "";
+    const opt0 = document.createElement("option");
+    opt0.value = "";
+    opt0.textContent = placeholder;
+    selectEl.appendChild(opt0);
+
+    items.forEach((it)=>{
+      const o = document.createElement("option");
+      o.value = getValue(it);
+      o.textContent = getLabel(it);
+      selectEl.appendChild(o);
+    });
+  }
+
+  // ---------- Step navigation ----------
+  function showStep(n){
+    $$(".step").forEach(s => s.style.display="none");
+    const el = $("#step-"+n);
+    if(el) el.style.display = "";
+
+    $$("#nav a").forEach(a=>a.classList.toggle("active", a.getAttribute("data-step")==String(n)));
+
+    const titles = {
+      1:["1) Scope & Assumptions","Capture what you are modeling, what is out-of-scope, and the assumptions that shape threat discovery."],
+      2:["2) Components","Build a simple inventory and capture key exposures and identity/authorization properties."],
+      3:["3) Data & Secrets","List sensitive data and cryptographic material, and where it is stored/processed."],
+      4:["4) Trust Boundaries","Define where trust changes and what controls exist at each boundary."],
+      5:["5) STRIDE Threats","Create concrete threats, classify them with STRIDE, and record mitigations."],
+      6:["6) Review & Export","Validate coverage, review threats, and export the model as JSON."]
+    };
+    $("#panelTitle").textContent = titles[n][0];
+    $("#panelDesc").textContent = titles[n][1];
+
+    // Show KPI strip after step 1 to reduce clutter
+    $("#kpiTop").style.display = (n>=2) ? "flex" : "none";
+
+    if(n===5) renderThreatHelpers();
+    if(n===6) renderExport();
+
+    location.hash = "#step-"+n;
+  }
+
+  function currentStepFromHash(){
+    const m = (location.hash||"").match(/step-(\d)/);
+    const n = m ? parseInt(m[1],10) : 1;
+    return (n>=1 && n<=6) ? n : 1;
+  }
+
+  // ---------- Rendering tables ----------
+  function renderComponents(){
+    const tb = $("#componentsTable tbody");
+    tb.innerHTML = "";
+    model.components.forEach(c => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td><b>${esc(c.name)}</b><div class="hint mono">${esc(c.id)}</div></td>
+        <td>${esc(c.type)}</td>
+        <td>${esc(c.zone)}</td>
+        <td>
+          <button class="btn small bad" data-del="${esc(c.id)}">Remove</button>
+        </td>
+      `;
+      tr.querySelector("[data-del]").addEventListener("click", ()=>{
+        // Remove component and any dependent references.
+        const id = c.id;
+        model.components = model.components.filter(x=>x.id!==id);
+        model.flows = model.flows.filter(f=>f.from!==id && f.to!==id);
+        model.data_items = model.data_items.filter(d=>d.location_component_id!==id);
+        model.threats = model.threats.filter(t=>!(t.target_kind==="component" && t.target_id===id));
+        // flows/others threats referencing deleted flow handled when rendering target list; also remove flow threats by cleanup:
+        cleanupOrphanThreats();
+        persist();
+        renderAll();
+        toast("Component removed", "Dependent flows, data references, and component-target threats were cleaned up.");
+      });
+      tb.appendChild(tr);
+    });
+
+    // Update selects that depend on components
+    renderComponentDependentSelects();
+  }
+
+  function renderFlows(){
+    const tb = $("#flowsTable tbody");
+    tb.innerHTML = "";
+
+    const nameOf = (id) => model.components.find(c=>c.id===id)?.name || ("<missing:"+id+">");
+
+    model.flows.forEach(f=>{
+      const tr = document.createElement("tr");
+      const fromName = nameOf(f.from);
+      const toName = nameOf(f.to);
+      tr.innerHTML = `
+        <td><b>${esc(fromName)} → ${esc(toName)}</b><div class="hint mono">${esc(f.id)}</div></td>
+        <td>${esc((f.channels||[]).join(", ") || "-")}</td>
+        <td>${esc((f.protections||[]).join(", ") || "-")}</td>
+        <td><button class="btn small bad" data-del="${esc(f.id)}">Remove</button></td>
+      `;
+      tr.querySelector("[data-del]").addEventListener("click", ()=>{
+        const id = f.id;
+        model.flows = model.flows.filter(x=>x.id!==id);
+        model.threats = model.threats.filter(t=>!(t.target_kind==="flow" && t.target_id===id));
+        persist(); renderAll();
+        toast("Flow removed", "Flow-target threats were removed as well.");
+      });
+      tb.appendChild(tr);
+    });
+
+    renderThreatTargetSelects();
+  }
+
+  function renderData(){
+    const tb = $("#dataTable tbody");
+    tb.innerHTML = "";
+    const compName = (id) => model.components.find(c=>c.id===id)?.name || "—";
+
+    model.data_items.forEach(d=>{
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td><b>${esc(d.name)}</b><div class="hint mono">${esc(d.id)}</div></td>
+        <td>${esc(d.classification || "-")}</td>
+        <td>${esc(compName(d.location_component_id))}</td>
+        <td><button class="btn small bad" data-del="${esc(d.id)}">Remove</button></td>
+      `;
+      tr.querySelector("[data-del]").addEventListener("click", ()=>{
+        const id = d.id;
+        model.data_items = model.data_items.filter(x=>x.id!==id);
+        model.threats = model.threats.filter(t=>!(t.target_kind==="data" && t.target_id===id));
+        persist(); renderAll();
+        toast("Data item removed", "Data-target threats were removed as well.");
+      });
+      tb.appendChild(tr);
+    });
+
+    renderThreatTargetSelects();
+  }
+
+  function renderBoundaries(){
+    const tb = $("#boundariesTable tbody");
+    tb.innerHTML = "";
+    model.trust_boundaries.forEach(b=>{
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${esc((b.types||[]).join(", ") || "-")}<div class="hint mono">${esc(b.id)}</div></td>
+        <td>${esc(b.crossing || "-")}</td>
+        <td>${esc((b.controls||[]).join(", ") || "-")}</td>
+        <td><button class="btn small bad" data-del="${esc(b.id)}">Remove</button></td>
+      `;
+      tr.querySelector("[data-del]").addEventListener("click", ()=>{
+        const id = b.id;
+        model.trust_boundaries = model.trust_boundaries.filter(x=>x.id!==id);
+        model.threats = model.threats.filter(t=>!(t.target_kind==="boundary" && t.target_id===id));
+        persist(); renderAll();
+        toast("Trust boundary removed", "Boundary-target threats were removed as well.");
+      });
+      tb.appendChild(tr);
+    });
+
+    renderThreatTargetSelects();
+  }
+
+  function renderThreats(){
+    const tb = $("#threatsTable tbody");
+    tb.innerHTML = "";
+
+    const targetLabel = (t) => {
+      const kind = t.target_kind;
+      const id = t.target_id;
+      if(kind==="component"){
+        const c = model.components.find(x=>x.id===id);
+        return c ? `Component: ${c.name}` : `Component: <missing>`;
+      }
+      if(kind==="flow"){
+        const f = model.flows.find(x=>x.id===id);
+        if(!f) return `Flow: <missing>`;
+        const from = model.components.find(c=>c.id===f.from)?.name || "<missing>";
+        const to = model.components.find(c=>c.id===f.to)?.name || "<missing>";
+        return `Flow: ${from} → ${to}`;
+      }
+      if(kind==="data"){
+        const d = model.data_items.find(x=>x.id===id);
+        return d ? `Data: ${d.name}` : `Data: <missing>`;
+      }
+      if(kind==="boundary"){
+        const b = model.trust_boundaries.find(x=>x.id===id);
+        return b ? `Boundary: ${b.crossing}` : `Boundary: <missing>`;
+      }
+      return `${kind}: ${id}`;
+    };
+
+    model.threats.forEach(t=>{
+      const tr = document.createElement("tr");
+      const strideLabels = (t.stride||[]).map(sid => STRIDE.find(x=>x.id===sid)?.name || sid).join(", ") || "-";
+      const patternLabels = (t.patterns||[]).map(pid => threatPatterns.find(x=>x.id===pid)?.label || pid).join(", ") || "-";
+      tr.innerHTML = `
+        <td><b>${esc(targetLabel(t))}</b><div class="hint mono">${esc(t.id)}</div></td>
+        <td>${esc(strideLabels)}</td>
+        <td>${esc(patternLabels)}</td>
+        <td>${esc(t.description || "")}</td>
+        <td><button class="btn small bad" data-del="${esc(t.id)}">Remove</button></td>
+      `;
+      tr.querySelector("[data-del]").addEventListener("click", ()=>{
+        model.threats = model.threats.filter(x=>x.id!==t.id);
+        persist(); renderAll();
+        toast("Threat removed", "The threat entry was deleted.");
+      });
+      tb.appendChild(tr);
+    });
+
+    renderThreatsFiltered();
+  }
+
+  function renderThreatsFiltered(){
+    const tb = $("#threatsTableFiltered tbody");
+    if(!tb) return;
+    tb.innerHTML = "";
+
+    const strideFilter = filter.stride;
+    const targetContains = (filter.targetContains||"").toLowerCase().trim();
+
+    const targetText = (t) => {
+      const kind = t.target_kind;
+      const id = t.target_id;
+      if(kind==="component") return model.components.find(x=>x.id===id)?.name || "";
+      if(kind==="flow"){
+        const f = model.flows.find(x=>x.id===id);
+        if(!f) return "";
+        const from = model.components.find(c=>c.id===f.from)?.name || "";
+        const to = model.components.find(c=>c.id===f.to)?.name || "";
+        return `${from} ${to}`;
+      }
+      if(kind==="data") return model.data_items.find(x=>x.id===id)?.name || "";
+      if(kind==="boundary") return model.trust_boundaries.find(x=>x.id===id)?.crossing || "";
+      return "";
+    };
+
+    const visible = model.threats.filter(t=>{
+      const strideOk = strideFilter.length ? strideFilter.some(s=> (t.stride||[]).includes(s)) : true;
+      const targetOk = targetContains ? targetText(t).toLowerCase().includes(targetContains) : true;
+      return strideOk && targetOk;
+    });
+
+    visible.forEach(t=>{
+      const tr = document.createElement("tr");
+      const strideLabels = (t.stride||[]).map(sid => STRIDE.find(x=>x.id===sid)?.name || sid).join(", ") || "-";
+      const patternLabels = (t.patterns||[]).map(pid => threatPatterns.find(x=>x.id===pid)?.label || pid).join(", ") || "-";
+
+      const target = (() => {
+        const kind = t.target_kind;
+        const id = t.target_id;
+        if(kind==="component") return "Component: " + (model.components.find(x=>x.id===id)?.name || "<missing>");
+        if(kind==="data") return "Data: " + (model.data_items.find(x=>x.id===id)?.name || "<missing>");
+        if(kind==="boundary") return "Boundary: " + (model.trust_boundaries.find(x=>x.id===id)?.crossing || "<missing>");
+        if(kind==="flow"){
+          const f = model.flows.find(x=>x.id===id);
+          if(!f) return "Flow: <missing>";
+          const from = model.components.find(c=>c.id===f.from)?.name || "<missing>";
+          const to = model.components.find(c=>c.id===f.to)?.name || "<missing>";
+          return `Flow: ${from} → ${to}`;
+        }
+        return `${kind}: ${id}`;
+      })();
+
+      tr.innerHTML = `
+        <td><b>${esc(target)}</b></td>
+        <td>${esc(strideLabels)}</td>
+        <td>${esc(patternLabels)}</td>
+        <td>${esc(t.description || "")}</td>
+      `;
+      tb.appendChild(tr);
+    });
+  }
+
+  // ---------- Dependent selects ----------
+  function renderComponentDependentSelects(){
+    const compItems = model.components.map(c => ({id:c.id, label:`${c.name} (${c.type})`}));
+
+    renderSelect($("#flowFrom"), compItems, x=>x.id, x=>x.label, "Select component…");
+    renderSelect($("#flowTo"), compItems, x=>x.id, x=>x.label, "Select component…");
+
+    // Data location
+    renderSelect($("#dataAt"), compItems, x=>x.id, x=>x.label, "Select component…");
+
+    // Boundary crossing options: zone↔zone plus component↔component shortcuts
+    const zonePairs = [];
+    for (const a of options.trustZones){
+      for (const b of options.trustZones){
+        if(a===b) continue;
+        zonePairs.push({ id:`${a} → ${b}`, label:`${a} → ${b}` });
+      }
+    }
+    const compPairs = [];
+    model.components.forEach(c=>{
+      compPairs.push({ id:`Zone: ${c.zone} | Component: ${c.name}`, label:`Zone: ${c.zone} | Component: ${c.name}` });
+    });
+
+    const boundaryBetween = $("#boundaryBetween");
+    boundaryBetween.innerHTML = "";
+    boundaryBetween.appendChild(new Option("Select…",""));
+    boundaryBetween.appendChild(new Option("— Zone crossing (simplified) —","", true, false)).disabled = true;
+    zonePairs.forEach(z => boundaryBetween.appendChild(new Option(z.label, z.id)));
+    boundaryBetween.appendChild(new Option("— Component anchor (context) —","", true, false)).disabled = true;
+    compPairs.forEach(p => boundaryBetween.appendChild(new Option(p.label, p.id)));
+
+    renderThreatTargetSelects();
+  }
+
+  function renderThreatTargetSelects(){
+    // Target kind list
+    const kindSel = $("#threatTargetKind");
+    if(!kindSel) return;
+    renderSelect(kindSel, options.threatTargetKinds, x=>x.id, x=>x.name, "Select…");
+
+    // Target ID list updates by kind
+    updateThreatTargetIdOptions();
+  }
+
+  function updateThreatTargetIdOptions(){
+    const kind = $("#threatTargetKind").value;
+    const sel = $("#threatTargetId");
+    if(!sel) return;
+
+    let items = [];
+    if(kind==="component"){
+      items = model.components.map(c=>({id:c.id, label:`${c.name} (${c.type})`}));
+    } else if(kind==="flow"){
+      items = model.flows.map(f=>{
+        const from = model.components.find(c=>c.id===f.from)?.name || "<missing>";
+        const to = model.components.find(c=>c.id===f.to)?.name || "<missing>";
+        return { id:f.id, label:`${from} → ${to} (${(f.channels||[]).join("/")||"flow"})` };
+      });
+    } else if(kind==="data"){
+      items = model.data_items.map(d=>({id:d.id, label:`${d.name} [${d.classification}]`}));
+    } else if(kind==="boundary"){
+      items = model.trust_boundaries.map(b=>({id:b.id, label:`${b.crossing || "Boundary"} (${(b.types||[]).join("/")||"type"})`}));
+    }
+
+    renderSelect(sel, items, x=>x.id, x=>x.label, items.length ? "Select…" : "No items available");
+  }
+
+  // ---------- Threat helpers ----------
+  function renderThreatHelpers(){
+    // STRIDE prompts
+    const prompts = $("#stridePrompts");
+    prompts.innerHTML = `
+      <ul style="margin:0; padding-left:18px; color: var(--text);">
+        ${STRIDE.map(s=>`
+          <li style="margin:6px 0;">
+            <b>${esc(s.name)}:</b> ${esc(promptForStride(s.id))}
+            <div class="hint">${esc(s.hint)}</div>
+          </li>
+        `).join("")}
+      </ul>
+    `;
+
+    $("#mappingHints").innerHTML = `
+      <div class="hint" style="margin:0 0 10px;">This is a heuristic. You still must think critically about your system.</div>
+      <table class="table" aria-label="stride mapping hints">
+        <thead><tr><th>Target</th><th>Often relevant STRIDE</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td><b>Component</b></td><td>S, T, R, I, D, E</td><td>Especially authentication, authorization, and admin paths.</td></tr>
+          <tr><td><b>Flow</b></td><td>T, I, D, (S)</td><td>Integrity/confidentiality, abuse, replay, dependency backpressure.</td></tr>
+          <tr><td><b>Data/Secret</b></td><td>T, I, (R), (E)</td><td>Disclosure and integrity; secrets may enable EoP if exposed.</td></tr>
+          <tr><td><b>Trust Boundary</b></td><td>S, E, I, T, D</td><td>Boundary crossings are where controls should exist and be verified.</td></tr>
+        </tbody>
+      </table>
+    `;
+
+    $("#missedThreats").innerHTML = `
+      <ul style="margin:0; padding-left:18px;">
+        <li style="margin:6px 0;"><b>Authorization drift:</b> inconsistent checks across endpoints and internal calls.</li>
+        <li style="margin:6px 0;"><b>Tenant context loss:</b> missing tenant ID propagation, leading to cross-tenant access.</li>
+        <li style="margin:6px 0;"><b>Logging secrets:</b> tokens/PII in logs, traces, crash dumps, analytics.</li>
+        <li style="margin:6px 0;"><b>Dependency cascade:</b> upstream latency/outage causing system-wide DoS.</li>
+        <li style="margin:6px 0;"><b>Build pipeline compromise:</b> CI secrets theft, artifact substitution, signing bypass.</li>
+        <li style="margin:6px 0;"><b>Break-glass abuse:</b> privileged paths lacking strong auditing and constraints.</li>
+      </ul>
+    `;
+  }
+
+  function promptForStride(id){
+    switch(id){
+      case "S": return "Can an attacker impersonate a user, service, or component identity?";
+      case "T": return "Can data, messages, code, or configuration be modified without authorization?";
+      case "R": return "Can actions be denied due to insufficient, non-tamper-evident logging and attribution?";
+      case "I": return "Can sensitive data leak via APIs, storage, logs, error messages, or side channels?";
+      case "D": return "Can availability be degraded via volume, resource exhaustion, or dependency failures?";
+      case "E": return "Can privileges be escalated (roles, policies, isolation boundaries, sandbox escapes)?";
+      default: return "";
+    }
+  }
+
+  // ---------- Validation ----------
+  function validate(){
+    const findings = [];
+
+    // Scope checks
+    if(!model.scope.system_name.trim()) findings.push("Scope: system name is missing.");
+    if(!model.scope.environment) findings.push("Scope: environment is not selected.");
+    if(model.scope.in_scope_boundary_types.length === 0) findings.push("Scope: choose at least one in-scope boundary type.");
+    if(model.scope.attack_surface.length === 0) findings.push("Scope: select at least one attack surface item.");
+    if(model.scope.assumptions.length === 0) findings.push("Scope: document at least one assumption (or explicitly state none).");
+
+    // Components and flows
+    if(model.components.length === 0) findings.push("Components: none added.");
+    const hasEntry = model.components.some(c=> (c.exposures||[]).some(e=>e.startsWith("Inbound:")));
+    if(model.components.length > 0 && !hasEntry) findings.push("Components: no obvious inbound entry component (Inbound: Public/Partner/Internal exposure).");
+
+    const hasStore = model.components.some(c=> /Database|Object Storage|Cache|Secrets Store/i.test(c.type));
+    if(model.components.length > 0 && !hasStore) findings.push("Components: no obvious data store component (DB/object storage/cache/secret store).");
+
+    // Data items
+    const hasSecrets = model.data_items.some(d => (d.types||[]).some(t=>/Credentials|Auth tokens|Cryptographic keys/i.test(t)));
+    if(model.data_items.length === 0) findings.push("Data/Secrets: none added.");
+    if(model.data_items.length > 0 && !hasSecrets) findings.push("Data/Secrets: no explicit secrets tracked (credentials/tokens/keys).");
+
+    // Boundaries
+    const exposedPublic = model.components.some(c=> (c.exposures||[]).includes("Inbound: Public"));
+    if(exposedPublic && model.trust_boundaries.length === 0) findings.push("Trust Boundaries: public exposure exists but no trust boundaries defined.");
+
+    // Threats
+    if(model.threats.length === 0) findings.push("Threats: none added. STRIDE requires explicit threat entries.");
+    const anyMissingStride = model.threats.some(t => !t.stride || t.stride.length === 0);
+    if(anyMissingStride) findings.push("Threats: at least one entry has no STRIDE category selected (invalid).");
+
+    // Coverage heuristic: For each flow, encourage at least one T/I/D
+    if(model.flows.length){
+      const flowThreats = model.threats.filter(t=>t.target_kind==="flow");
+      const coveredFlows = new Set(flowThreats.map(t=>t.target_id));
+      const uncovered = model.flows.filter(f=>!coveredFlows.has(f.id));
+      if(uncovered.length){
+        findings.push(`Threat coverage: ${uncovered.length} flow(s) have no associated threat entries (consider at least Tampering/Disclosure/DoS).`);
+      }
+    }
+
+    // Coverage heuristic: Inbound exposed components should have Spoofing/EoP considered
+    const inboundComps = model.components.filter(c => (c.exposures||[]).some(e=>e.startsWith("Inbound:")));
+    if(inboundComps.length){
+      inboundComps.forEach(c=>{
+        const threats = model.threats.filter(t=>t.target_kind==="component" && t.target_id===c.id);
+        const hasS = threats.some(t=>(t.stride||[]).includes("S"));
+        const hasE = threats.some(t=>(t.stride||[]).includes("E"));
+        if(!hasS) findings.push(`Threat coverage: inbound component "${c.name}" has no Spoofing threat entry.`);
+        if(!hasE) findings.push(`Threat coverage: inbound component "${c.name}" has no Elevation of Privilege threat entry.`);
+      });
+    }
+
+    if(findings.length === 0){
+      toast("Validation passed", "No obvious completeness gaps were detected. Still perform a human review.");
+      return true;
+    } else {
+      toast("Validation findings", findings[0] + (findings.length>1 ? ` (+${findings.length-1} more)` : ""));
+      // Show a detailed alert (kept simple for static page)
+      alert("Validation Findings:\n\n- " + findings.join("\n- "));
+      return false;
+    }
+  }
+
+  function cleanupOrphanThreats(){
+    const compIds = new Set(model.components.map(c=>c.id));
+    const flowIds = new Set(model.flows.map(f=>f.id));
+    const dataIds = new Set(model.data_items.map(d=>d.id));
+    const boundaryIds = new Set(model.trust_boundaries.map(b=>b.id));
+
+    model.threats = model.threats.filter(t=>{
+      if(t.target_kind==="component") return compIds.has(t.target_id);
+      if(t.target_kind==="flow") return flowIds.has(t.target_id);
+      if(t.target_kind==="data") return dataIds.has(t.target_id);
+      if(t.target_kind==="boundary") return boundaryIds.has(t.target_id);
+      return false;
+    });
+  }
+
+  // ---------- Progress ----------
+  function computeProgress(){
+    // Simple completeness-based progress
+    const checks = [
+      !!model.scope.system_name.trim(),
+      !!model.scope.environment,
+      model.scope.in_scope_boundary_types.length>0,
+      model.scope.attack_surface.length>0,
+      model.components.length>0,
+      model.flows.length>0,
+      model.data_items.length>0,
+      model.trust_boundaries.length>0,
+      model.threats.length>0
+    ];
+    const done = checks.filter(Boolean).length;
+    return Math.round((done / checks.length) * 100);
+  }
+
+  function updateProgress(){
+    const pct = computeProgress();
+    $("#progressText").textContent = pct + "%";
+    $("#progressBar").style.width = pct + "%";
+  }
+
+  // ---------- KPIs ----------
+  function updateKPIs(){
+    $("#modelIdPill").textContent = "model: " + model.meta.id;
+
+    $("#kpiComponents").textContent = model.components.length;
+    $("#kpiData").textContent = model.data_items.length;
+    $("#kpiThreats").textContent = model.threats.length;
+
+    $("#sumComponents").textContent = model.components.length;
+    $("#sumFlows").textContent = model.flows.length;
+    $("#sumBoundaries").textContent = model.trust_boundaries.length;
+    $("#sumData").textContent = model.data_items.length;
+    $("#sumThreats").textContent = model.threats.length;
+  }
+
+  // ---------- Export rendering ----------
+  function renderExport(){
+    const json = JSON.stringify(model, null, 2);
+    $("#jsonOut").value = json;
+    updateKPIs();
+    renderThreatsFiltered();
+  }
+
+  // ---------- Full render ----------
+  function renderAll(){
+    // Scope
+    $("#sysName").value = model.scope.system_name || "";
+    $("#sysOwner").value = model.scope.owner_team || "";
+    $("#sysEnv").value = model.scope.environment || "";
+    $("#outOfScope").value = model.scope.out_of_scope || "";
+
+    // Chips
+    renderChips($("#scopeBoundaryChips"), options.scopeBoundaries, model.scope.in_scope_boundary_types);
+    renderChips($("#attackSurfaceChips"), options.attackSurface, model.scope.attack_surface);
+    renderChips($("#assumptionsChips"), options.assumptions, model.scope.assumptions);
+    renderChips($("#objectivesChips"), options.objectives, model.scope.security_objectives);
+
+    // Component builder selects
+    renderSelect($("#compType"), options.componentTypes, x=>x, x=>x);
+    renderSelect($("#compTrustZone"), options.trustZones, x=>x, x=>x);
+    renderChips($("#compExposureChips"), options.exposures, temp.comp.exposures);
+    renderChips($("#compAuthChips"), options.authn, temp.comp.authn);
+    renderChips($("#compAuthzChips"), options.authz, temp.comp.authz);
+
+    // Flow chips
+    renderChips($("#flowChannelChips"), options.flowChannels, temp.flow.channels);
+    renderChips($("#flowProtectionChips"), options.flowProtection, temp.flow.protections);
+
+    // Data builder
+    renderSelect($("#dataClass"), options.dataClass, x=>x, x=>x);
+    renderChips($("#dataTypeChips"), options.dataTypes, temp.data.types);
+    renderChips($("#dataProtectionChips"), options.dataProtection, temp.data.protections);
+
+    // Boundaries
+    renderChips($("#boundaryTypeChips"), options.boundaryTypes, temp.boundary.types);
+    renderChips($("#boundaryControlsChips"), options.boundaryControls, temp.boundary.controls);
+
+    // Threat builder
+    renderThreatTargetSelects();
+    renderChips($("#strideChips"), STRIDE, temp.threat.stride, { idFn: x=>x.id, labelFn: x=>x.name, smallFn: x=>x.id });
+    renderChips($("#patternChips"), threatPatterns, temp.threat.patterns, { idFn: x=>x.id, labelFn: x=>x.label, smallFn: x=>x.stride.join("") });
+    renderChips($("#mitigationChips"), mitigations, temp.threat.mitigations, { idFn: x=>x.id, labelFn: x=>x.label });
+
+    // Filter chips (step 6)
+    renderChips($("#filterStrideChips"), STRIDE, filter.stride, { idFn: x=>x.id, labelFn: x=>x.name, smallFn: x=>x.id });
+
+    // Tables
+    renderComponents();
+    renderFlows();
+    renderData();
+    renderBoundaries();
+    renderThreats();
+
+    updateKPIs();
+    updateProgress();
+  }
+
+  // ---------- Temp builders (so chips do not mutate model until added) ----------
+  const temp = {
+    comp: { exposures:[], authn:[], authz:[] },
+    flow: { channels:[], protections:[] },
+    data: { types:[], protections:[] },
+    boundary: { types:[], controls:[] },
+    threat: { stride:[], patterns:[], mitigations:[] }
+  };
+
+  function resetTemp(which){
+    if(which==="comp") temp.comp = { exposures:[], authn:[], authz:[] };
+    if(which==="flow") temp.flow = { channels:[], protections:[] };
+    if(which==="data") temp.data = { types:[], protections:[] };
+    if(which==="boundary") temp.boundary = { types:[], controls:[] };
+    if(which==="threat") temp.threat = { stride:[], patterns:[], mitigations:[] };
+  }
+
+  // ---------- Event wiring ----------
+  function wire(){
+    // Nav clicks
+    $$("#nav a").forEach(a=>{
+      a.addEventListener("click",(e)=>{
+        e.preventDefault();
+        showStep(parseInt(a.getAttribute("data-step"),10));
+      });
+    });
+
+    // Next/Prev buttons
+    $$("[data-next]").forEach(b=> b.addEventListener("click", ()=> showStep(parseInt(b.getAttribute("data-next"),10))));
+    $$("[data-prev]").forEach(b=> b.addEventListener("click", ()=> showStep(parseInt(b.getAttribute("data-prev"),10))));
+
+    // Scope fields
+    $("#sysName").addEventListener("input", (e)=>{ model.scope.system_name = e.target.value; persist(); });
+    $("#sysOwner").addEventListener("input", (e)=>{ model.scope.owner_team = e.target.value; persist(); });
+    $("#sysEnv").addEventListener("change",(e)=>{ model.scope.environment = e.target.value; persist(); });
+    $("#outOfScope").addEventListener("input",(e)=>{ model.scope.out_of_scope = e.target.value; persist(); });
+
+    // Add component
+    $("#btnAddComponent").addEventListener("click", ()=>{
+      const name = $("#compName").value.trim();
+      const type = $("#compType").value;
+      const zone = $("#compTrustZone").value;
+      if(!name){ toast("Cannot add component","Component name is required."); return; }
+      if(!type || !zone){ toast("Cannot add component","Type and trust zone are required."); return; }
+
+      const id = "C-" + Math.random().toString(16).slice(2,8).toUpperCase();
+      model.components.push({
+        id, name, type, zone,
+        exposures: [...temp.comp.exposures],
+        authn: [...temp.comp.authn],
+        authz: [...temp.comp.authz],
+        notes: $("#compNotes").value.trim()
+      });
+
+      $("#compName").value = "";
+      $("#compNotes").value = "";
+      $("#compType").value = "";
+      $("#compTrustZone").value = "";
+      resetTemp("comp");
+      renderAll();
+      persist();
+      toast("Component added", `"${name}" was added.`);
+    });
+
+    // Add flow
+    $("#btnAddFlow").addEventListener("click", ()=>{
+      const from = $("#flowFrom").value;
+      const to = $("#flowTo").value;
+      if(!from || !to){ toast("Cannot add flow","Select both From and To components."); return; }
+      if(from===to){ toast("Cannot add flow","From and To must be different."); return; }
+      const id = "F-" + Math.random().toString(16).slice(2,8).toUpperCase();
+      model.flows.push({
+        id, from, to,
+        channels: [...temp.flow.channels],
+        protections: [...temp.flow.protections],
+        purpose: $("#flowPurpose").value.trim()
+      });
+      $("#flowPurpose").value = "";
+      $("#flowFrom").value = "";
+      $("#flowTo").value = "";
+      resetTemp("flow");
+      renderAll();
+      persist();
+      toast("Flow added","A new directional flow was added.");
+    });
+
+    // Add data
+    $("#btnAddData").addEventListener("click", ()=>{
+      const name = $("#dataName").value.trim();
+      const classification = $("#dataClass").value;
+      const location = $("#dataAt").value;
+      if(!name){ toast("Cannot add data","Data item name is required."); return; }
+      if(!classification){ toast("Cannot add data","Classification is required."); return; }
+      if(!location){ toast("Cannot add data","Select where it is stored/processed."); return; }
+      const id = "D-" + Math.random().toString(16).slice(2,8).toUpperCase();
+      model.data_items.push({
+        id, name,
+        classification,
+        types: [...temp.data.types],
+        location_component_id: location,
+        protections: [...temp.data.protections],
+        notes: $("#dataNotes").value.trim()
+      });
+      $("#dataName").value = "";
+      $("#dataClass").value = "";
+      $("#dataAt").value = "";
+      $("#dataNotes").value = "";
+      resetTemp("data");
+      renderAll();
+      persist();
+      toast("Data item added", `"${name}" was added.`);
+    });
+
+    // Add boundary
+    $("#btnAddBoundary").addEventListener("click", ()=>{
+      const crossing = $("#boundaryBetween").value;
+      if(temp.boundary.types.length===0){
+        toast("Cannot add boundary","Select at least one boundary type."); return;
+      }
+      if(!crossing){
+        toast("Cannot add boundary","Select a boundary crossing."); return;
+      }
+      const id = "B-" + Math.random().toString(16).slice(2,8).toUpperCase();
+      model.trust_boundaries.push({
+        id,
+        types: [...temp.boundary.types],
+        crossing,
+        controls: [...temp.boundary.controls],
+        notes: $("#boundaryNotes").value.trim()
+      });
+      $("#boundaryBetween").value = "";
+      $("#boundaryNotes").value = "";
+      resetTemp("boundary");
+      renderAll();
+      persist();
+      toast("Trust boundary added","A trust boundary entry was added.");
+    });
+
+    // Threat target selectors
+    $("#threatTargetKind").addEventListener("change", ()=>{
+      updateThreatTargetIdOptions();
+    });
+
+    // Add threat
+    $("#btnAddThreat").addEventListener("click", ()=>{
+      const target_kind = $("#threatTargetKind").value;
+      const target_id = $("#threatTargetId").value;
+      const stride = [...temp.threat.stride];
+      const patterns = [...temp.threat.patterns];
+      const description = $("#threatDesc").value.trim();
+      const mitig = [...temp.threat.mitigations];
+      const notes = $("#threatNotes").value.trim();
+
+      if(!target_kind){ toast("Cannot add threat","Select a threat target kind."); return; }
+      if(!target_id){ toast("Cannot add threat","Select a target item."); return; }
+      if(stride.length===0){ toast("Cannot add threat","Select at least one STRIDE category."); return; }
+      if(!description){ toast("Cannot add threat","Threat description is required."); return; }
+
+      // Basic sanity: ensure patterns are consistent with selected stride (allow mismatch but warn)
+      const mismatched = patterns.filter(pid=>{
+        const p = threatPatterns.find(x=>x.id===pid);
+        if(!p) return false;
+        return !p.stride.some(s=>stride.includes(s));
+      });
+      if(mismatched.length){
+        // Not blocking; just warn, because real threats can span categories.
+        toast("Note", "Some selected patterns do not match selected STRIDE categories. Ensure this is intentional.");
+      }
+
+      const id = "T-" + Math.random().toString(16).slice(2,8).toUpperCase();
+      model.threats.push({
+        id, target_kind, target_id,
+        stride, patterns,
+        description,
+        mitigations: mitig,
+        notes
+      });
+
+      $("#threatTargetKind").value = "";
+      updateThreatTargetIdOptions();
+      $("#threatDesc").value = "";
+      $("#threatNotes").value = "";
+      resetTemp("threat");
+      renderAll();
+      persist();
+      toast("Threat added","Threat entry was added.");
+    });
+
+    // Filter actions
+    $("#btnApplyFilter").addEventListener("click", ()=>{
+      filter.targetContains = $("#filterTarget").value || "";
+      renderThreatsFiltered();
+      toast("Filter applied","Filtered threats are shown below.");
+    });
+    $("#btnClearFilter").addEventListener("click", ()=>{
+      filter.stride.length = 0;
+      filter.targetContains = "";
+      $("#filterTarget").value = "";
+      renderAll();
+      toast("Filter cleared","All threats are shown.");
+    });
+
+    // Export actions
+    $("#btnCopyJson").addEventListener("click", async ()=>{
+      const ok = await copyToClipboard($("#jsonOut").value);
+      toast(ok ? "Copied" : "Copy failed", ok ? "JSON copied to clipboard." : "Clipboard write was blocked by the browser.");
+    });
+    $("#btnDownloadJson").addEventListener("click", ()=>{
+      const name = (model.scope.system_name || model.meta.id).replace(/[^\w.-]+/g,"_");
+      download(`${name}.stride.json`, $("#jsonOut").value);
+      toast("Downloaded","JSON file download started.");
+    });
+
+    // Header actions
+    $("#btnExport").addEventListener("click", ()=>{
+      showStep(6);
+      renderExport();
+      toast("Export ready","Review and copy/download your JSON.");
+    });
+    $("#btnValidate").addEventListener("click", ()=>{
+      validate();
+    });
+    $("#btnNew").addEventListener("click", ()=>{
+      if(confirm("Reset the model? This clears local storage for this page.")) wipe();
+    });
+
+    // Step 6 wipe button
+    $("#btnWipe").addEventListener("click", ()=>{
+      if(confirm("Wipe the entire model? This cannot be undone (local storage).")) wipe();
+    });
+
+    // Keyboard shortcuts
+    window.addEventListener("keydown",(e)=>{
+      if(!e.ctrlKey) return;
+      const k = e.key.toLowerCase();
+      if(k==="e"){ e.preventDefault(); $("#btnExport").click(); }
+      if(k==="v"){ e.preventDefault(); $("#btnValidate").click(); }
+      if(k==="n"){ e.preventDefault(); $("#btnNew").click(); }
+    });
+
+    // Hash navigation
+    window.addEventListener("hashchange", ()=>{
+      showStep(currentStepFromHash());
+    });
+  }
+
+  // ---------- Initialize chip targets that mutate temp builders ----------
+  // We render chips using temp.* arrays, so toggling affects temp and persists progress, without changing the model until "Add".
+  // This is intentional to prevent partial entries from being saved.
+  function initChipTargets(){
+    // Step 2 chips already render to temp arrays. No extra needed beyond renderAll().
+    // Step 5 target kind and id updates on changes.
+  }
+
+  // ---------- Boot ----------
+  function boot(){
+    wire();
+    initChipTargets();
+    renderAll();
+
+    // Some selects depend on components (flows/data/boundary)
+    renderComponentDependentSelects();
+
+    // Step from hash
+    showStep(currentStepFromHash());
+
+    // Prepare threat target options
+    renderThreatTargetSelects();
+
+    // Top-level KPIs
+    updateKPIs();
+    updateProgress();
+  }
+
+  // ---------- Persist trigger on certain chip toggles ----------
+  // Chips already call persist() when toggled; safe.
+
+  // Ensure temp chips do not persist into model storage (only model is persisted).
+  // persist() currently saves model only. Good.
+
+  // ---------- Final: patch renderAll to re-render temp chips after reset ----------
+  // (Already handled via renderAll() using temp.* arrays.)
+
+  boot();
+
+  // ---------- Additional: keep model scope fields synced with local storage even if another tab modifies it ----------
+  window.addEventListener("storage", (e)=>{
+    if(e.key==="stride_tm_model"){
+      model = loadOrCreate();
+      cleanupOrphanThreats();
+      renderAll();
+      toast("Model updated", "Local storage changed (another tab or refresh).");
+    }
+  });
+})();
+</script>
+</body>
+</html>
