@@ -554,7 +554,7 @@ def print_report(target: str,
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="Certificate auditor (OpenSSL chain fetch + hostname + trust validation)")
-    ap.add_argument("hostname", nargs="?", help="Hostname to analyze (e.g., alelo.com.br)")
+    ap.add_argument("hostname", nargs="?", help="Hostname to analyze (e.g., example.com.br)")
     ap.add_argument("-p", "--port", type=int, default=443, help="Port (default: 443)")
     ap.add_argument("-o", "--outdir", default="./cert_audit_out", help="Output directory")
     ap.add_argument("--pem", help="Analyze a local PEM file containing leaf and optionally chain")
