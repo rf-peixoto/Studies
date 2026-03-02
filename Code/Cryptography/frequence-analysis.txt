@@ -1,0 +1,16 @@
+# English:
+ETAOINSHRDLCUMWFGYPBVKJXQZ
+# PT-BR:
+AEOSRIDMNTCULPVGQBFHZJXKWY | EAOSRNIDLCTUMPBGYVQHFZJÑXKW
+# French:
+ESAITNRULODCMPVQFBGHJXZYKW
+# Cyrillic (Russian):
+ОЕАИНТСРВЛКМДПУЯЫЬГЗБЧЙХЖШЮЦЩЭФЪЁ
+# Mandarin (Chinese):
+的 一 是 不 了 在 人 有 我 他
+# Japanese (Higarana):
+の に は て を が た し で い | 
+# Japanese (Katakana):
+ー ン イ ト ス ル ラ ア コ
+# Japanese (Kanji):
+日 人 年 大 国 本 中 長 出 事
