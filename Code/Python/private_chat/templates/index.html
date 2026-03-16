@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PrivateChatRoom</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<div class="page">
+    <div class="panel home-panel">
+        <h1>[ private chat room ]</h1>
+        <p class="subtitle">ephemeral · e2ee · no history beyond 5 minutes</p>
+
+        <div class="grid-2">
+            <section class="card">
+                <h2>generate room</h2>
+                <form id="create-form" novalidate>
+                    <label for="create-username">username</label>
+                    <input id="create-username" name="username" type="text" maxlength="12" pattern="[A-Za-z0-9_-]{1,12}" autocomplete="off" required>
+
+                    <label for="create-capacity">capacity</label>
+                    <select id="create-capacity" name="capacity">
+                        <option value="8">8 users</option>
+                        <option value="16">16 users</option>
+                        <option value="32">32 users</option>
+                    </select>
+
+                    <label for="create-duration">lifetime</label>
+                    <select id="create-duration" name="duration">
+                        <option value="8">8 hours</option>
+                        <option value="12">12 hours</option>
+                        <option value="16">16 hours</option>
+                        <option value="24">24 hours</option>
+                    </select>
+
+                    <label class="checkbox-row"><input type="checkbox" name="password_protected"> password protected</label>
+
+                    <button id="create-submit" type="submit">generate room</button>
+                </form>
+                <div id="create-error" class="error"></div>
+            </section>
+
+            <section class="card">
+                <h2>enter room</h2>
+                <form id="join-form" novalidate>
+                    <label for="join-room-id">room id</label>
+                    <input id="join-room-id" name="room_id" type="text" maxlength="64" pattern="[a-f0-9]{64}" autocomplete="off" required>
+
+                    <label for="join-username">username</label>
+                    <input id="join-username" name="username" type="text" maxlength="12" pattern="[A-Za-z0-9_-]{1,12}" autocomplete="off" required>
+
+                    <label for="join-password">password</label>
+                    <input id="join-password" name="password" type="password" autocomplete="off">
+
+                    <button id="join-submit" type="submit">enter room</button>
+                </form>
+                <div id="join-error" class="error"></div>
+            </section>
+        </div>
+    </div>
+</div>
+<script src="{{ url_for('static', filename='index.js') }}"></script>
+</body>
+</html>
