@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PrivateChatRoom</title>
+    <title>private room</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
 <div class="page">
     <div class="panel home-panel">
-        <h1>[ private chat room ]</h1>
+        <h1>[ private room ]</h1>
         <p class="subtitle">ephemeral · e2ee · no history beyond 5 minutes</p>
 
         <div class="grid-2">
@@ -34,8 +34,7 @@
                         <option value="24">24 hours</option>
                     </select>
 
-                    <label class="checkbox-row"><input type="checkbox" name="password_protected"> password protected</label>
-
+                    <label class="checkbox-row"><input type="checkbox" name="password_protected">password protected</label>
                     <button id="create-submit" type="submit">generate room</button>
                 </form>
                 <div id="create-error" class="error"></div>
