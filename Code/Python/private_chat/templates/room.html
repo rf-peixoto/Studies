@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PrivateChatRoom</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<div class="page room-page">
+    <div
+        id="room-config"
+        class="panel room-panel"
+        data-room-id="{{ room_id }}"
+        data-username="{{ username }}"
+        data-expires-at="{{ expires_at }}"
+    >
+        <div class="room-header">
+            <div>room: <span class="mono">{{ room_id }}</span></div>
+            <div>users: <span id="participant-count">0</span>/{{ capacity }}</div>
+            <div id="expiry" class="expiry"></div>
+        </div>
+
+        {% if password_banner %}
+        <div class="password-banner">password: {{ password_banner }}</div>
+        {% endif %}
+
+        <div class="room-layout">
+            <aside class="participants-box">
+                <div class="participants-title">participants</div>
+                <ul id="participants-list"></ul>
+            </aside>
+            <main class="chat-box">
+                <div id="messages" class="messages"></div>
+                <div class="input-line">
+                    <span class="prompt">$&gt;</span>
+                    <input type="text" id="message-input" maxlength="1000" autocomplete="off" placeholder="type message and press enter">
+                </div>
+            </main>
+        </div>
+    </div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js"></script>
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
