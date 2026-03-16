@@ -1,0 +1,5 @@
+Flask>=3.0.0
+Flask-SocketIO>=5.3.6
+python-socketio>=5.11.0
+simple-websocket>=1.0.0
+Werkzeug>=3.0.0
