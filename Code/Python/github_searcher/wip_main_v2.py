@@ -18,6 +18,8 @@ import base64
 import json
 import os
 import re
+import http.client
+import socket
 import sys
 import time
 import urllib.parse
@@ -269,25 +271,50 @@ def build_headers(token: str, accept: str = "application/vnd.github+json") -> di
     }
 
 
-def api_get_json(url: str, headers: dict[str, str]) -> tuple[dict, dict[str, str]]:
-    req = urllib.request.Request(url, headers=headers, method="GET")
-    try:
-        with urllib.request.urlopen(req, timeout=60) as resp:
-            body = resp.read().decode("utf-8", errors="replace")
-            data = json.loads(body)
-            return data, dict(resp.headers.items())
-    except urllib.error.HTTPError as e:
-        body = e.read().decode("utf-8", errors="replace")
+def api_get_json(url: str, headers: dict[str, str], retries: int = 4, backoff: float = 2.0) -> tuple[dict, dict[str, str]]:
+    last_error = None
+
+    for attempt in range(1, retries + 1):
+        req = urllib.request.Request(url, headers=headers, method="GET")
         try:
-            data = json.loads(body)
-        except Exception:
-            data = {"message": body or str(e)}
-        headers_out = dict(e.headers.items()) if e.headers else {}
-        raise RuntimeError(
-            f"HTTP {e.code}: {data.get('message', 'Unknown API error')}|||HEADERS|||{json.dumps(headers_out)}"
-        ) from None
-    except urllib.error.URLError as e:
-        raise RuntimeError(f"Network error: {e}") from None
+            with urllib.request.urlopen(req, timeout=60) as resp:
+                body = resp.read().decode("utf-8", errors="replace")
+                data = json.loads(body)
+                return data, dict(resp.headers.items())
+
+        except urllib.error.HTTPError as e:
+            body = e.read().decode("utf-8", errors="replace")
+            try:
+                data = json.loads(body)
+            except Exception:
+                data = {"message": body or str(e)}
+
+            status = e.code
+            if status in (429, 500, 502, 503, 504) and attempt < retries:
+                time.sleep(backoff * attempt)
+                last_error = RuntimeError(f"HTTP {status}: {data.get('message', 'Transient API error')}")
+                continue
+
+            headers_out = dict(e.headers.items()) if e.headers else {}
+            raise RuntimeError(
+                f"HTTP {status}: {data.get('message', 'Unknown API error')}|||HEADERS|||{json.dumps(headers_out)}"
+            ) from None
+
+        except (http.client.IncompleteRead, urllib.error.URLError, socket.timeout, TimeoutError) as e:
+            last_error = e
+            if attempt < retries:
+                time.sleep(backoff * attempt)
+                continue
+            raise RuntimeError(f"Transient network/read error after {retries} attempts: {e}") from None
+
+        except json.JSONDecodeError as e:
+            last_error = e
+            if attempt < retries:
+                time.sleep(backoff * attempt)
+                continue
+            raise RuntimeError(f"Invalid JSON response after {retries} attempts: {e}") from None
+
+    raise RuntimeError(f"Request failed after {retries} attempts: {last_error}")
 
 
 def get_rate_limit_status(token: str) -> dict:
