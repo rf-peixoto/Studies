@@ -288,6 +288,13 @@ def safe_sleep(seconds: float) -> None:
     if seconds > 0:
         time.sleep(seconds)
 
+def print_progress(current: int, total: int, prefix: str = "[~] Classifying") -> None:
+    if total <= 0:
+        return
+    percent = (current / total) * 100
+    msg = f"\r{color(prefix, C.GRAY)} {color(f'{current}/{total}', C.BOLD + C.GRAY)} {color(f'({percent:5.1f}%)', C.GRAY)}"
+    print(msg, end="", flush=True)
+
 
 def api_get_json(
     url: str,
@@ -654,6 +661,10 @@ def collect_search_hits(token: str, domain: str, pages: int, per_page: int, dela
 def classify_hits(token: str, domain: str, hits: list[dict], delay: float) -> list[Finding]:
     repo_cache: dict[str, RepoMeta] = {}
     findings: list[Finding] = []
+    total = len(hits)
+
+    if total:
+        print_progress(0, total)
 
     for idx, item in enumerate(hits, 1):
         try:
@@ -665,6 +676,7 @@ def classify_hits(token: str, domain: str, hits: list[dict], delay: float) -> li
             sha = item.get("sha")
 
             if not repo_full_name or not path or not html_url:
+                print_progress(idx, total)
                 continue
 
             meta = fetch_repo_meta(token, repo_full_name, repo_cache, delay)
@@ -710,9 +722,14 @@ def classify_hits(token: str, domain: str, hits: list[dict], delay: float) -> li
                 )
             )
 
-        except Exception as exc:
-            print(color(f"  [!] Skipping item {idx}/{len(hits)} due to error: {exc}", C.YELLOW))
-            continue
+        except Exception:
+            pass
+
+        if idx == total or idx % 10 == 0:
+            print_progress(idx, total)
+
+    if total:
+        print()
 
     findings.sort(key=lambda x: (-x.score, x.repo_full_name.lower(), x.path.lower()))
     return findings
