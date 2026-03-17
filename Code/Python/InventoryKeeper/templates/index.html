@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="panel">
+    <div class="panel-title">add domain</div>
+    <form method="post" action="{{ url_for('add_domain') }}" class="inline-form">
+        <input type="text" name="domain" placeholder="example.com" autocomplete="off" required>
+        <button type="submit">add + scan</button>
+    </form>
+</section>
+
+<section class="panel">
+    <div class="panel-title">tracked domains</div>
+    {% if domains %}
+    <table>
+        <thead>
+            <tr>
+                <th>domain</th>
+                <th>status</th>
+                <th>total</th>
+                <th>active</th>
+                <th>new</th>
+                <th>suspicious</th>
+                <th>last scan</th>
+                <th>actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in domains %}
+            <tr>
+                <td><a href="{{ url_for('domain_detail', domain_id=row['id']) }}">{{ row['domain'] }}</a></td>
+                <td>
+                    {% if row['scan_status'] == 'running' %}<span class="tag">[running]</span>{% endif %}
+                    {% if row['scan_status'] == 'idle' %}<span>[idle]</span>{% endif %}
+                    {% if row['scan_status'] == 'error' %}<span class="tag suspicious">[error]</span>{% endif %}
+                </td>
+                <td>{{ row['total_subdomains'] }}</td>
+                <td>{{ row['active_count'] }}</td>
+                <td>{% if row['unseen_new_count'] %}<span class="tag new">[{{ row['unseen_new_count'] }} new]</span>{% else %}0{% endif %}</td>
+                <td>{% if row['suspicious_count'] %}<span class="tag suspicious">[{{ row['suspicious_count'] }} suspicious]</span>{% else %}0{% endif %}</td>
+                <td>{{ row['last_scan_at']|fmt_ts }}</td>
+                <td>
+                    <form method="post" action="{{ url_for('scan_domain', domain_id=row['id']) }}" class="inline-form compact">
+                        <button type="submit">verify</button>
+                    </form>
+                    <form method="post" action="{{ url_for('delete_domain', domain_id=row['id']) }}" class="inline-form compact" onsubmit="return confirm('Delete this domain and all associated records?');">
+                        <button type="submit">delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="muted">no tracked domains yet.</div>
+    {% endif %}
+</section>
+{% endblock %}
