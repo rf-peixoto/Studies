@@ -9,16 +9,22 @@ Usage:
     export GITHUB_TOKEN="ghp_xxxxxxxxx"
     python3 github_domain_triage.py --domain example.com
     python3 github_domain_triage.py --file domains.txt
+
+Notes:
+- Uses GitHub REST API code search.
+- Reads GITHUB_TOKEN from the environment.
+- Saves outputs under ./results/
+- Classification is heuristic triage, not definitive proof of exposure.
 """
 
 from __future__ import annotations
 
 import argparse
 import base64
+import http.client
 import json
 import os
 import re
-import http.client
 import socket
 import sys
 import time
@@ -28,7 +34,6 @@ import urllib.error
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Iterable
 
 
 API_BASE = "https://api.github.com"
@@ -40,8 +45,10 @@ DEFAULT_PAGES = 5
 DEFAULT_PER_PAGE = 100
 DEFAULT_DELAY = 2.0
 DEFAULT_MAX_CONTENT_BYTES = 200_000
+DEFAULT_HTTP_RETRIES = 4
 RESULTS_DIR = Path("results")
 
+# File/path patterns that influence scoring.
 SUSPICIOUS_FILE_PATTERNS = [
     (re.compile(r"(^|/)\.env(\..+)?$", re.I), 7, "env-file"),
     (re.compile(r"(^|/)(docker-compose|compose)\.ya?ml$", re.I), 5, "compose-file"),
@@ -147,10 +154,16 @@ CONTENT_KEYWORDS = {
     "vault": 4,
 }
 
+# Narrowed on purpose to reduce volume, fragility, and API usage.
 CONTENT_FETCH_CANDIDATE = re.compile(
-    r"(^|/)(\.env(\..+)?|docker-compose\.ya?ml|compose\.ya?ml|Jenkinsfile|jenkinsfile|"
-    r"application\.(ya?ml|properties)|bootstrap\.(ya?ml|properties)|"
-    r".+\.(sh|bash|zsh|ps1|ya?ml|json|ini|conf|cfg|toml|xml|properties|py|js|ts|go|java|rb|php|cs|rs|tf|tfvars))$",
+    r"(^|/)(\.env(\..+)?|"
+    r"docker-compose\.ya?ml|compose\.ya?ml|"
+    r"Jenkinsfile|jenkinsfile|"
+    r"application\.(ya?ml|properties)|"
+    r"bootstrap\.(ya?ml|properties)|"
+    r".*\.tfvars|"
+    r"\.github/workflows/.+\.ya?ml|"
+    r"(settings|config|secrets?)\.(ya?ml|json|ini|conf|cfg|toml|xml|properties))$",
     re.I,
 )
 
@@ -271,7 +284,17 @@ def build_headers(token: str, accept: str = "application/vnd.github+json") -> di
     }
 
 
-def api_get_json(url: str, headers: dict[str, str], retries: int = 4, backoff: float = 2.0) -> tuple[dict, dict[str, str]]:
+def safe_sleep(seconds: float) -> None:
+    if seconds > 0:
+        time.sleep(seconds)
+
+
+def api_get_json(
+    url: str,
+    headers: dict[str, str],
+    retries: int = DEFAULT_HTTP_RETRIES,
+    backoff: float = 2.0,
+) -> tuple[dict, dict[str, str]]:
     last_error = None
 
     for attempt in range(1, retries + 1):
@@ -283,7 +306,11 @@ def api_get_json(url: str, headers: dict[str, str], retries: int = 4, backoff: f
                 return data, dict(resp.headers.items())
 
         except urllib.error.HTTPError as e:
-            body = e.read().decode("utf-8", errors="replace")
+            try:
+                body = e.read().decode("utf-8", errors="replace")
+            except Exception:
+                body = str(e)
+
             try:
                 data = json.loads(body)
             except Exception:
@@ -291,7 +318,7 @@ def api_get_json(url: str, headers: dict[str, str], retries: int = 4, backoff: f
 
             status = e.code
             if status in (429, 500, 502, 503, 504) and attempt < retries:
-                time.sleep(backoff * attempt)
+                safe_sleep(backoff * attempt)
                 last_error = RuntimeError(f"HTTP {status}: {data.get('message', 'Transient API error')}")
                 continue
 
@@ -303,14 +330,14 @@ def api_get_json(url: str, headers: dict[str, str], retries: int = 4, backoff: f
         except (http.client.IncompleteRead, urllib.error.URLError, socket.timeout, TimeoutError) as e:
             last_error = e
             if attempt < retries:
-                time.sleep(backoff * attempt)
+                safe_sleep(backoff * attempt)
                 continue
             raise RuntimeError(f"Transient network/read error after {retries} attempts: {e}") from None
 
         except json.JSONDecodeError as e:
             last_error = e
             if attempt < retries:
-                time.sleep(backoff * attempt)
+                safe_sleep(backoff * attempt)
                 continue
             raise RuntimeError(f"Invalid JSON response after {retries} attempts: {e}") from None
 
@@ -320,7 +347,8 @@ def api_get_json(url: str, headers: dict[str, str], retries: int = 4, backoff: f
 def get_rate_limit_status(token: str) -> dict:
     headers = build_headers(token)
     data, _ = api_get_json(RATE_LIMIT_ENDPOINT, headers)
-    return data.get("resources", {})
+    resources = data.get("resources", {})
+    return resources if isinstance(resources, dict) else {}
 
 
 def wait_until_reset(reset_epoch: int, extra_seconds: int = 3) -> None:
@@ -340,17 +368,20 @@ def ensure_bucket_available(token: str, bucket: str) -> None:
         wait_until_reset(reset)
 
 
-def handle_rate_limit_error(token: str, bucket: str, exc: RuntimeError) -> bool:
+def handle_rate_limit_error(token: str, bucket: str, exc: Exception) -> bool:
     msg = str(exc)
     if "HTTP 403" not in msg and "HTTP 429" not in msg:
         return False
+
     resources = get_rate_limit_status(token)
     info = resources.get(bucket, {})
     remaining = info.get("remaining")
     reset = info.get("reset")
+
     if isinstance(remaining, int) and remaining <= 0 and isinstance(reset, int):
         wait_until_reset(reset)
         return True
+
     return False
 
 
@@ -402,10 +433,12 @@ def domain_risk_score(domain: str) -> tuple[int, list[str]]:
     score = 0
     reasons = []
     lower = domain.lower()
+
     for key, pts in DOMAIN_RISK_TERMS.items():
         if key in lower:
             score += pts
             reasons.append(f"domain-term:{key}:{pts:+d}")
+
     return score, reasons
 
 
@@ -445,8 +478,8 @@ def content_context_score(content: str, domain: str) -> tuple[int, list[str]]:
     score = 0
     reasons = []
     lower = content.lower()
-
     domain_lower = domain.lower()
+
     idx = lower.find(domain_lower)
     if idx == -1:
         return 0, []
@@ -491,7 +524,7 @@ def fetch_repo_meta(token: str, repo_full_name: str, cache: dict[str, RepoMeta],
 
     try:
         data, _ = api_get_json(url, headers)
-    except RuntimeError as exc:
+    except Exception as exc:
         if handle_rate_limit_error(token, "core", exc):
             data, _ = api_get_json(url, headers)
         else:
@@ -505,29 +538,50 @@ def fetch_repo_meta(token: str, repo_full_name: str, cache: dict[str, RepoMeta],
         stargazers_count=int(data.get("stargazers_count") or 0),
     )
     cache[repo_full_name] = meta
-    time.sleep(delay)
+    safe_sleep(delay)
     return meta
+
+
+def fetch_download_url_text(download_url: str, max_bytes: int, retries: int = 4, backoff: float = 2.0) -> str | None:
+    for attempt in range(1, retries + 1):
+        try:
+            req = urllib.request.Request(
+                download_url,
+                headers={"User-Agent": "github-domain-triage"},
+            )
+            with urllib.request.urlopen(req, timeout=60) as resp:
+                raw = resp.read(max_bytes + 1)
+                if len(raw) > max_bytes:
+                    return None
+                return raw.decode("utf-8", errors="replace")
+        except (http.client.IncompleteRead, urllib.error.URLError, socket.timeout, TimeoutError):
+            if attempt < retries:
+                safe_sleep(backoff * attempt)
+                continue
+            return None
+        except Exception:
+            return None
+    return None
 
 
 def fetch_file_content(token: str, repo_full_name: str, path: str, ref: str | None, delay: float) -> str | None:
     ensure_bucket_available(token, "core")
     headers = build_headers(token)
+
     quoted_path = urllib.parse.quote(path)
     url = f"{REPOS_ENDPOINT}/{repo_full_name}/contents/{quoted_path}"
-    params = {}
     if ref:
-        params["ref"] = ref
-        url += "?" + urllib.parse.urlencode(params)
+        url += "?" + urllib.parse.urlencode({"ref": ref})
 
     try:
         data, _ = api_get_json(url, headers)
-    except RuntimeError as exc:
+    except Exception as exc:
         if handle_rate_limit_error(token, "core", exc):
             data, _ = api_get_json(url, headers)
         else:
             return None
 
-    time.sleep(delay)
+    safe_sleep(delay)
 
     if data.get("type") != "file":
         return None
@@ -538,6 +592,7 @@ def fetch_file_content(token: str, repo_full_name: str, path: str, ref: str | No
 
     encoding = data.get("encoding")
     content = data.get("content")
+
     if encoding == "base64" and content:
         try:
             return base64.b64decode(content).decode("utf-8", errors="replace")
@@ -546,24 +601,14 @@ def fetch_file_content(token: str, repo_full_name: str, path: str, ref: str | No
 
     download_url = data.get("download_url")
     if download_url:
-        try:
-            req = urllib.request.Request(download_url, headers={"User-Agent": "github-domain-triage"})
-            with urllib.request.urlopen(req, timeout=60) as resp:
-                raw = resp.read(DEFAULT_MAX_CONTENT_BYTES + 1)
-                if len(raw) > DEFAULT_MAX_CONTENT_BYTES:
-                    return None
-                return raw.decode("utf-8", errors="replace")
-        except Exception:
-            return None
+        return fetch_download_url_text(download_url, DEFAULT_MAX_CONTENT_BYTES)
 
     return None
 
 
 def extract_items(data: dict) -> list[dict]:
     items = data.get("items", [])
-    if not isinstance(items, list):
-        return []
-    return items
+    return items if isinstance(items, list) else []
 
 
 def collect_search_hits(token: str, domain: str, pages: int, per_page: int, delay: float) -> list[dict]:
@@ -579,7 +624,7 @@ def collect_search_hits(token: str, domain: str, pages: int, per_page: int, dela
 
         try:
             data, _ = api_get_json(url, headers)
-        except RuntimeError as exc:
+        except Exception as exc:
             if handle_rate_limit_error(token, "code_search", exc):
                 data, _ = api_get_json(url, headers)
             else:
@@ -601,7 +646,7 @@ def collect_search_hits(token: str, domain: str, pages: int, per_page: int, dela
             added += 1
 
         print(color(f"  [-] Page {page}: ", C.GRAY) + color(f"{added} unique hits", C.GRAY))
-        time.sleep(delay)
+        safe_sleep(delay)
 
     return hits
 
@@ -610,61 +655,64 @@ def classify_hits(token: str, domain: str, hits: list[dict], delay: float) -> li
     repo_cache: dict[str, RepoMeta] = {}
     findings: list[Finding] = []
 
-    for item in hits:
-        repo = item.get("repository") or {}
-        repo_full_name = repo.get("full_name")
-        repo_html_url = repo.get("html_url") or ""
-        path = item.get("path") or ""
-        html_url = item.get("html_url") or ""
-        sha = item.get("sha")
+    for idx, item in enumerate(hits, 1):
+        try:
+            repo = item.get("repository") or {}
+            repo_full_name = repo.get("full_name")
+            repo_html_url = repo.get("html_url") or ""
+            path = item.get("path") or ""
+            html_url = item.get("html_url") or ""
+            sha = item.get("sha")
 
-        if not repo_full_name or not path or not html_url:
-            continue
+            if not repo_full_name or not path or not html_url:
+                continue
 
-        meta = fetch_repo_meta(token, repo_full_name, repo_cache, delay)
+            meta = fetch_repo_meta(token, repo_full_name, repo_cache, delay)
 
-        score = 0
-        reasons = []
+            score = 0
+            reasons = []
 
-        s, r = path_score(path)
-        score += s
-        reasons.extend(r)
+            s, r = path_score(path)
+            score += s
+            reasons.extend(r)
 
-        s, r = domain_risk_score(domain)
-        score += s
-        reasons.extend(r)
+            s, r = domain_risk_score(domain)
+            score += s
+            reasons.extend(r)
 
-        s, r = repo_score(meta)
-        score += s
-        reasons.extend(r)
+            s, r = repo_score(meta)
+            score += s
+            reasons.extend(r)
 
-        content_bonus = 0
-        content_reasons = []
-        if should_fetch_content(path):
-            content = fetch_file_content(token, repo_full_name, path, sha, delay)
-            if content:
-                content_bonus, content_reasons = content_context_score(content, domain)
-                score += content_bonus
-                reasons.extend(content_reasons)
+            if should_fetch_content(path):
+                content = fetch_file_content(token, repo_full_name, path, sha, delay)
+                if content:
+                    s, r = content_context_score(content, domain)
+                    score += s
+                    reasons.extend(r)
 
-        tier = finding_tier(score)
+            tier = finding_tier(score)
 
-        findings.append(
-            Finding(
-                domain=domain,
-                html_url=html_url,
-                repo_full_name=repo_full_name,
-                repo_html_url=repo_html_url,
-                repo_owner_type=meta.owner_type,
-                repo_archived=meta.archived,
-                repo_pushed_at=meta.pushed_at,
-                path=path,
-                sha=sha,
-                score=score,
-                tier=tier,
-                reasons=reasons,
+            findings.append(
+                Finding(
+                    domain=domain,
+                    html_url=html_url,
+                    repo_full_name=repo_full_name,
+                    repo_html_url=repo_html_url,
+                    repo_owner_type=meta.owner_type,
+                    repo_archived=meta.archived,
+                    repo_pushed_at=meta.pushed_at,
+                    path=path,
+                    sha=sha,
+                    score=score,
+                    tier=tier,
+                    reasons=reasons,
+                )
             )
-        )
+
+        except Exception as exc:
+            print(color(f"  [!] Skipping item {idx}/{len(hits)} due to error: {exc}", C.YELLOW))
+            continue
 
     findings.sort(key=lambda x: (-x.score, x.repo_full_name.lower(), x.path.lower()))
     return findings
