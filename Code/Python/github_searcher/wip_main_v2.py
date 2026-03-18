@@ -46,23 +46,116 @@ DEFAULT_PER_PAGE = 100
 DEFAULT_DELAY = 2.0
 DEFAULT_MAX_CONTENT_BYTES = 200_000
 DEFAULT_HTTP_RETRIES = 4
+DEFAULT_TOP_CANDIDATES = 15
 RESULTS_DIR = Path("results")
 
-# File/path patterns that influence scoring.
+
+class C:
+    RESET = "\033[0m"
+    BOLD = "\033[1m"
+    RED = "\033[31m"
+    GREEN = "\033[32m"
+    YELLOW = "\033[33m"
+    BLUE = "\033[34m"
+    CYAN = "\033[36m"
+    GRAY = "\033[90m"
+    MAGENTA = "\033[35m"
+
+
+def color(text: str, tone: str) -> str:
+    return f"{tone}{text}{C.RESET}"
+
+
+def safe_sleep(seconds: float) -> None:
+    if seconds > 0:
+        time.sleep(seconds)
+
+
+def print_progress(current: int, total: int, prefix: str = "[~] Classifying") -> None:
+    if total <= 0:
+        return
+    percent = (current / total) * 100
+    msg = (
+        f"\r{color(prefix, C.GRAY)} "
+        f"{color(f'{current}/{total}', C.BOLD + C.GRAY)} "
+        f"{color(f'({percent:5.1f}%)', C.GRAY)}"
+    )
+    print(msg, end="", flush=True)
+
+
+@dataclass
+class RepoMeta:
+    full_name: str
+    archived: bool = False
+    pushed_at: str | None = None
+    owner_type: str | None = None
+    stargazers_count: int = 0
+
+
+@dataclass
+class Finding:
+    domain: str
+    html_url: str
+    repo_full_name: str
+    path: str
+    repo_owner_type: str | None
+    repo_archived: bool
+    repo_pushed_at: str | None
+    sha: str | None = None
+    score: int = 0
+    tier: str = "low"
+    classification: str = "likely_noise"
+    tags: list[str] = field(default_factory=list)
+    debug_reasons: list[str] = field(default_factory=list)
+
+
+TIER_THRESHOLDS = [
+    ("urgent", 15),
+    ("high", 10),
+    ("medium", 5),
+    ("low", -9999),
+]
+
+OWNER_TYPE_SCORES = {
+    "Organization": 2,
+    "User": 0,
+}
+
+NEGATIVE_HINTS = {
+    "readme": -2,
+    "example": -2,
+    "sample": -2,
+    "demo": -2,
+    "test": -1,
+    "docs": -2,
+    "changelog": -2,
+    "fixtures": -1,
+    "mock": -1,
+}
+
 SUSPICIOUS_FILE_PATTERNS = [
-    (re.compile(r"(^|/)\.env(\..+)?$", re.I), 7, "env-file"),
+    (re.compile(r"(^|/)\.env(\..+)?$", re.I), 8, "env-file"),
+    (re.compile(r"(^|/)(prod|production)\.env$", re.I), 9, "prod-env"),
     (re.compile(r"(^|/)(docker-compose|compose)\.ya?ml$", re.I), 5, "compose-file"),
-    (re.compile(r"(^|/)\.github/workflows/.+\.ya?ml$", re.I), 6, "github-actions"),
+    (re.compile(r"(^|/)\.github/workflows/.+\.ya?ml$", re.I), 7, "workflow"),
     (re.compile(r"(^|/)(application|bootstrap)\.(ya?ml|properties)$", re.I), 6, "app-config"),
-    (re.compile(r"(^|/)(settings|config|secrets?)\.[a-z0-9._-]+$", re.I), 5, "config-file"),
-    (re.compile(r"(^|/)(terraform\.tfvars|.*\.tfvars)$", re.I), 6, "terraform-vars"),
+    (re.compile(r"(^|/)(settings|config|secrets?)\.[a-z0-9._-]+$", re.I), 6, "config-file"),
+    (re.compile(r"(^|/)(terraform\.tfvars|.*\.tfvars)$", re.I), 7, "terraform-vars"),
     (re.compile(r"(^|/).+\.tf$", re.I), 4, "terraform"),
-    (re.compile(r"(^|/)(Jenkinsfile|jenkinsfile)$", re.I), 5, "jenkinsfile"),
+    (re.compile(r"(^|/)(Jenkinsfile|jenkinsfile)$", re.I), 6, "ci-cd"),
     (re.compile(r"(^|/).+\.(sh|bash|zsh|ps1)$", re.I), 4, "script"),
     (re.compile(r"(^|/).+\.(ya?ml|json|ini|conf|cfg|toml|xml|properties)$", re.I), 3, "structured-config"),
+    (re.compile(r"(^|/)(kubeconfig|config\.json|settings\.json|local\.settings\.json|appsettings\.json)$", re.I), 6, "app-settings"),
+    (re.compile(r"(^|/)(credentials|credentials\.json)$", re.I), 8, "credentials-file"),
+    (re.compile(r"(^|/)(id_rsa|id_dsa|authorized_keys|known_hosts)$", re.I), 9, "ssh-material"),
+    (re.compile(r"(^|/).+\.(pem|p12|pfx|key|crt|cer)$", re.I), 7, "key-material"),
+    (re.compile(r"(^|/)(vault\.ya?ml|secrets\.ya?ml)$", re.I), 7, "secret-config"),
+    (re.compile(r"(^|/)(inventory|hosts)$", re.I), 4, "infra-inventory"),
+    (re.compile(r"(^|/).+\.(sql)$", re.I), 3, "sql-file"),
+    (re.compile(r"(^|/)(backup|dump)\.sql$", re.I), 6, "db-dump"),
     (re.compile(r"(^|/).+\.(py|js|ts|go|java|rb|php|cs|rs)$", re.I), 2, "source-code"),
     (re.compile(r"(^|/)(README|CHANGELOG|docs?/).*$", re.I), -2, "docs"),
-    (re.compile(r"(^|/).+\.(md|rst|txt)$", re.I), -2, "text-doc"),
+    (re.compile(r"(^|/).+\.(md|rst|txt)$", re.I), -2, "doc-file"),
 ]
 
 PATH_KEYWORDS = {
@@ -87,8 +180,10 @@ PATH_KEYWORDS = {
     "database": 2,
     "redis": 2,
     "postgres": 2,
+    "postgresql": 2,
     "mysql": 2,
     "mongo": 2,
+    "mongodb": 2,
     "s3": 2,
     "bucket": 2,
     "internal": 3,
@@ -101,6 +196,44 @@ PATH_KEYWORDS = {
     "k8s": 2,
     "deploy": 2,
     "infra": 2,
+    "oauth": 3,
+    "oidc": 3,
+    "openid": 3,
+    "saml": 3,
+    "client_id": 2,
+    "refresh_token": 4,
+    "access_token": 4,
+    "id_token": 3,
+    "x-api-key": 4,
+    "service_account": 4,
+    "connectionstring": 4,
+    "connection_string": 4,
+    "vault_token": 5,
+    "ansible_vault": 4,
+    "sealedsecret": 4,
+    "secretref": 3,
+    "envfrom": 3,
+    "imagepullsecrets": 3,
+    "bastion": 3,
+    "jumpbox": 3,
+    "monitoring": 2,
+    "prometheus": 2,
+    "alertmanager": 2,
+    "kibana": 3,
+    "grafana": 3,
+    "dashboard": 2,
+    "proxy": 2,
+    "gateway": 3,
+    "ingress": 2,
+    "egress": 2,
+    "loadbalancer": 2,
+    "reverse-proxy": 2,
+    "vpn": 3,
+    "kafka": 2,
+    "rabbitmq": 2,
+    "amqp": 2,
+    "dsn": 2,
+    "jdbc": 2,
 }
 
 DOMAIN_RISK_TERMS = {
@@ -126,6 +259,19 @@ DOMAIN_RISK_TERMS = {
     "storage": 2,
     "s3": 2,
     "backup": 3,
+    "vpn": 3,
+    "gateway": 3,
+    "proxy": 2,
+    "ingress": 2,
+    "bastion": 3,
+    "console": 2,
+    "dashboard": 2,
+    "monitoring": 2,
+    "kafka": 2,
+    "rabbitmq": 2,
+    "broker": 2,
+    "elastic": 2,
+    "opensearch": 2,
 }
 
 CONTENT_KEYWORDS = {
@@ -148,96 +294,59 @@ CONTENT_KEYWORDS = {
     "database_url": 4,
     "redis": 2,
     "postgres": 2,
+    "postgresql": 2,
     "mysql": 2,
     "mongo": 2,
+    "mongodb_uri": 3,
     "smtp": 2,
     "vault": 4,
+    "aws_access_key_id": 5,
+    "aws_secret_access_key": 5,
+    "aws_session_token": 4,
+    "service_account": 4,
+    "google_credentials": 4,
+    "azure_keyvault": 4,
+    "connectionstring": 4,
+    "connection_string": 4,
+    "oauth": 3,
+    "oidc": 3,
+    "openid": 3,
+    "saml": 3,
+    "client_id": 2,
+    "refresh_token": 4,
+    "access_token": 4,
+    "id_token": 3,
+    "x-api-key": 4,
+    "vault_token": 5,
+    "ansible_vault": 4,
+    "sealedsecret": 4,
+    "secretref": 3,
+    "envfrom": 3,
+    "imagepullsecrets": 3,
+    "amqp": 2,
+    "rabbitmq": 2,
+    "kafka": 2,
+    "dsn": 2,
+    "jdbc": 2,
 }
 
-# Narrowed on purpose to reduce volume, fragility, and API usage.
 CONTENT_FETCH_CANDIDATE = re.compile(
     r"(^|/)(\.env(\..+)?|"
+    r"(prod|production)\.env|"
     r"docker-compose\.ya?ml|compose\.ya?ml|"
     r"Jenkinsfile|jenkinsfile|"
     r"application\.(ya?ml|properties)|"
     r"bootstrap\.(ya?ml|properties)|"
     r".*\.tfvars|"
     r"\.github/workflows/.+\.ya?ml|"
-    r"(settings|config|secrets?)\.(ya?ml|json|ini|conf|cfg|toml|xml|properties))$",
+    r"(settings|config|secrets?)\.(ya?ml|json|ini|conf|cfg|toml|xml|properties)|"
+    r"credentials(\.json)?|"
+    r"kubeconfig|"
+    r"local\.settings\.json|"
+    r"appsettings\.json|"
+    r".+\.(pem|key|p12|pfx))$",
     re.I,
 )
-
-NEGATIVE_HINTS = {
-    "readme": -2,
-    "example": -2,
-    "sample": -2,
-    "demo": -2,
-    "test": -1,
-    "docs": -2,
-    "changelog": -2,
-}
-
-OWNER_TYPE_SCORES = {
-    "Organization": 2,
-    "User": 0,
-}
-
-TIER_THRESHOLDS = [
-    ("urgent", 14),
-    ("high", 9),
-    ("medium", 4),
-    ("low", -9999),
-]
-
-
-class C:
-    RESET = "\033[0m"
-    BOLD = "\033[1m"
-    RED = "\033[31m"
-    GREEN = "\033[32m"
-    YELLOW = "\033[33m"
-    BLUE = "\033[34m"
-    CYAN = "\033[36m"
-    GRAY = "\033[90m"
-    MAGENTA = "\033[35m"
-
-
-def color(text: str, tone: str) -> str:
-    return f"{tone}{text}{C.RESET}"
-
-
-@dataclass
-class RepoMeta:
-    full_name: str
-    archived: bool = False
-    pushed_at: str | None = None
-    owner_type: str | None = None
-    stargazers_count: int = 0
-
-
-@dataclass
-class Finding:
-    domain: str
-    html_url: str
-    repo_full_name: str
-    repo_html_url: str
-    repo_owner_type: str | None
-    repo_archived: bool
-    repo_pushed_at: str | None
-    path: str
-    sha: str | None = None
-    score: int = 0
-    tier: str = "low"
-    reasons: list[str] = field(default_factory=list)
-
-
-def eprint(text: str) -> None:
-    print(text, file=sys.stderr)
-
-
-def sanitize_filename(value: str) -> str:
-    cleaned = re.sub(r"[^a-zA-Z0-9._-]+", "_", value.strip())
-    return cleaned.strip("._") or "domain"
 
 
 def normalize_domain(value: str) -> str:
@@ -245,6 +354,15 @@ def normalize_domain(value: str) -> str:
     value = re.sub(r"^https?://", "", value)
     value = value.split("/")[0]
     return value.strip()
+
+
+def sanitize_filename(value: str) -> str:
+    cleaned = re.sub(r"[^a-zA-Z0-9._-]+", "_", value.strip())
+    return cleaned.strip("._") or "domain"
+
+
+def eprint(text: str) -> None:
+    print(text, file=sys.stderr)
 
 
 def load_domains(single_domain: str | None, file_path: str | None) -> list[str]:
@@ -282,18 +400,6 @@ def build_headers(token: str, accept: str = "application/vnd.github+json") -> di
         "X-GitHub-Api-Version": "2022-11-28",
         "User-Agent": "github-domain-triage",
     }
-
-
-def safe_sleep(seconds: float) -> None:
-    if seconds > 0:
-        time.sleep(seconds)
-
-def print_progress(current: int, total: int, prefix: str = "[~] Classifying") -> None:
-    if total <= 0:
-        return
-    percent = (current / total) * 100
-    msg = f"\r{color(prefix, C.GRAY)} {color(f'{current}/{total}', C.BOLD + C.GRAY)} {color(f'({percent:5.1f}%)', C.GRAY)}"
-    print(msg, end="", flush=True)
 
 
 def api_get_json(
@@ -412,106 +518,126 @@ def days_since_iso8601(value: str | None) -> int | None:
         return None
 
 
-def path_score(path: str) -> tuple[int, list[str]]:
+def path_score(path: str) -> tuple[int, list[str], list[str]]:
     score = 0
-    reasons = []
+    debug_reasons = []
+    tags = []
     lower = path.lower()
 
-    for pattern, pts, reason in SUSPICIOUS_FILE_PATTERNS:
+    for pattern, pts, tag in SUSPICIOUS_FILE_PATTERNS:
         if pattern.search(path):
             score += pts
-            reasons.append(f"path:{reason}:{pts:+d}")
+            debug_reasons.append(f"path:{tag}:{pts:+d}")
+            tags.append(tag)
             break
 
     for key, pts in PATH_KEYWORDS.items():
         if key in lower:
             score += pts
-            reasons.append(f"path-keyword:{key}:{pts:+d}")
+            debug_reasons.append(f"path-keyword:{key}:{pts:+d}")
+            tags.append(key.replace("_", "-"))
 
     for key, pts in NEGATIVE_HINTS.items():
         if key in lower:
             score += pts
-            reasons.append(f"negative-hint:{key}:{pts:+d}")
+            debug_reasons.append(f"negative-hint:{key}:{pts:+d}")
+            tags.append(f"likely-{key}")
 
-    return score, reasons
+    return score, debug_reasons, tags
 
 
-def domain_risk_score(domain: str) -> tuple[int, list[str]]:
+def domain_risk_score(domain: str) -> tuple[int, list[str], list[str]]:
     score = 0
-    reasons = []
+    debug_reasons = []
+    tags = []
     lower = domain.lower()
 
     for key, pts in DOMAIN_RISK_TERMS.items():
         if key in lower:
             score += pts
-            reasons.append(f"domain-term:{key}:{pts:+d}")
+            debug_reasons.append(f"domain-term:{key}:{pts:+d}")
+            tags.append(key)
 
-    return score, reasons
+    return score, debug_reasons, tags
 
 
-def repo_score(meta: RepoMeta) -> tuple[int, list[str]]:
+def repo_score(meta: RepoMeta) -> tuple[int, list[str], list[str]]:
     score = 0
-    reasons = []
+    debug_reasons = []
+    tags = []
 
     owner_pts = OWNER_TYPE_SCORES.get(meta.owner_type or "", 0)
     if owner_pts:
         score += owner_pts
-        reasons.append(f"owner-type:{meta.owner_type}:{owner_pts:+d}")
+        debug_reasons.append(f"owner-type:{meta.owner_type}:{owner_pts:+d}")
+        if meta.owner_type == "Organization":
+            tags.append("org-repo")
 
     if meta.archived:
         score -= 3
-        reasons.append("repo:archived:-3")
+        debug_reasons.append("repo:archived:-3")
+        tags.append("archived-repo")
 
     age_days = days_since_iso8601(meta.pushed_at)
     if age_days is not None:
         if age_days <= 30:
             score += 3
-            reasons.append("repo:recent-push:+3")
+            debug_reasons.append("repo:recent-push:+3")
+            tags.append("active-repo")
         elif age_days <= 180:
             score += 1
-            reasons.append("repo:active-ish:+1")
+            debug_reasons.append("repo:active-ish:+1")
+            tags.append("recent-repo")
         elif age_days > 730:
             score -= 2
-            reasons.append("repo:stale:-2")
+            debug_reasons.append("repo:stale:-2")
+            tags.append("stale-repo")
 
-    return score, reasons
+    return score, debug_reasons, tags
 
 
 def should_fetch_content(path: str) -> bool:
     return bool(CONTENT_FETCH_CANDIDATE.search(path))
 
 
-def content_context_score(content: str, domain: str) -> tuple[int, list[str]]:
+def content_context_score(content: str, domain: str) -> tuple[int, list[str], list[str]]:
     score = 0
-    reasons = []
+    debug_reasons = []
+    tags = []
     lower = content.lower()
     domain_lower = domain.lower()
 
     idx = lower.find(domain_lower)
     if idx == -1:
-        return 0, []
+        return 0, [], []
 
-    start = max(0, idx - 600)
-    end = min(len(lower), idx + len(domain_lower) + 600)
+    start = max(0, idx - 700)
+    end = min(len(lower), idx + len(domain_lower) + 700)
     window = lower[start:end]
 
     for key, pts in CONTENT_KEYWORDS.items():
         if key in window:
             score += pts
-            reasons.append(f"content-keyword:{key}:{pts:+d}")
+            debug_reasons.append(f"content-keyword:{key}:{pts:+d}")
+            tags.append(key.replace("_", "-"))
 
-    secret_like_assignments = [
-        r"(token|secret|password|passwd|api[_-]?key|client[_-]?secret|access[_-]?key)\s*[:=]\s*['\"]?[a-z0-9_\-\/+=]{8,}",
-        r"authorization\s*[:=]\s*['\"]?bearer\s+[a-z0-9\-._~+/]+=*",
-        r"private[_-]?key",
+    secret_like_patterns = [
+        (r"(token|secret|password|passwd|api[_-]?key|client[_-]?secret|access[_-]?key)\s*[:=]\s*['\"]?[a-z0-9_\-\/+=]{8,}", "credential-pattern", 5),
+        (r"authorization\s*[:=]\s*['\"]?bearer\s+[a-z0-9\-._~+/]+=*", "bearer", 5),
+        (r"aws_access_key_id\s*[:=]", "aws-access-key", 5),
+        (r"aws_secret_access_key\s*[:=]", "aws-secret-key", 5),
+        (r"-----begin [a-z0-9 ]*private key-----", "private-key", 6),
+        (r"(connectionstring|connection_string)\s*[:=]", "connection-string", 4),
+        (r"(mongodb(\+srv)?://|postgres(ql)?://|mysql://|redis://|amqp://)", "service-uri", 4),
     ]
-    for pat in secret_like_assignments:
-        if re.search(pat, window, re.I):
-            score += 5
-            reasons.append("content:secret-like-assignment:+5")
-            break
 
-    return score, reasons
+    for pattern, tag, pts in secret_like_patterns:
+        if re.search(pattern, window, re.I):
+            score += pts
+            debug_reasons.append(f"content:{tag}:{pts:+d}")
+            tags.append(tag)
+
+    return score, debug_reasons, tags
 
 
 def finding_tier(score: int) -> str:
@@ -519,6 +645,57 @@ def finding_tier(score: int) -> str:
         if score >= threshold:
             return name
     return "low"
+
+
+def unique_tags(tags: list[str], limit: int = 5) -> list[str]:
+    seen = set()
+    out = []
+    for tag in tags:
+        tag = tag.strip().lower()
+        if not tag or tag in seen:
+            continue
+        seen.add(tag)
+        out.append(tag)
+        if len(out) >= limit:
+            break
+    return out
+
+
+def classify_label(tags: list[str], score: int, path: str) -> str:
+    tagset = set(t.lower() for t in tags)
+    path_lower = path.lower()
+
+    direct_secret_markers = {
+        "credential-pattern", "private-key", "aws-access-key", "aws-secret-key",
+        "api-key", "token", "secret", "password", "client-secret", "vault-token",
+        "connection-string",
+    }
+    ci_cd_markers = {"workflow", "ci-cd", "deploy", "jenkinsfile", "bearer"}
+    infra_markers = {"terraform", "terraform-vars", "config-file", "app-config", "structured-config", "compose-file", "k8s", "kube"}
+    endpoint_markers = {"admin", "internal", "api", "auth", "sso", "prod", "production", "staging", "vpn", "gateway"}
+    db_markers = {"database", "database-url", "postgres", "postgresql", "mysql", "mongo", "mongodb", "service-uri", "jdbc", "dsn"}
+    cloud_markers = {"s3", "bucket", "service-account", "google-credentials", "azure-keyvault", "vault"}
+    doc_markers = {"docs", "doc-file", "likely-readme", "likely-docs", "likely-example", "likely-sample", "likely-demo"}
+
+    if tagset & direct_secret_markers:
+        return "direct_secret_signal"
+    if tagset & ci_cd_markers and (tagset & direct_secret_markers or "auth" in tagset or "bearer" in tagset):
+        return "ci_cd_exposure"
+    if tagset & infra_markers and (tagset & endpoint_markers or tagset & direct_secret_markers):
+        return "infra_config_exposure"
+    if tagset & db_markers:
+        return "database_reference"
+    if tagset & cloud_markers:
+        return "cloud_storage_reference"
+    if tagset & endpoint_markers:
+        return "sensitive_endpoint_reference"
+    if "internal" in tagset or "admin" in tagset:
+        return "internal_service_reference"
+    if tagset & doc_markers or path_lower.endswith((".md", ".rst", ".txt")):
+        return "documentation_reference"
+    if score <= 2:
+        return "likely_noise"
+    return "probable_secret_context"
 
 
 def fetch_repo_meta(token: str, repo_full_name: str, cache: dict[str, RepoMeta], delay: float) -> RepoMeta:
@@ -670,55 +847,63 @@ def classify_hits(token: str, domain: str, hits: list[dict], delay: float) -> li
         try:
             repo = item.get("repository") or {}
             repo_full_name = repo.get("full_name")
-            repo_html_url = repo.get("html_url") or ""
             path = item.get("path") or ""
             html_url = item.get("html_url") or ""
             sha = item.get("sha")
 
             if not repo_full_name or not path or not html_url:
-                print_progress(idx, total)
+                if idx == total or idx % 10 == 0:
+                    print_progress(idx, total)
                 continue
 
             meta = fetch_repo_meta(token, repo_full_name, repo_cache, delay)
 
             score = 0
-            reasons = []
+            debug_reasons = []
+            tags = []
 
-            s, r = path_score(path)
+            s, r, t = path_score(path)
             score += s
-            reasons.extend(r)
+            debug_reasons.extend(r)
+            tags.extend(t)
 
-            s, r = domain_risk_score(domain)
+            s, r, t = domain_risk_score(domain)
             score += s
-            reasons.extend(r)
+            debug_reasons.extend(r)
+            tags.extend(t)
 
-            s, r = repo_score(meta)
+            s, r, t = repo_score(meta)
             score += s
-            reasons.extend(r)
+            debug_reasons.extend(r)
+            tags.extend(t)
 
             if should_fetch_content(path):
                 content = fetch_file_content(token, repo_full_name, path, sha, delay)
                 if content:
-                    s, r = content_context_score(content, domain)
+                    s, r, t = content_context_score(content, domain)
                     score += s
-                    reasons.extend(r)
+                    debug_reasons.extend(r)
+                    tags.extend(t)
 
+            final_tags = unique_tags(tags, limit=5)
             tier = finding_tier(score)
+            classification = classify_label(final_tags, score, path)
 
             findings.append(
                 Finding(
                     domain=domain,
                     html_url=html_url,
                     repo_full_name=repo_full_name,
-                    repo_html_url=repo_html_url,
+                    path=path,
                     repo_owner_type=meta.owner_type,
                     repo_archived=meta.archived,
                     repo_pushed_at=meta.pushed_at,
-                    path=path,
                     sha=sha,
                     score=score,
                     tier=tier,
-                    reasons=reasons,
+                    classification=classification,
+                    tags=final_tags,
+                    debug_reasons=debug_reasons,
                 )
             )
 
@@ -731,7 +916,7 @@ def classify_hits(token: str, domain: str, hits: list[dict], delay: float) -> li
     if total:
         print()
 
-    findings.sort(key=lambda x: (-x.score, x.repo_full_name.lower(), x.path.lower()))
+    findings.sort(key=lambda x: (-x.score, x.html_url.lower()))
     return findings
 
 
@@ -742,7 +927,15 @@ def summarize_tiers(findings: list[Finding]) -> dict[str, int]:
     return counts
 
 
-def save_results(domain: str, findings: list[Finding], outdir: Path) -> Path:
+def format_entry(f: Finding, include_tags: bool = True) -> str:
+    lines = [f"[{f.tier.upper()}][{f.score}] {f.classification}"]
+    if include_tags and f.tags:
+        lines.append(f"tags: {', '.join(f.tags)}")
+    lines.append(f"link: {f.html_url}")
+    return "\n".join(lines)
+
+
+def save_results(domain: str, findings: list[Finding], outdir: Path, top_n: int = DEFAULT_TOP_CANDIDATES) -> Path:
     outdir.mkdir(parents=True, exist_ok=True)
     output_file = outdir / f"{sanitize_filename(domain)}.txt"
 
@@ -750,25 +943,39 @@ def save_results(domain: str, findings: list[Finding], outdir: Path) -> Path:
     for f in findings:
         grouped.setdefault(f.tier, []).append(f)
 
+    counts = summarize_tiers(findings)
+    unique_repos = len({f.repo_full_name for f in findings})
+    top_candidates = findings[:top_n]
+
     with open(output_file, "w", encoding="utf-8") as fh:
         fh.write(f"Domain: {domain}\n")
         fh.write(f"Generated: {datetime.now().isoformat()}\n")
-        fh.write(f"Total findings: {len(findings)}\n\n")
+        fh.write(f"Total findings: {len(findings)}\n")
+        fh.write(f"Unique repositories: {unique_repos}\n")
+        fh.write(
+            f"Tiers: urgent={counts['urgent']} "
+            f"high={counts['high']} medium={counts['medium']} low={counts['low']}\n\n"
+        )
 
-        for tier in ["urgent", "high", "medium", "low"]:
+        fh.write(f"TOP REVIEW CANDIDATES ({len(top_candidates)})\n\n")
+        for idx, finding in enumerate(top_candidates, 1):
+            fh.write(f"{idx}. {format_entry(finding)}\n\n")
+
+        for tier in ["urgent", "high", "medium"]:
             items = grouped.get(tier, [])
             fh.write(f"==== {tier.upper()} ({len(items)}) ====\n\n")
-            for f in items:
-                fh.write(f"[score={f.score}] {f.repo_full_name} :: {f.path}\n")
-                fh.write(f"URL: {f.html_url}\n")
-                fh.write(f"Repo URL: {f.repo_html_url}\n")
-                fh.write(f"Owner type: {f.repo_owner_type or 'unknown'}\n")
-                fh.write(f"Archived: {f.repo_archived}\n")
-                fh.write(f"Last push: {f.repo_pushed_at or 'unknown'}\n")
-                fh.write("Reasons:\n")
-                for reason in f.reasons[:20]:
-                    fh.write(f"  - {reason}\n")
-                fh.write("\n")
+            for finding in items:
+                fh.write(format_entry(finding) + "\n\n")
+
+        low_items = grouped.get("low", [])
+        fh.write(f"==== LOW ({len(low_items)}) ====\n\n")
+        if low_items:
+            fh.write("Compact view only.\n\n")
+            for finding in low_items[:100]:
+                fh.write(f"[LOW][{finding.score}] {finding.classification}\n")
+                fh.write(f"link: {finding.html_url}\n\n")
+            if len(low_items) > 100:
+                fh.write(f"... {len(low_items) - 100} more low-tier entries omitted ...\n")
 
     return output_file
 
