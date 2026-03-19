@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 """
-github_domain_triage.py
-
 Search GitHub code results for exact domain strings, classify findings, and save
 one ranked TXT report per domain.
 
