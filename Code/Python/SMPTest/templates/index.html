@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SMTP Dev Mailer</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+
+    :root {
+      --bg:        #0d0d0d;
+      --bg2:       #111111;
+      --bg3:       #161616;
+      --border:    #2a2a2a;
+      --green:     #00ff41;
+      --green-dim: #00cc33;
+      --green-dk:  #005510;
+      --amber:     #ffb000;
+      --red:       #ff3333;
+      --muted:     #3a3a3a;
+      --text:      #c8ffc8;
+      --font:      'Share Tech Mono', 'Courier New', monospace;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--green);
+      font-family: var(--font);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    /* scanline overlay */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background: repeating-linear-gradient(
+        to bottom,
+        transparent 0px,
+        transparent 2px,
+        rgba(0,0,0,.18) 2px,
+        rgba(0,0,0,.18) 4px
+      );
+      pointer-events: none;
+      z-index: 9999;
+    }
+
+    /* subtle screen glow */
+    body::after {
+      content: '';
+      position: fixed; inset: 0;
+      background: radial-gradient(ellipse at 50% 40%, rgba(0,255,65,.04) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 9998;
+    }
+
+    .shell {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 24px 16px 60px;
+    }
+
+    /* ── header ── */
+    .header {
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 12px;
+      margin-bottom: 28px;
+    }
+    .header-top {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .logo {
+      font-size: 22px;
+      color: var(--green);
+      letter-spacing: 2px;
+      text-shadow: 0 0 10px var(--green-dim);
+    }
+    .logo span { color: var(--green-dim); }
+    .badge {
+      font-size: 11px;
+      color: var(--bg);
+      background: var(--green-dim);
+      padding: 1px 6px;
+      letter-spacing: 1px;
+    }
+    .server-info {
+      margin-top: 6px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .server-info b { color: var(--green-dim); }
+
+    /* ── tabs ── */
+    .tabs {
+      display: flex;
+      gap: 0;
+      margin-bottom: 24px;
+      border-bottom: 1px solid var(--border);
+    }
+    .tab-btn {
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      color: var(--muted);
+      font-family: var(--font);
+      font-size: 12px;
+      letter-spacing: 1px;
+      padding: 8px 18px;
+      cursor: pointer;
+      transition: color .15s, border-color .15s;
+      margin-bottom: -1px;
+    }
+    .tab-btn:hover { color: var(--text); }
+    .tab-btn.active {
+      color: var(--green);
+      border-bottom-color: var(--green);
+    }
+
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ── form ── */
+    .field { margin-bottom: 16px; }
+    .field label {
+      display: block;
+      font-size: 11px;
+      letter-spacing: 1.5px;
+      color: var(--green-dim);
+      margin-bottom: 5px;
+    }
+    .field label::before { content: '> '; color: var(--muted); }
+
+    .field input,
+    .field textarea {
+      width: 100%;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 13px;
+      padding: 8px 10px;
+      outline: none;
+      transition: border-color .15s, box-shadow .15s;
+      resize: vertical;
+      caret-color: var(--green);
+    }
+    .field input:focus,
+    .field textarea:focus {
+      border-color: var(--green-dim);
+      box-shadow: 0 0 0 1px var(--green-dk), inset 0 0 12px rgba(0,255,65,.04);
+    }
+    .field textarea { min-height: 120px; }
+
+    .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    @media(max-width:520px){ .row-2 { grid-template-columns: 1fr; } }
+
+    /* attachment zone */
+    .attach-zone {
+      border: 1px dashed var(--border);
+      padding: 14px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 12px;
+      cursor: pointer;
+      transition: border-color .15s, color .15s;
+      position: relative;
+    }
+    .attach-zone:hover { border-color: var(--green-dim); color: var(--text); }
+    .attach-zone input[type="file"] {
+      position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+    }
+    .attach-zone .icon { font-size: 18px; margin-bottom: 4px; }
+    #file-list {
+      margin-top: 8px;
+      font-size: 11px;
+      color: var(--green-dim);
+      text-align: left;
+    }
+    #file-list div { padding: 2px 0; }
+    #file-list div::before { content: '+ '; color: var(--muted); }
+
+    /* send button */
+    .btn-send {
+      display: block;
+      width: 100%;
+      margin-top: 20px;
+      padding: 11px;
+      background: var(--green-dk);
+      border: 1px solid var(--green-dim);
+      color: var(--green);
+      font-family: var(--font);
+      font-size: 13px;
+      letter-spacing: 2px;
+      cursor: pointer;
+      transition: background .15s, box-shadow .15s;
+    }
+    .btn-send:hover {
+      background: #003d0d;
+      box-shadow: 0 0 14px rgba(0,255,65,.2);
+    }
+    .btn-send:active { background: #002808; }
+    .btn-send:disabled { opacity: .4; cursor: not-allowed; }
+
+    /* status bar */
+    #status {
+      margin-top: 14px;
+      font-size: 12px;
+      padding: 8px 10px;
+      border-left: 3px solid transparent;
+      display: none;
+    }
+    #status.ok   { border-color: var(--green); color: var(--green); background: rgba(0,255,65,.05); }
+    #status.err  { border-color: var(--red);   color: var(--red);   background: rgba(255,51,51,.05); }
+    #status.info { border-color: var(--amber); color: var(--amber); background: rgba(255,176,0,.05); }
+
+    /* ── log panel ── */
+    .log-controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .log-controls span { font-size: 11px; color: var(--muted); }
+    .btn-sm {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-family: var(--font);
+      font-size: 11px;
+      padding: 4px 10px;
+      cursor: pointer;
+      transition: color .15s, border-color .15s;
+    }
+    .btn-sm:hover { color: var(--text); border-color: var(--muted); }
+
+    #log-container {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      padding: 12px;
+      min-height: 200px;
+      max-height: 480px;
+      overflow-y: auto;
+    }
+    .log-empty {
+      color: var(--muted);
+      font-size: 12px;
+      text-align: center;
+      padding: 40px 0;
+    }
+    .log-entry {
+      border-bottom: 1px solid var(--border);
+      padding: 10px 0;
+      animation: fadeIn .3s ease;
+    }
+    .log-entry:last-child { border-bottom: none; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+
+    .log-meta {
+      font-size: 11px;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+    .log-meta b { color: var(--green-dim); }
+    .log-subject { color: var(--text); font-size: 13px; margin-bottom: 4px; }
+    .log-body {
+      font-size: 12px;
+      color: #6a8f6a;
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-height: 80px;
+      overflow: hidden;
+      position: relative;
+    }
+    .log-body.expanded { max-height: none; }
+    .log-expand {
+      font-size: 11px;
+      color: var(--green-dim);
+      cursor: pointer;
+      background: none;
+      border: none;
+      font-family: var(--font);
+      padding: 0;
+      margin-top: 2px;
+    }
+    .log-expand:hover { color: var(--green); }
+
+    .relay-detail {
+      font-size: 11px;
+      margin: 4px 0 6px;
+      line-height: 1.7;
+    }
+    .relay-ok  { color: var(--green-dim); }
+    .relay-err { color: var(--red); }
+
+    .badge-ok   { background: var(--green-dk); color: var(--green);  font-size: 10px; padding: 1px 5px; letter-spacing: 1px; }
+    .badge-err  { background: rgba(255,51,51,.15); color: var(--red);   font-size: 10px; padding: 1px 5px; letter-spacing: 1px; }
+    .badge-warn { background: rgba(255,176,0,.12); color: var(--amber); font-size: 10px; padding: 1px 5px; letter-spacing: 1px; }
+    .badge-muted{ color: var(--muted); font-size: 10px; }
+
+    /* scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border); }
+    ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+    /* cursor blink for decoration */
+    .blink {
+      display: inline-block;
+      width: 9px; height: 15px;
+      background: var(--green);
+      vertical-align: middle;
+      margin-left: 4px;
+      animation: blink 1.1s step-end infinite;
+    }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+  </style>
+</head>
+<body>
+<div class="shell">
+
+  <div class="header">
+    <div class="header-top">
+      <div class="logo">SMTP<span>://</span>DEV</div>
+      <div class="badge">LOCAL</div>
+    </div>
+    <div class="server-info">
+      listening on <b>{{ smtp_host }}:{{ smtp_port }}</b> &nbsp;|&nbsp; no auth &nbsp;|&nbsp; no TLS &nbsp;|&nbsp; dev only
+      <span class="blink"></span>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="compose">[ COMPOSE ]</button>
+    <button class="tab-btn" data-tab="inbox">[ RECEIVED LOG ]</button>
+  </div>
+
+  <!-- ── COMPOSE ── -->
+  <div id="tab-compose" class="tab-panel active">
+    <form id="mail-form" enctype="multipart/form-data">
+
+      <div class="row-2">
+        <div class="field">
+          <label>FROM NAME</label>
+          <input type="text" name="from_name" placeholder="John Doe" />
+        </div>
+        <div class="field">
+          <label>FROM EMAIL</label>
+          <input type="email" name="from_email" placeholder="john@example.com" required />
+        </div>
+      </div>
+
+      <div class="field">
+        <label>TO</label>
+        <input type="email" name="to" placeholder="recipient@example.com" required />
+      </div>
+
+      <div class="field">
+        <label>SUBJECT</label>
+        <input type="text" name="subject" placeholder="Re: something important" required />
+      </div>
+
+      <div class="field">
+        <label>MESSAGE BODY</label>
+        <textarea name="body" placeholder="Write your message here..."></textarea>
+      </div>
+
+      <div class="field">
+        <label>ATTACHMENTS</label>
+        <div class="attach-zone" id="attach-zone">
+          <input type="file" name="attachments" id="file-input" multiple />
+          <div class="icon">⊕</div>
+          <div>click to attach files — or drag &amp; drop</div>
+          <div id="file-list"></div>
+        </div>
+      </div>
+
+      <button type="submit" class="btn-send" id="btn-send">
+        ▶ SEND MESSAGE
+      </button>
+    </form>
+
+    <div id="status"></div>
+  </div>
+
+  <!-- ── RECEIVED LOG ── -->
+  <div id="tab-inbox" class="tab-panel">
+    <div class="log-controls">
+      <span id="log-count">0 messages captured</span>
+      <div style="display:flex;gap:8px;">
+        <button class="btn-sm" id="btn-refresh">↻ REFRESH</button>
+        <button class="btn-sm" id="btn-clear">✕ CLEAR</button>
+      </div>
+    </div>
+    <div id="log-container">
+      <div class="log-empty" id="log-empty">// no messages yet</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // ── Tabs ──────────────────────────────────────────────────────────────────
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+      if (btn.dataset.tab === 'inbox') loadLog();
+    });
+  });
+
+  // ── File picker ───────────────────────────────────────────────────────────
+  const fileInput  = document.getElementById('file-input');
+  const fileList   = document.getElementById('file-list');
+  const attachZone = document.getElementById('attach-zone');
+
+  fileInput.addEventListener('change', renderFileList);
+
+  attachZone.addEventListener('dragover', e => {
+    e.preventDefault();
+    attachZone.style.borderColor = 'var(--green)';
+  });
+  attachZone.addEventListener('dragleave', () => {
+    attachZone.style.borderColor = '';
+  });
+  attachZone.addEventListener('drop', e => {
+    e.preventDefault();
+    attachZone.style.borderColor = '';
+    fileInput.files = e.dataTransfer.files;
+    renderFileList();
+  });
+
+  function renderFileList() {
+    fileList.innerHTML = '';
+    Array.from(fileInput.files).forEach(f => {
+      const d = document.createElement('div');
+      d.textContent = `${f.name}  (${(f.size/1024).toFixed(1)} KB)`;
+      fileList.appendChild(d);
+    });
+  }
+
+  // ── Send ──────────────────────────────────────────────────────────────────
+  const form    = document.getElementById('mail-form');
+  const btnSend = document.getElementById('btn-send');
+  const status  = document.getElementById('status');
+
+  form.addEventListener('submit', async e => {
+    e.preventDefault();
+    setStatus('info', '▷ transmitting...');
+    btnSend.disabled = true;
+    btnSend.textContent = '▷ SENDING...';
+
+    const fd = new FormData(form);
+    try {
+      const res  = await fetch('/send', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (data.ok) {
+        setStatus('ok', `✓ ${data.message}`);
+        form.reset();
+        fileList.innerHTML = '';
+      } else {
+        setStatus('err', `✗ ${data.error}`);
+      }
+    } catch(err) {
+      setStatus('err', `✗ network error: ${err.message}`);
+    } finally {
+      btnSend.disabled = false;
+      btnSend.textContent = '▶ SEND MESSAGE';
+    }
+  });
+
+  function setStatus(type, msg) {
+    status.className = type;
+    status.textContent = msg;
+    status.style.display = 'block';
+  }
+
+  // ── Log ───────────────────────────────────────────────────────────────────
+  async function loadLog() {
+    const res  = await fetch('/log');
+    const data = await res.json();
+    const container = document.getElementById('log-container');
+    const empty     = document.getElementById('log-empty');
+    const count     = document.getElementById('log-count');
+
+    count.textContent = `${data.length} message${data.length !== 1 ? 's' : ''} captured`;
+
+    if (!data.length) {
+      container.innerHTML = '<div class="log-empty" id="log-empty">// no messages yet</div>';
+      return;
+    }
+
+    container.innerHTML = data.map((m, i) => {
+      const to = (m.rcpt_tos || []).join(', ');
+      const relay = m.relay || {};
+      const relayLines = Object.entries(relay).map(([rcpt, r]) => {
+        const icon  = r.ok ? '✓' : '✗';
+        const cls   = r.ok ? 'relay-ok' : 'relay-err';
+        return `<span class="${cls}">${icon} ${escapeHtml(rcpt)} — ${escapeHtml(r.detail)}</span>`;
+      }).join('<br>');
+      const allOk  = Object.values(relay).every(r => r.ok);
+      const anyBad = Object.values(relay).some(r => !r.ok);
+      const relayBadge = Object.keys(relay).length === 0
+        ? '<span class="badge-muted">no relay info</span>'
+        : allOk
+          ? '<span class="badge-ok">RELAYED</span>'
+          : anyBad && !allOk
+            ? '<span class="badge-err">RELAY FAILED</span>'
+            : '<span class="badge-warn">PARTIAL</span>';
+
+      return `
+        <div class="log-entry">
+          <div class="log-meta">
+            <b>${escapeHtml(m.timestamp)}</b>
+            &nbsp;·&nbsp; FROM: <b>${escapeHtml(m.mail_from)}</b>
+            &nbsp;·&nbsp; TO: <b>${escapeHtml(to)}</b>
+            &nbsp;·&nbsp; ${relayBadge}
+          </div>
+          ${relayLines ? `<div class="relay-detail">${relayLines}</div>` : ''}
+          <div class="log-body" id="body-${i}">${escapeHtml(m.data)}</div>
+          <button class="log-expand" onclick="toggleBody(${i}, this)">[ expand ]</button>
+        </div>`;
+    }).join('');
+  }
+
+  function toggleBody(i, btn) {
+    const el = document.getElementById('body-' + i);
+    el.classList.toggle('expanded');
+    btn.textContent = el.classList.contains('expanded') ? '[ collapse ]' : '[ expand ]';
+  }
+
+  function escapeHtml(s) {
+    return String(s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;');
+  }
+
+  document.getElementById('btn-refresh').addEventListener('click', loadLog);
+  document.getElementById('btn-clear').addEventListener('click', async () => {
+    await fetch('/clear', { method: 'POST' });
+    loadLog();
+  });
+</script>
+</body>
+</html>
