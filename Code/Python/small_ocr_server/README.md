@@ -1,6 +1,8 @@
-# OCR API Server
+# OCR + Logo Detection API
 
-A lightweight REST API that extracts text from images using **Tesseract OCR** and **FastAPI**.
+A lightweight REST API that:
+- **Extracts text** from images using Tesseract OCR
+- **Detects client logos** using OpenCV ORB feature matching (no ML model needed)
 
 ---
 
@@ -9,102 +11,164 @@ A lightweight REST API that extracts text from images using **Tesseract OCR** an
 | Requirement | Notes |
 |---|---|
 | Python 3.9+ | `python3 --version` |
-| Tesseract OCR | Installed automatically by `install.sh` |
+| Tesseract OCR | Auto-installed by `install.sh` |
+| libgl1 (Linux) | Auto-installed by `install.sh` |
 
 ---
 
 ## Quick Start
 
 ```bash
-# 1. Make scripts executable
 chmod +x install.sh start.sh
-
-# 2. Install system deps + Python venv
 ./install.sh
-
-# 3. Start the server (default: http://0.0.0.0:8000)
 ./start.sh
 ```
 
----
-
-## API Endpoints
-
-### `GET /health`
-Simple health check.
-
-```bash
-curl http://localhost:8000/health
-# {"status":"ok"}
-```
+Interactive docs → **http://localhost:8000/docs**
 
 ---
+
+## OCR Endpoints
 
 ### `POST /ocr`
-Extract text from a **single** image (JPG, JPEG or PNG).
-
 ```bash
-curl -X POST http://localhost:8000/ocr \
-     -F "file=@/path/to/image.png"
+curl -X POST http://localhost:8000/ocr -F "file=@photo.png"
+```
+```json
+{ "filename": "photo.png", "text": "Hello World", "character_count": 11 }
 ```
 
-**Response:**
+### `POST /ocr/batch`
+```bash
+curl -X POST http://localhost:8000/ocr/batch \
+     -F "files=@img1.png" -F "files=@img2.jpg"
+```
+
+---
+
+## Logo Detection Endpoints
+
+The detector works purely on **visual shape features** — it ignores text entirely and focuses on the graphic structure of logos. It uses **ORB feature matching** with **Lowe's ratio test**, which handles logos at different scales, rotations, and with moderate perspective distortion.
+
+---
+
+### `POST /logos/register` — Upload a reference logo
+
+```bash
+curl -X POST "http://localhost:8000/logos/register?name=Acme+Corp" \
+     -F "file=@acme_logo.png"
+```
+
 ```json
 {
-  "filename": "image.png",
-  "text": "Hello, World!",
-  "character_count": 13
+  "logo_id": "d3f1a2b4-...",
+  "name": "Acme Corp",
+  "feature_count": 342,
+  "message": "Logo registered successfully."
 }
 ```
 
+> **Tips for best results:**
+> - Use a clean, isolated version of the logo (white or transparent background)
+> - Minimum 100×100 px recommended
+> - Avoid blurry or heavily JPEG-compressed images
+
 ---
 
-### `POST /ocr/batch`
-Extract text from **multiple** images in one request.
+### `GET /logos` — List registered logos
 
 ```bash
-curl -X POST http://localhost:8000/ocr/batch \
-     -F "files=@image1.png" \
-     -F "files=@image2.jpg"
+curl http://localhost:8000/logos
 ```
 
-**Response:**
+---
+
+### `DELETE /logos/{logo_id}` — Remove a logo
+
+```bash
+curl -X DELETE http://localhost:8000/logos/d3f1a2b4-...
+```
+
+---
+
+### `POST /logos/detect` — Find logos in an image
+
+```bash
+curl -X POST "http://localhost:8000/logos/detect?threshold=15" \
+     -F "file=@document_photo.jpg"
+```
+
 ```json
 {
+  "filename": "document_photo.jpg",
+  "logos_checked": 3,
+  "logos_detected": 1,
   "results": [
-    { "filename": "image1.png", "text": "...", "character_count": 42, "error": null },
-    { "filename": "image2.jpg", "text": "...", "character_count": 17, "error": null }
+    {
+      "logo_id": "d3f1a2b4-...",
+      "name": "Acme Corp",
+      "detected": true,
+      "match_count": 47,
+      "threshold": 15,
+      "confidence": 100.0
+    },
+    {
+      "logo_id": "e9c2b1a0-...",
+      "name": "Other Corp",
+      "detected": false,
+      "match_count": 3,
+      "threshold": 15,
+      "confidence": 20.0
+    }
   ]
 }
 ```
 
+#### Tuning the `threshold` parameter
+
+| Scenario | Recommended threshold |
+|---|---|
+| Logo is large and clearly visible | `15–20` (default) |
+| Logo is small or partially cropped | `8–12` |
+| Logo appears at a strong angle | `8–12` |
+| Many false positives | Increase to `25–40` |
+
 ---
 
-## Interactive Docs
+## How Logo Detection Works
 
-Once the server is running, open your browser at:
-
-- **Swagger UI** → http://localhost:8000/docs  
-- **ReDoc**      → http://localhost:8000/redoc
+```
+Query image                Reference logos
+     │                          │
+     ▼                          ▼
+ ORB keypoints             ORB keypoints
+ + descriptors             + descriptors
+          \                   /
+           ▼                 ▼
+         BFMatcher (Hamming distance)
+                   │
+          Lowe's ratio test
+          (filters ambiguous matches)
+                   │
+          good_matches >= threshold?
+                   │
+            YES → detected ✓
+            NO  → not found ✗
+```
 
 ---
 
 ## Configuration
-
-All settings are controlled via environment variables:
 
 | Variable | Default | Description |
 |---|---|---|
 | `HOST` | `0.0.0.0` | Bind address |
 | `PORT` | `8000` | TCP port |
 | `WORKERS` | `1` | Uvicorn worker processes |
-| `LOG_LEVEL` | `info` | Uvicorn log level |
+| `LOG_LEVEL` | `info` | Log verbosity |
 | `RELOAD` | `false` | Hot-reload (dev mode) |
 
 ```bash
-# Example: production on port 9000 with 4 workers
 PORT=9000 WORKERS=4 ./start.sh
-
-# Example: development mode with hot-reload
 RELOAD=true ./start.sh
 ```
