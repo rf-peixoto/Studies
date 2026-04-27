@@ -4,16 +4,6 @@ A lightweight REST API that:
 - **Extracts text** from images using Tesseract OCR
 - **Detects client logos** using OpenCV feature matching — with a choice of engine
 
----
-
-## What's new in v3
-
-| | v2 | v3 |
-|---|---|---|
-| Engines | ORB only | **ORB + SIFT** (separate endpoints) |
-| Descriptor computation | On every `/detect` call | **Once at registration**, cached to `.npy` |
-| Detection speed | Degrades with library size | **Constant** regardless of library size |
-| `opencv` package | `opencv-python-headless` | `opencv-contrib-python-headless` |
 
 ---
 
