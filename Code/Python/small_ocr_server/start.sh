@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ──────────────────────────────────────────────────────────────────────────────
-# start.sh — Activate the virtual-env and start the OCR + Logo Detection server.
+# start.sh — Activate the venv and start the OCR + Logo Detection server.
 #
 # Environment variables (all optional):
 #   HOST      Bind address          (default: 0.0.0.0)
@@ -10,11 +10,9 @@
 #   RELOAD    Hot-reload flag       (default: false)
 #
 # Usage:
-#   chmod +x start.sh
-#   ./start.sh
-#
+#   chmod +x start.sh && ./start.sh
 #   PORT=9000 WORKERS=4 ./start.sh
-#   RELOAD=true ./start.sh          # development mode
+#   RELOAD=true ./start.sh
 # ──────────────────────────────────────────────────────────────────────────────
 
 set -euo pipefail
@@ -33,24 +31,15 @@ info()  { echo -e "${GREEN}[start]${NC} $*"; }
 warn()  { echo -e "${YELLOW}[start]${NC} $*"; }
 error() { echo -e "${RED}[start]${NC} $*" >&2; }
 
-if [[ ! -d "$VENV_DIR" ]]; then
-    error "Virtual environment '$VENV_DIR' not found. Run ./install.sh first."
-    exit 1
-fi
-
-if [[ ! -f "ocr_server.py" ]]; then
-    error "ocr_server.py not found. Run this script from the project root."
-    exit 1
-fi
+[[ ! -d "$VENV_DIR" ]]     && { error "Run ./install.sh first."; exit 1; }
+[[ ! -f "ocr_server.py" ]] && { error "ocr_server.py not found. Run from project root."; exit 1; }
 
 # shellcheck disable=SC1091
 source "$VENV_DIR/bin/activate"
 info "Virtual environment activated."
 
-if ! command -v tesseract &>/dev/null; then
-    error "Tesseract OCR not found. Run ./install.sh to install it."
-    exit 1
-fi
+command -v tesseract &>/dev/null \
+    || { error "Tesseract not found. Run ./install.sh."; exit 1; }
 info "Tesseract: $(tesseract --version 2>&1 | head -1)"
 
 mkdir -p logo_store
@@ -70,26 +59,27 @@ else
 fi
 
 echo ""
-echo -e "${CYAN}  ╔══════════════════════════════════════════════╗${NC}"
-echo -e "${CYAN}  ║      OCR + Logo Detection  API  Server       ║${NC}"
-echo -e "${CYAN}  ╚══════════════════════════════════════════════╝${NC}"
+echo -e "${CYAN}  ╔══════════════════════════════════════════════════╗${NC}"
+echo -e "${CYAN}  ║      OCR + Logo Detection  API  Server  v3       ║${NC}"
+echo -e "${CYAN}  ╚══════════════════════════════════════════════════╝${NC}"
 echo ""
-echo -e "  ${GREEN}URL      ${NC}: http://${HOST}:${PORT}"
-echo -e "  ${GREEN}Docs     ${NC}: http://${HOST}:${PORT}/docs"
-echo -e "  ${GREEN}Workers  ${NC}: ${WORKERS}"
-echo -e "  ${GREEN}Log level${NC}: ${LOG_LEVEL}"
+echo -e "  ${GREEN}URL   ${NC}: http://${HOST}:${PORT}"
+echo -e "  ${GREEN}Docs  ${NC}: http://${HOST}:${PORT}/docs"
 echo ""
-echo -e "  ── OCR ──────────────────────────────────────────"
-echo -e "  ${YELLOW}POST /ocr${NC}              → extract text (single)"
-echo -e "  ${YELLOW}POST /ocr/batch${NC}        → extract text (batch)"
+echo -e "  ── OCR ─────────────────────────────────────────────"
+echo -e "  ${YELLOW}POST /ocr${NC}                  extract text (single)"
+echo -e "  ${YELLOW}POST /ocr/batch${NC}            extract text (batch)"
 echo ""
-echo -e "  ── Logo Detection ───────────────────────────────"
-echo -e "  ${YELLOW}POST /logos/register${NC}   → upload a reference logo"
-echo -e "  ${YELLOW}GET  /logos${NC}            → list registered logos"
-echo -e "  ${YELLOW}DELETE /logos/{id}${NC}     → remove a logo"
-echo -e "  ${YELLOW}POST /logos/detect${NC}     → find logos in an image"
+echo -e "  ── Logo Management ─────────────────────────────────"
+echo -e "  ${YELLOW}POST   /logos/register${NC}     upload + cache ORB & SIFT"
+echo -e "  ${YELLOW}GET    /logos${NC}              list registered logos"
+echo -e "  ${YELLOW}DELETE /logos/{id}${NC}         remove logo + caches"
 echo ""
-echo -e "  ${YELLOW}GET  /health${NC}           → health check"
+echo -e "  ── Logo Detection ──────────────────────────────────"
+echo -e "  ${YELLOW}POST /logos/detect/orb${NC}     fast  — binary features"
+echo -e "  ${YELLOW}POST /logos/detect/sift${NC}    accurate — float features"
+echo ""
+echo -e "  ${YELLOW}GET  /health${NC}               health check"
 echo ""
 
 exec uvicorn "${UVICORN_ARGS[@]}"

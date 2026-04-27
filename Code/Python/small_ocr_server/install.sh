@@ -1,11 +1,10 @@
 #!/usr/bin/env bash
 # ──────────────────────────────────────────────────────────────────────────────
 # install.sh — Create a Python virtual-env and install all dependencies for the
-#              OCR + Logo Detection server.
+#              OCR + Logo Detection server (v3 — ORB + SIFT).
 #
 # Usage:
-#   chmod +x install.sh
-#   ./install.sh
+#   chmod +x install.sh && ./install.sh
 #
 # Override the Python interpreter:
 #   PYTHON=python3.11 ./install.sh
@@ -16,34 +15,33 @@ set -euo pipefail
 VENV_DIR=".venv"
 PYTHON=${PYTHON:-python3}
 
-# ── Colour helpers ─────────────────────────────────────────────────────────────
 GREEN="\033[0;32m"; YELLOW="\033[1;33m"; RED="\033[0;31m"; NC="\033[0m"
 info()  { echo -e "${GREEN}[install]${NC} $*"; }
 warn()  { echo -e "${YELLOW}[install]${NC} $*"; }
 error() { echo -e "${RED}[install]${NC} $*" >&2; }
 
-# ── 1. System dependencies (Tesseract + OpenCV prerequisites) ─────────────────
+# ── 1. System dependencies ────────────────────────────────────────────────────
 install_system_deps() {
     if command -v apt-get &>/dev/null; then
-        info "Detected Debian/Ubuntu — installing system packages via apt…"
+        info "Debian/Ubuntu — installing system packages via apt…"
         sudo apt-get update -qq
         sudo apt-get install -y \
             tesseract-ocr tesseract-ocr-eng tesseract-ocr-por \
-            libgl1 libglib2.0-0          # required by opencv-python-headless
+            libgl1 libglib2.0-0   # required by OpenCV headless on Linux
     elif command -v brew &>/dev/null; then
-        info "Detected macOS — installing via Homebrew…"
+        info "macOS — installing via Homebrew…"
         brew install tesseract
-        # OpenCV system libs are bundled in the Python wheel on macOS
+        # OpenCV libs are bundled in the Python wheel on macOS
     elif command -v dnf &>/dev/null; then
-        info "Detected Fedora/RHEL — installing via dnf…"
+        info "Fedora/RHEL — installing via dnf…"
         sudo dnf install -y tesseract mesa-libGL
     elif command -v pacman &>/dev/null; then
-        info "Detected Arch Linux — installing via pacman…"
+        info "Arch Linux — installing via pacman…"
         sudo pacman -Sy --noconfirm tesseract tesseract-data-eng
     else
         warn "Unknown package manager — skipping system packages."
         warn "Please install manually:"
-        warn "  • Tesseract OCR  → https://github.com/tesseract-ocr/tesseract"
+        warn "  • Tesseract OCR → https://github.com/tesseract-ocr/tesseract"
         warn "  • libgl1 / mesa  (needed by OpenCV on Linux)"
     fi
 }
@@ -66,7 +64,7 @@ info "Using Python $PY_VER ($($PYTHON -c 'import sys; print(sys.executable)'))"
 MAJOR=$(echo "$PY_VER" | cut -d. -f1)
 MINOR=$(echo "$PY_VER" | cut -d. -f2)
 if [[ "$MAJOR" -lt 3 ]] || { [[ "$MAJOR" -eq 3 ]] && [[ "$MINOR" -lt 9 ]]; }; then
-    error "Python 3.9+ is required (found $PY_VER)."
+    error "Python 3.9+ required (found $PY_VER)."
     exit 1
 fi
 
@@ -87,28 +85,44 @@ info "Upgrading pip…"
 pip install --quiet --upgrade pip
 
 info "Installing Python dependencies…"
+
+# NOTE: opencv-contrib-python-headless is required (not the plain opencv-python)
+# because SIFT lives in the contrib modules (xfeatures2d).
+# The -headless variant skips GUI/display dependencies, which are not needed
+# for a server process.
 pip install \
-    "fastapi>=0.111.0"           \
-    "uvicorn[standard]>=0.29.0"  \
-    "python-multipart>=0.0.9"    \
-    "pytesseract>=0.3.10"        \
-    "Pillow>=10.3.0"             \
-    "opencv-python-headless>=4.9.0.80" \
+    "fastapi>=0.111.0"                      \
+    "uvicorn[standard]>=0.29.0"             \
+    "python-multipart>=0.0.9"               \
+    "pytesseract>=0.3.10"                   \
+    "Pillow>=10.3.0"                        \
+    "opencv-contrib-python-headless>=4.9.0.80" \
     "numpy>=1.26.0"
 
-# Create the logo storage directory
+# Create the logo storage directory if it doesn't already exist
 mkdir -p logo_store
 
-# ── 5. Done ───────────────────────────────────────────────────────────────────
+# ── 5. Smoke-test SIFT availability ───────────────────────────────────────────
+info "Verifying SIFT is available…"
+"$VENV_DIR/bin/python" - <<'PYEOF'
+import cv2, sys
+try:
+    cv2.SIFT_create()
+    print("  ✔ SIFT available")
+except AttributeError:
+    print("  ✘ SIFT not available — make sure opencv-contrib-python-headless is installed")
+    sys.exit(1)
+PYEOF
+
+# ── 6. Done ───────────────────────────────────────────────────────────────────
 echo ""
 echo -e "${GREEN}✔ Installation complete!${NC}"
 echo ""
 echo "  Dependencies installed:"
-echo "    • FastAPI + Uvicorn  — REST API server"
-echo "    • pytesseract        — OCR (text extraction)"
-echo "    • Pillow             — image I/O for OCR"
-echo "    • opencv-headless    — feature matching for logo detection"
-echo "    • numpy              — array operations"
+echo "    • FastAPI + Uvicorn                  — REST API server"
+echo "    • pytesseract + Pillow               — OCR (text extraction)"
+echo "    • opencv-contrib-python-headless     — ORB + SIFT feature matching"
+echo "    • numpy                              — descriptor cache (.npy files)"
 echo ""
 echo "  Next step → start the server:"
 echo "    ./start.sh"

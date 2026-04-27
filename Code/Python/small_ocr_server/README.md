@@ -1,18 +1,19 @@
-# OCR + Logo Detection API
+# OCR + Logo Detection API  v3
 
 A lightweight REST API that:
 - **Extracts text** from images using Tesseract OCR
-- **Detects client logos** using OpenCV ORB feature matching (no ML model needed)
+- **Detects client logos** using OpenCV feature matching — with a choice of engine
 
 ---
 
-## Requirements
+## What's new in v3
 
-| Requirement | Notes |
-|---|---|
-| Python 3.9+ | `python3 --version` |
-| Tesseract OCR | Auto-installed by `install.sh` |
-| libgl1 (Linux) | Auto-installed by `install.sh` |
+| | v2 | v3 |
+|---|---|---|
+| Engines | ORB only | **ORB + SIFT** (separate endpoints) |
+| Descriptor computation | On every `/detect` call | **Once at registration**, cached to `.npy` |
+| Detection speed | Degrades with library size | **Constant** regardless of library size |
+| `opencv` package | `opencv-python-headless` | `opencv-contrib-python-headless` |
 
 ---
 
@@ -34,25 +35,23 @@ Interactive docs → **http://localhost:8000/docs**
 ```bash
 curl -X POST http://localhost:8000/ocr -F "file=@photo.png"
 ```
-```json
-{ "filename": "photo.png", "text": "Hello World", "character_count": 11 }
-```
 
 ### `POST /ocr/batch`
 ```bash
-curl -X POST http://localhost:8000/ocr/batch \
-     -F "files=@img1.png" -F "files=@img2.jpg"
+curl -X POST http://localhost:8000/ocr/batch -F "files=@a.png" -F "files=@b.jpg"
 ```
 
 ---
 
-## Logo Detection Endpoints
+## Logo Management
 
-The detector works purely on **visual shape features** — it ignores text entirely and focuses on the graphic structure of logos. It uses **ORB feature matching** with **Lowe's ratio test**, which handles logos at different scales, rotations, and with moderate perspective distortion.
+### `POST /logos/register`
 
----
+Uploads a reference logo. At registration time:
+1. ORB descriptors are extracted and saved as `{id}_orb.npy`
+2. SIFT descriptors are extracted and saved as `{id}_sift.npy`
 
-### `POST /logos/register` — Upload a reference logo
+No feature extraction happens at detection time — only file reads.
 
 ```bash
 curl -X POST "http://localhost:8000/logos/register?name=Acme+Corp" \
@@ -63,44 +62,51 @@ curl -X POST "http://localhost:8000/logos/register?name=Acme+Corp" \
 {
   "logo_id": "d3f1a2b4-...",
   "name": "Acme Corp",
-  "feature_count": 342,
-  "message": "Logo registered successfully."
+  "orb_features": 521,
+  "sift_features": 384,
+  "message": "Logo registered and descriptors cached for both ORB and SIFT."
 }
 ```
 
-> **Tips for best results:**
-> - Use a clean, isolated version of the logo (white or transparent background)
-> - Minimum 100×100 px recommended
-> - Avoid blurry or heavily JPEG-compressed images
-
----
-
-### `GET /logos` — List registered logos
-
+### `GET /logos`
 ```bash
 curl http://localhost:8000/logos
 ```
 
----
-
-### `DELETE /logos/{logo_id}` — Remove a logo
-
+### `DELETE /logos/{logo_id}`
+Removes the logo image and **both** `.npy` cache files.
 ```bash
 curl -X DELETE http://localhost:8000/logos/d3f1a2b4-...
 ```
 
 ---
 
-### `POST /logos/detect` — Find logos in an image
+## Logo Detection
+
+Both endpoints return the same response shape. Choose based on your needs:
+
+| | `POST /logos/detect/orb` | `POST /logos/detect/sift` |
+|---|---|---|
+| Speed | ⚡ Fast | 🐢 Slower |
+| Accuracy | Good | Excellent |
+| Best for | High volume / real-time | Quality-critical |
+| Default threshold | 15 | 10 |
+| Descriptor type | Binary (Hamming) | Float (L2) |
 
 ```bash
-curl -X POST "http://localhost:8000/logos/detect?threshold=15" \
-     -F "file=@document_photo.jpg"
+# ORB — fast
+curl -X POST "http://localhost:8000/logos/detect/orb" \
+     -F "file=@document.jpg"
+
+# SIFT — accurate
+curl -X POST "http://localhost:8000/logos/detect/sift?threshold=8" \
+     -F "file=@document.jpg"
 ```
 
 ```json
 {
-  "filename": "document_photo.jpg",
+  "filename": "document.jpg",
+  "engine": "sift",
   "logos_checked": 3,
   "logos_detected": 1,
   "results": [
@@ -108,67 +114,66 @@ curl -X POST "http://localhost:8000/logos/detect?threshold=15" \
       "logo_id": "d3f1a2b4-...",
       "name": "Acme Corp",
       "detected": true,
-      "match_count": 47,
-      "threshold": 15,
-      "confidence": 100.0
+      "match_count": 31,
+      "threshold": 10,
+      "confidence": 100.0,
+      "engine": "sift"
     },
     {
       "logo_id": "e9c2b1a0-...",
       "name": "Other Corp",
       "detected": false,
-      "match_count": 3,
-      "threshold": 15,
-      "confidence": 20.0
+      "match_count": 2,
+      "threshold": 10,
+      "confidence": 20.0,
+      "engine": "sift"
     }
   ]
 }
 ```
 
-#### Tuning the `threshold` parameter
+### Threshold tuning guide
 
-| Scenario | Recommended threshold |
+| Scenario | Recommended |
 |---|---|
-| Logo is large and clearly visible | `15–20` (default) |
-| Logo is small or partially cropped | `8–12` |
-| Logo appears at a strong angle | `8–12` |
-| Many false positives | Increase to `25–40` |
+| Large, clearly visible logo | `15–20` (ORB) / `10–15` (SIFT) |
+| Small or partially cropped | `8–12` (ORB) / `6–8` (SIFT) |
+| Strong angle / perspective | `8–12` (ORB) / `6–8` (SIFT) |
+| Too many false positives | Increase by `+5–10` |
 
 ---
 
-## How Logo Detection Works
+## How Descriptor Caching Works
 
 ```
-Query image                Reference logos
-     │                          │
-     ▼                          ▼
- ORB keypoints             ORB keypoints
- + descriptors             + descriptors
-          \                   /
-           ▼                 ▼
-         BFMatcher (Hamming distance)
-                   │
-          Lowe's ratio test
-          (filters ambiguous matches)
-                   │
-          good_matches >= threshold?
-                   │
-            YES → detected ✓
-            NO  → not found ✗
+Registration (once)               Detection (every call)
+──────────────────                ──────────────────────────────
+Upload logo.png                   Upload query photo
+       │                                   │
+  ORB extraction ──→ id_orb.npy            │
+  SIFT extraction ──→ id_sift.npy          ▼
+       │                          Extract query descriptors
+  Save image                               │
+  Save index.json                  Load id_orb.npy  ← disk read only
+                                           │
+                                    kNN match + ratio test
+                                           │
+                                    match_count ≥ threshold?
 ```
+
+The `.npy` files are binary NumPy arrays — loading them is a simple memory-map
+operation, orders of magnitude faster than re-running ORB or SIFT on the
+reference image.
 
 ---
 
 ## Configuration
 
-| Variable | Default | Description |
-|---|---|---|
-| `HOST` | `0.0.0.0` | Bind address |
-| `PORT` | `8000` | TCP port |
-| `WORKERS` | `1` | Uvicorn worker processes |
-| `LOG_LEVEL` | `info` | Log verbosity |
-| `RELOAD` | `false` | Hot-reload (dev mode) |
+```bash
+HOST=0.0.0.0  PORT=8000  WORKERS=1  LOG_LEVEL=info  RELOAD=false
+```
 
 ```bash
-PORT=9000 WORKERS=4 ./start.sh
-RELOAD=true ./start.sh
+PORT=9000 WORKERS=4 ./start.sh    # production
+RELOAD=true ./start.sh            # development
 ```

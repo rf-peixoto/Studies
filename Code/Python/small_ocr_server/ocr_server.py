@@ -1,9 +1,27 @@
+"""
+OCR + Logo Detection API  — v3.0.0
+────────────────────────────────────────────────────────────────────────────────
+Features
+  • OCR  : extract text from JPG / JPEG / PNG images (single or batch)
+  • Logos: register reference logos, auto-compute & cache ORB + SIFT descriptors
+  • Detect with ORB  → POST /logos/detect/orb   (fast, patent-free)
+  • Detect with SIFT → POST /logos/detect/sift  (slower, more accurate)
+
+Descriptor caching
+  At registration time both ORB and SIFT descriptors are computed once and
+  saved as .npy files inside logo_store/.  Detection calls load these files
+  directly — no re-extraction ever happens, so detection speed stays constant
+  regardless of how large your logo library grows.
+────────────────────────────────────────────────────────────────────────────────
+"""
+
 import io
 import json
 import logging
 import uuid
 from datetime import datetime
 from pathlib import Path
+from typing import Literal
 
 import cv2
 import numpy as np
@@ -19,7 +37,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# ── Paths ──────────────────────────────────────────────────────────────────────
+# ── Storage paths ──────────────────────────────────────────────────────────────
 LOGO_STORE_DIR  = Path("logo_store")
 LOGO_INDEX_FILE = LOGO_STORE_DIR / "index.json"
 LOGO_STORE_DIR.mkdir(exist_ok=True)
@@ -27,25 +45,109 @@ LOGO_STORE_DIR.mkdir(exist_ok=True)
 # ── App ────────────────────────────────────────────────────────────────────────
 app = FastAPI(
     title="OCR + Logo Detection API",
-    description=(
-        "Extracts text from images (OCR) and detects client logos "
-        "using ORB feature matching."
-    ),
-    version="2.0.0",
+    description=__doc__,
+    version="3.0.0",
 )
 
 ALLOWED_CONTENT_TYPES = {"image/jpeg", "image/jpg", "image/png"}
 ALLOWED_EXTENSIONS    = {".jpg", ".jpeg", ".png"}
 
-# ── Tuning constants ──────────────────────────────────────────────────────────
-# Minimum good feature matches to consider a logo "detected"
-MIN_MATCH_COUNT = 15
-# Lowe's ratio-test threshold  (lower = stricter matching)
-LOWE_RATIO      = 0.75
+# ── Matching tuning ────────────────────────────────────────────────────────────
+ORB_MIN_MATCHES  = 15     # good-match floor for ORB
+SIFT_MIN_MATCHES = 10     # SIFT produces fewer but higher-quality matches
+LOWE_RATIO       = 0.75   # Lowe's ratio-test threshold
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# Helpers — shared
+# Feature engines
+# ══════════════════════════════════════════════════════════════════════════════
+
+# ORB — fast, patent-free, binary descriptors → Hamming distance
+_orb    = cv2.ORB_create(nfeatures=1000)
+_bf_orb = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=False)
+
+# SIFT — slower, float descriptors, superior scale/rotation invariance → L2
+_sift    = cv2.SIFT_create()
+_bf_sift = cv2.BFMatcher(cv2.NORM_L2, crossCheck=False)
+
+
+def _bytes_to_gray(image_bytes: bytes) -> np.ndarray:
+    """Decode raw image bytes to a grayscale OpenCV array."""
+    arr = np.frombuffer(image_bytes, dtype=np.uint8)
+    img = cv2.imdecode(arr, cv2.IMREAD_COLOR)
+    if img is None:
+        raise HTTPException(status_code=422, detail="Could not decode image.")
+    return cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+
+def _extract_orb(gray: np.ndarray) -> np.ndarray | None:
+    """Return ORB descriptors (uint8) or None if no keypoints found."""
+    _, des = _orb.detectAndCompute(gray, None)
+    return des
+
+
+def _extract_sift(gray: np.ndarray) -> np.ndarray | None:
+    """Return SIFT descriptors (float32) or None if no keypoints found."""
+    _, des = _sift.detectAndCompute(gray, None)
+    return des
+
+
+def _good_matches(des_query: np.ndarray, des_ref: np.ndarray, matcher) -> int:
+    """
+    Apply kNN matching + Lowe's ratio test.
+    Returns the count of good matches, or 0 on failure.
+    """
+    if des_query is None or des_ref is None:
+        return 0
+    if len(des_query) < 2 or len(des_ref) < 2:
+        return 0
+
+    matches = matcher.knnMatch(des_ref, des_query, k=2)
+    good = [
+        m for pair in matches
+        if len(pair) == 2
+        for m, n in [pair]
+        if m.distance < LOWE_RATIO * n.distance
+    ]
+    return len(good)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Descriptor cache  (disk-backed .npy files)
+# ══════════════════════════════════════════════════════════════════════════════
+
+def _cache_path(logo_id: str, engine: Literal["orb", "sift"]) -> Path:
+    return LOGO_STORE_DIR / f"{logo_id}_{engine}.npy"
+
+
+def _save_descriptors(logo_id: str, engine: Literal["orb", "sift"],
+                      des: np.ndarray) -> None:
+    np.save(str(_cache_path(logo_id, engine)), des)
+
+
+def _load_descriptors(logo_id: str, engine: Literal["orb", "sift"]) -> np.ndarray | None:
+    path = _cache_path(logo_id, engine)
+    if not path.exists():
+        return None
+    return np.load(str(path))
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Logo index helpers
+# ══════════════════════════════════════════════════════════════════════════════
+
+def _load_index() -> dict:
+    if LOGO_INDEX_FILE.exists():
+        return json.loads(LOGO_INDEX_FILE.read_text())
+    return {}
+
+
+def _save_index(index: dict) -> None:
+    LOGO_INDEX_FILE.write_text(json.dumps(index, indent=2))
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Image validation
 # ══════════════════════════════════════════════════════════════════════════════
 
 def _validate_image(file: UploadFile) -> None:
@@ -62,76 +164,72 @@ def _validate_image(file: UploadFile) -> None:
         )
 
 
-def _bytes_to_cv2_gray(image_bytes: bytes) -> np.ndarray:
-    """Decode raw image bytes into an OpenCV grayscale array."""
-    arr = np.frombuffer(image_bytes, dtype=np.uint8)
-    img = cv2.imdecode(arr, cv2.IMREAD_COLOR)
-    if img is None:
-        raise HTTPException(status_code=422, detail="Could not decode image.")
-    return cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-
-
 # ══════════════════════════════════════════════════════════════════════════════
-# Logo index — persists metadata across restarts
+# Detection core — shared by both /detect/orb and /detect/sift
 # ══════════════════════════════════════════════════════════════════════════════
 
-def _load_index() -> dict:
-    if LOGO_INDEX_FILE.exists():
-        return json.loads(LOGO_INDEX_FILE.read_text())
-    return {}
-
-
-def _save_index(index: dict) -> None:
-    LOGO_INDEX_FILE.write_text(json.dumps(index, indent=2))
-
-
-# ══════════════════════════════════════════════════════════════════════════════
-# ORB Feature Engine
-#
-# ORB (Oriented FAST and Rotated BRIEF) is:
-#  - Patent-free (unlike SIFT/SURF)
-#  - Fast enough for real-time use
-#  - Robust to scale, rotation, and moderate perspective changes
-# ══════════════════════════════════════════════════════════════════════════════
-
-_orb = cv2.ORB_create(nfeatures=1000)
-
-# BFMatcher with Hamming distance — correct for ORB binary descriptors.
-_bf  = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=False)
-
-
-def _compute_descriptors(gray: np.ndarray):
-    """Return (keypoints, descriptors) for a grayscale image."""
-    return _orb.detectAndCompute(gray, None)
-
-
-def _count_good_matches(des_query: np.ndarray, des_ref: np.ndarray) -> int:
+def _run_detection(
+    query_des:  np.ndarray,
+    index:      dict,
+    engine:     Literal["orb", "sift"],
+    threshold:  int,
+    matcher,
+) -> list[dict]:
     """
-    Apply Lowe's ratio test and return the count of good feature matches.
-    Returns 0 when either descriptor set is empty or too small.
+    Compare query descriptors against every cached reference descriptor.
+    Returns a list of result dicts sorted by detected-first / match-count desc.
     """
-    if des_query is None or des_ref is None:
-        return 0
-    if len(des_query) < 2 or len(des_ref) < 2:
-        return 0
+    results = []
 
-    matches = _bf.knnMatch(des_ref, des_query, k=2)
+    for logo_id, meta in index.items():
+        ref_des = _load_descriptors(logo_id, engine)
 
-    good = [
-        m for pair in matches
-        if len(pair) == 2
-        for m, n in [pair]
-        if m.distance < LOWE_RATIO * n.distance
-    ]
-    return len(good)
+        if ref_des is None:
+            logger.warning(
+                "No %s cache for logo '%s' (%s) — recomputing from image.",
+                engine.upper(), meta["name"], logo_id,
+            )
+            logo_path = LOGO_STORE_DIR / meta["filename"]
+            if not logo_path.exists():
+                logger.error("Logo image missing for %s — skipping.", logo_id)
+                continue
+            gray    = _bytes_to_gray(logo_path.read_bytes())
+            ref_des = _extract_orb(gray) if engine == "orb" else _extract_sift(gray)
+            if ref_des is not None:
+                _save_descriptors(logo_id, engine, ref_des)
+
+        n_good   = _good_matches(query_des, ref_des, matcher)
+        detected = n_good >= threshold
+
+        logger.info(
+            "[%s] %-30s %3d matches (threshold=%d) → %s",
+            engine.upper(), f"'{meta['name']}':", n_good, threshold,
+            "DETECTED" if detected else "not found",
+        )
+
+        results.append(
+            {
+                "logo_id":     logo_id,
+                "name":        meta["name"],
+                "detected":    detected,
+                "match_count": n_good,
+                "threshold":   threshold,
+                "confidence":  round(min(n_good / max(threshold, 1), 1.0) * 100, 1),
+                "engine":      engine,
+            }
+        )
+
+    results.sort(key=lambda r: (not r["detected"], -r["match_count"]))
+    return results
 
 
 # ══════════════════════════════════════════════════════════════════════════════
 # Routes — Health
 # ══════════════════════════════════════════════════════════════════════════════
 
-@app.get("/health", summary="Health check")
+@app.get("/health", summary="Health check", tags=["General"])
 def health():
+    """Returns 200 OK when the service is up."""
     return {"status": "ok"}
 
 
@@ -146,226 +244,276 @@ def _run_ocr(image_bytes: bytes) -> str:
     return pytesseract.image_to_string(image).strip()
 
 
-@app.post("/ocr", summary="Extract text from an image")
+@app.post("/ocr", summary="Extract text from an image", tags=["OCR"])
 async def ocr_endpoint(file: UploadFile = File(...)):
     """Upload a JPG/PNG and receive the extracted text."""
     _validate_image(file)
-    image_bytes = await file.read()
-    if not image_bytes:
+    raw = await file.read()
+    if not raw:
         raise HTTPException(status_code=422, detail="Uploaded file is empty.")
-    text = _run_ocr(image_bytes)
-    logger.info("OCR: '%s' → %d chars", file.filename, len(text))
-    return JSONResponse({"filename": file.filename, "text": text, "character_count": len(text)})
+    text = _run_ocr(raw)
+    logger.info("OCR '%s' → %d chars", file.filename, len(text))
+    return {"filename": file.filename, "text": text, "character_count": len(text)}
 
 
-@app.post("/ocr/batch", summary="Extract text from multiple images")
+@app.post("/ocr/batch", summary="Extract text from multiple images", tags=["OCR"])
 async def ocr_batch_endpoint(files: list[UploadFile] = File(...)):
-    """Upload multiple images and get OCR results for each."""
+    """Upload multiple images and receive OCR results for each."""
     results = []
     for file in files:
         try:
             _validate_image(file)
             text = _run_ocr(await file.read())
             results.append({"filename": file.filename, "text": text,
-                            "character_count": len(text), "error": None})
+                             "character_count": len(text), "error": None})
         except HTTPException as exc:
             results.append({"filename": file.filename, "text": None, "error": exc.detail})
-    return JSONResponse({"results": results})
+    return {"results": results}
 
 
 # ══════════════════════════════════════════════════════════════════════════════
 # Routes — Logo Management
 # ══════════════════════════════════════════════════════════════════════════════
 
-@app.post("/logos/register", summary="Register a reference logo", status_code=201)
+@app.post(
+    "/logos/register",
+    summary="Register a reference logo",
+    status_code=201,
+    tags=["Logo Management"],
+)
 async def register_logo(
     file: UploadFile = File(...),
     name: str        = "",
 ):
     """
-    Upload a clean reference logo image to use as a detection template.
+    Upload a clean reference logo image.
 
-    - **name** — human-friendly label (e.g. `"Acme Corp"`). Defaults to filename stem.
+    **What happens at registration:**
+    - Both **ORB** and **SIFT** descriptors are computed immediately and stored
+      as `.npy` binary files on disk.
+    - Detection calls load these cached files — no re-extraction ever occurs.
 
-    Returns a `logo_id` that you will see in `/logos/detect` results.
-
-    **Tips for best results:**
-    - Use a clean, isolated version of the logo (transparent or white background).
-    - Minimum size of 100×100 px recommended.
-    - Avoid heavily compressed or blurry images.
+    **Tips for best accuracy:**
+    - Preferred format: **PNG** (lossless, no compression artefacts).
+    - Recommended size: **300–500 px** on the longest side.
+    - Use an isolated logo on a white or transparent background.
     """
     _validate_image(file)
-    image_bytes = await file.read()
-    if not image_bytes:
+    raw = await file.read()
+    if not raw:
         raise HTTPException(status_code=422, detail="Uploaded file is empty.")
 
-    # Verify the image has enough detectable features before saving
-    gray = _bytes_to_cv2_gray(image_bytes)
-    _, des = _compute_descriptors(gray)
+    gray     = _bytes_to_gray(raw)
+    orb_des  = _extract_orb(gray)
+    sift_des = _extract_sift(gray)
 
-    if des is None or len(des) == 0:
+    if orb_des is None and sift_des is None:
         raise HTTPException(
             status_code=422,
             detail=(
-                "No visual features could be extracted from this logo. "
-                "Make sure it has distinct shapes/edges and is not too small or blurry."
+                "No visual features could be extracted. "
+                "Ensure the logo is at least 100×100 px, not blurry, and has distinct edges."
             ),
         )
 
     logo_id   = str(uuid.uuid4())
     ext       = Path(file.filename or "logo.png").suffix.lower() or ".png"
-    save_path = LOGO_STORE_DIR / f"{logo_id}{ext}"
-    save_path.write_bytes(image_bytes)
+    img_path  = LOGO_STORE_DIR / f"{logo_id}{ext}"
+    img_path.write_bytes(raw)
 
+    # ── Cache descriptors ──────────────────────────────────────────────────────
+    orb_count  = 0
+    sift_count = 0
+
+    if orb_des is not None:
+        _save_descriptors(logo_id, "orb", orb_des)
+        orb_count = int(len(orb_des))
+
+    if sift_des is not None:
+        _save_descriptors(logo_id, "sift", sift_des)
+        sift_count = int(len(sift_des))
+
+    # ── Persist metadata ───────────────────────────────────────────────────────
     logo_name = name.strip() or Path(file.filename or "").stem or logo_id
 
-    index = _load_index()
-    index[logo_id] = {
+    entry = {
         "id":            logo_id,
         "name":          logo_name,
-        "filename":      save_path.name,
+        "filename":      img_path.name,
         "original_file": file.filename,
-        "feature_count": int(len(des)),
+        "orb_features":  orb_count,
+        "sift_features": sift_count,
         "registered_at": datetime.utcnow().isoformat() + "Z",
     }
+
+    index = _load_index()
+    index[logo_id] = entry
     _save_index(index)
 
-    logger.info("Registered logo '%s' — %d features, id: %s", logo_name, len(des), logo_id)
+    logger.info(
+        "Registered logo '%s' — ORB: %d features, SIFT: %d features, id: %s",
+        logo_name, orb_count, sift_count, logo_id,
+    )
 
     return {
         "logo_id":       logo_id,
         "name":          logo_name,
-        "feature_count": int(len(des)),
-        "message":       "Logo registered successfully.",
+        "orb_features":  orb_count,
+        "sift_features": sift_count,
+        "message":       "Logo registered and descriptors cached for both ORB and SIFT.",
     }
 
 
-@app.get("/logos", summary="List all registered logos")
+@app.get("/logos", summary="List all registered logos", tags=["Logo Management"])
 def list_logos():
-    """Returns every logo currently registered for detection."""
+    """Returns every logo currently registered, including their cached feature counts."""
     index = _load_index()
     return {"count": len(index), "logos": list(index.values())}
 
 
-@app.delete("/logos/{logo_id}", summary="Remove a registered logo")
+@app.delete("/logos/{logo_id}", summary="Remove a registered logo", tags=["Logo Management"])
 def delete_logo(logo_id: str):
-    """Delete a logo by its `logo_id`."""
+    """
+    Delete a logo and all its associated files (image + ORB cache + SIFT cache).
+    """
     index = _load_index()
     if logo_id not in index:
         raise HTTPException(status_code=404, detail=f"Logo '{logo_id}' not found.")
 
-    entry     = index.pop(logo_id)
-    logo_path = LOGO_STORE_DIR / entry["filename"]
-    if logo_path.exists():
-        logo_path.unlink()
+    entry = index.pop(logo_id)
+
+    for path in [
+        LOGO_STORE_DIR / entry["filename"],
+        _cache_path(logo_id, "orb"),
+        _cache_path(logo_id, "sift"),
+    ]:
+        if path.exists():
+            path.unlink()
 
     _save_index(index)
-    logger.info("Deleted logo '%s' (%s)", entry["name"], logo_id)
-    return {"message": f"Logo '{entry['name']}' deleted successfully."}
+    logger.info("Deleted logo '%s' (%s) and its descriptor caches.", entry["name"], logo_id)
+    return {"message": f"Logo '{entry['name']}' and all cached descriptors deleted."}
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# Routes — Logo Detection
+# Routes — Logo Detection  (ORB)
 # ══════════════════════════════════════════════════════════════════════════════
 
-@app.post("/logos/detect", summary="Detect registered logos in an image")
-async def detect_logos(
+@app.post(
+    "/logos/detect/orb",
+    summary="Detect logos — ORB engine (fast)",
+    tags=["Logo Detection"],
+)
+async def detect_logos_orb(
     file:      UploadFile = File(...),
-    threshold: int        = MIN_MATCH_COUNT,
+    threshold: int        = ORB_MIN_MATCHES,
 ):
     """
-    Upload any image and find which of your registered logos appear in it.
+    Detect registered logos using the **ORB** feature matcher.
 
-    The detector works **purely on visual shape features** — it intentionally
-    ignores text and focuses on graphic elements like shapes, symbols and colour
-    gradients that make up a logo.
-
-    ### How it works
-    1. ORB extracts keypoints and binary descriptors from both the query image
-       and every reference logo.
-    2. A Brute-Force matcher pairs descriptors, and Lowe's ratio test filters
-       out ambiguous matches.
-    3. If the number of surviving matches meets `threshold`, the logo is marked
-       as **detected**.
-
-    ### Parameters
-    - **threshold** — minimum good matches required (default `15`).  
-      Lower → more sensitive (may cause false positives).  
-      Higher → stricter (may miss partially visible logos).
-
-    ### Response fields
-    | Field | Description |
+    | Property | Detail |
     |---|---|
-    | `detected` | `true` if `match_count >= threshold` |
-    | `match_count` | number of good feature matches found |
-    | `confidence` | `match_count / threshold` capped at 100 % |
+    | Speed | ⚡ Fast — binary descriptors + Hamming distance |
+    | Accuracy | Good for clean, high-contrast logos |
+    | Best for | Real-time / high-volume scenarios |
+    | Default threshold | `15` good matches |
+
+    ORB descriptors are loaded from the pre-computed cache — no re-extraction
+    happens at detection time.
     """
     _validate_image(file)
-    image_bytes = await file.read()
-    if not image_bytes:
+    raw = await file.read()
+    if not raw:
         raise HTTPException(status_code=422, detail="Uploaded file is empty.")
 
     index = _load_index()
     if not index:
         raise HTTPException(
             status_code=404,
-            detail="No logos registered yet. Use POST /logos/register first.",
+            detail="No logos registered. Use POST /logos/register first.",
         )
 
-    # Compute query descriptors once — reused for every logo comparison
-    query_gray   = _bytes_to_cv2_gray(image_bytes)
-    _, query_des = _compute_descriptors(query_gray)
-
+    query_des = _extract_orb(_bytes_to_gray(raw))
     if query_des is None or len(query_des) == 0:
         raise HTTPException(
             status_code=422,
-            detail="No visual features found in the query image. Try a higher-resolution photo.",
+            detail="No ORB features found in the query image. Try a higher-resolution photo.",
         )
 
-    results = []
-    for logo_id, meta in index.items():
-        logo_path = LOGO_STORE_DIR / meta["filename"]
-        if not logo_path.exists():
-            logger.warning("Missing logo file for id %s — skipping.", logo_id)
-            continue
-
-        ref_gray     = _bytes_to_cv2_gray(logo_path.read_bytes())
-        _, ref_des   = _compute_descriptors(ref_gray)
-        good_matches = _count_good_matches(query_des, ref_des)
-        detected     = good_matches >= threshold
-
-        logger.info(
-            "Logo %-30s %3d matches (threshold=%d) → %s",
-            f"'{meta['name']}':", good_matches, threshold,
-            "DETECTED" if detected else "not found",
-        )
-
-        results.append(
-            {
-                "logo_id":     logo_id,
-                "name":        meta["name"],
-                "detected":    detected,
-                "match_count": good_matches,
-                "threshold":   threshold,
-                # confidence: percentage relative to threshold, capped at 100
-                "confidence":  round(min(good_matches / max(threshold, 1), 1.0) * 100, 1),
-            }
-        )
-
-    # Sort: detected logos first, then by descending match count
-    results.sort(key=lambda r: (not r["detected"], -r["match_count"]))
-
+    results        = _run_detection(query_des, index, "orb", threshold, _bf_orb)
     detected_count = sum(1 for r in results if r["detected"])
+
     logger.info(
-        "Detection complete — '%s': %d/%d logos detected.",
+        "[ORB] Detection on '%s': %d/%d logos detected.",
         file.filename, detected_count, len(results),
     )
 
-    return JSONResponse(
-        {
-            "filename":       file.filename,
-            "logos_checked":  len(results),
-            "logos_detected": detected_count,
-            "results":        results,
-        }
+    return JSONResponse({
+        "filename":       file.filename,
+        "engine":         "orb",
+        "logos_checked":  len(results),
+        "logos_detected": detected_count,
+        "results":        results,
+    })
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Routes — Logo Detection  (SIFT)
+# ══════════════════════════════════════════════════════════════════════════════
+
+@app.post(
+    "/logos/detect/sift",
+    summary="Detect logos — SIFT engine (accurate)",
+    tags=["Logo Detection"],
+)
+async def detect_logos_sift(
+    file:      UploadFile = File(...),
+    threshold: int        = SIFT_MIN_MATCHES,
+):
+    """
+    Detect registered logos using the **SIFT** feature matcher.
+
+    | Property | Detail |
+    |---|---|
+    | Speed | 🐢 Slower — float descriptors + L2 distance |
+    | Accuracy | Excellent — handles scale, rotation, lighting changes |
+    | Best for | Quality-critical or low-volume scenarios |
+    | Default threshold | `10` good matches (SIFT matches are higher quality) |
+
+    SIFT descriptors are loaded from the pre-computed cache — no re-extraction
+    happens at detection time.
+    """
+    _validate_image(file)
+    raw = await file.read()
+    if not raw:
+        raise HTTPException(status_code=422, detail="Uploaded file is empty.")
+
+    index = _load_index()
+    if not index:
+        raise HTTPException(
+            status_code=404,
+            detail="No logos registered. Use POST /logos/register first.",
+        )
+
+    query_des = _extract_sift(_bytes_to_gray(raw))
+    if query_des is None or len(query_des) == 0:
+        raise HTTPException(
+            status_code=422,
+            detail="No SIFT features found in the query image. Try a higher-resolution photo.",
+        )
+
+    results        = _run_detection(query_des, index, "sift", threshold, _bf_sift)
+    detected_count = sum(1 for r in results if r["detected"])
+
+    logger.info(
+        "[SIFT] Detection on '%s': %d/%d logos detected.",
+        file.filename, detected_count, len(results),
     )
+
+    return JSONResponse({
+        "filename":       file.filename,
+        "engine":         "sift",
+        "logos_checked":  len(results),
+        "logos_detected": detected_count,
+        "results":        results,
+    })
