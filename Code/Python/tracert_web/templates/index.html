@@ -1,0 +1,1258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NETRECON // PATH INTELLIGENCE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+/* ── Reset & Root ───────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --void:         #030810;
+  --deep:         #060f1e;
+  --panel:        rgba(4, 18, 38, 0.92);
+  --panel-hover:  rgba(0, 229, 255, 0.04);
+
+  --cyan:   #00e5ff;
+  --cyan2:  #00b8d4;
+  --pink:   #ff2a6d;
+  --green:  #05ffa1;
+  --amber:  #ffb700;
+  --red:    #ff3355;
+  --blue:   #4d9fff;
+  --purple: #c060ff;
+
+  --b0: rgba(0,229,255,0.08);
+  --b1: rgba(0,229,255,0.18);
+  --b2: rgba(0,229,255,0.45);
+
+  --text:   #9ec8dc;
+  --text2:  #c8e8f5;
+  --dim:    #1e3a4a;
+  --dim2:   #2a4f64;
+
+  --font-hud:  'Orbitron', monospace;
+  --font-data: 'JetBrains Mono', monospace;
+
+  /* hop type colors */
+  --type-gateway:  #05ffa1;
+  --type-isp:      #00e5ff;
+  --type-backbone: #4d9fff;
+  --type-cdn:      #c060ff;
+  --type-cloud:    #7b6bff;
+  --type-hosting:  #ffb700;
+  --type-proxy:    #ff8c00;
+  --type-transit:  #2a7a8a;
+  --type-target:   #ff2a6d;
+  --type-timeout:  #1a3040;
+}
+
+/* ── Base ───────────────────────────────────────────────────────── */
+html, body {
+  background: var(--void);
+  color: var(--text);
+  font-family: var(--font-data);
+  font-size: 13px;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Grid background */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(0,229,255,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,229,255,0.03) 1px, transparent 1px);
+  background-size: 48px 48px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Scanlines */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 3px,
+    rgba(0,0,0,0.18) 3px,
+    rgba(0,0,0,0.18) 4px
+  );
+  pointer-events: none;
+  z-index: 999;
+}
+
+/* ── Layout shell ───────────────────────────────────────────────── */
+.shell {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ── HEADER ─────────────────────────────────────────────────────── */
+.header {
+  flex-shrink: 0;
+  padding: 14px 24px 0;
+  border-bottom: 1px solid var(--b0);
+}
+
+.header-top {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 12px;
+}
+
+/* Logo */
+.logo {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.logo-main {
+  font-family: var(--font-hud);
+  font-size: 20px;
+  font-weight: 900;
+  color: var(--cyan);
+  letter-spacing: 0.12em;
+  line-height: 1;
+  text-shadow: 0 0 20px rgba(0,229,255,0.5);
+}
+
+.logo-slash { color: var(--dim2); font-size: 18px; }
+
+.logo-sub {
+  font-family: var(--font-hud);
+  font-size: 9px;
+  font-weight: 400;
+  color: var(--dim2);
+  letter-spacing: 0.25em;
+  margin-top: 2px;
+}
+
+/* Input row */
+.input-row {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.input-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--b1);
+  background: rgba(0,229,255,0.03);
+  clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+  transition: border-color 0.15s;
+}
+
+.input-wrap:focus-within {
+  border-color: var(--b2);
+  background: rgba(0,229,255,0.06);
+}
+
+.input-prefix {
+  padding: 0 10px;
+  font-family: var(--font-hud);
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--cyan2);
+  letter-spacing: 0.18em;
+  white-space: nowrap;
+  border-right: 1px solid var(--b1);
+}
+
+.target-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  padding: 9px 12px;
+  color: var(--text2);
+  font-family: var(--font-data);
+  font-size: 13px;
+  font-weight: 500;
+  outline: none;
+  caret-color: var(--cyan);
+  letter-spacing: 0.04em;
+}
+
+.target-input::placeholder { color: var(--dim2); font-weight: 300; }
+.target-input:disabled { opacity: 0.5; }
+
+.btn {
+  font-family: var(--font-hud);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  padding: 9px 16px;
+  border: 1px solid;
+  cursor: pointer;
+  text-transform: uppercase;
+  transition: all 0.12s;
+  background: transparent;
+  clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+}
+
+.btn-exec {
+  border-color: var(--cyan2);
+  color: var(--cyan);
+}
+.btn-exec:hover:not(:disabled) {
+  background: rgba(0,229,255,0.12);
+  border-color: var(--cyan);
+  box-shadow: 0 0 12px rgba(0,229,255,0.2), inset 0 0 8px rgba(0,229,255,0.05);
+}
+.btn-exec:disabled { opacity: 0.3; cursor: not-allowed; }
+
+.btn-sec {
+  border-color: var(--dim2);
+  color: var(--dim2);
+  font-size: 9px;
+}
+.btn-sec:hover {
+  border-color: var(--text);
+  color: var(--text);
+}
+
+/* Status bar */
+.status-bar {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 6px 0 10px;
+  font-family: var(--font-hud);
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  color: var(--dim2);
+  overflow: hidden;
+}
+
+.status-dot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--dim2);
+  flex-shrink: 0;
+}
+.status-dot.idle   { background: var(--dim2); }
+.status-dot.active { background: var(--cyan); animation: pulse 1s ease-in-out infinite; }
+.status-dot.done   { background: var(--green); }
+.status-dot.error  { background: var(--red); }
+
+@keyframes pulse {
+  0%,100% { opacity: 1; box-shadow: 0 0 0 0 rgba(0,229,255,0.5); }
+  50%      { opacity: 0.7; box-shadow: 0 0 0 4px rgba(0,229,255,0); }
+}
+
+.status-text { color: var(--text); }
+.status-sep  { color: var(--dim); }
+
+/* ── BODY ───────────────────────────────────────────────────────── */
+.body {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  gap: 1px;
+}
+
+/* Hop list pane */
+.hops-pane {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+  border-right: 1px solid var(--b0);
+}
+
+.pane-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 20px;
+  border-bottom: 1px solid var(--b0);
+  flex-shrink: 0;
+}
+
+.pane-title {
+  font-family: var(--font-hud);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.25em;
+  color: var(--dim2);
+  text-transform: uppercase;
+}
+
+.pane-title-count { color: var(--cyan); margin-left: 8px; }
+
+.pane-actions { display: flex; gap: 6px; }
+
+.hop-list-wrap {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 12px;
+}
+
+.hop-list-wrap::-webkit-scrollbar { width: 3px; }
+.hop-list-wrap::-webkit-scrollbar-track { background: transparent; }
+.hop-list-wrap::-webkit-scrollbar-thumb { background: var(--dim); border-radius: 2px; }
+
+/* ── HOP CARD ───────────────────────────────────────────────────── */
+.hop-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 12px;
+  margin-bottom: 3px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: border-color 0.12s, background 0.12s;
+  clip-path: polygon(0 0, calc(100% - 6px) 0, 100% 6px, 100% 100%, 6px 100%, 0 calc(100% - 6px));
+  animation: cardIn 0.25s ease-out both;
+  position: relative;
+}
+
+.hop-card::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 2px;
+  background: var(--type-color, var(--dim));
+  transition: box-shadow 0.12s;
+}
+
+@keyframes cardIn {
+  from { opacity: 0; transform: translateX(-12px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+.hop-card:hover {
+  border-color: var(--b1);
+  background: var(--panel-hover);
+}
+
+.hop-card.selected {
+  border-color: var(--b2);
+  background: rgba(0,229,255,0.06);
+}
+
+.hop-card.selected::before {
+  box-shadow: 0 0 8px var(--type-color, var(--cyan));
+}
+
+.hop-num {
+  font-family: var(--font-hud);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--dim2);
+  width: 28px;
+  flex-shrink: 0;
+  text-align: right;
+}
+
+.hop-type-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--type-color, var(--dim));
+}
+
+.hop-ip {
+  font-family: var(--font-data);
+  font-size: 13px;
+  font-weight: 500;
+  width: 200px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 0;
+  color: var(--type-color, var(--text2));
+  letter-spacing: 0.04em;
+}
+
+.hop-ip.timeout { color: var(--dim2); font-weight: 300; }
+.hop-ip.v6 { font-size: 11px; letter-spacing: 0.01em; }
+
+.hop-bar-wrap {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.hop-org {
+  font-size: 11px;
+  color: var(--dim2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: 0.02em;
+}
+
+.hop-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.lat-track {
+  flex: 1;
+  height: 3px;
+  background: var(--dim);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.lat-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.4s ease-out;
+  background: var(--type-color, var(--cyan));
+}
+
+.hop-avg {
+  font-family: var(--font-data);
+  font-size: 11px;
+  color: var(--type-color, var(--text));
+  width: 52px;
+  text-align: right;
+  flex-shrink: 0;
+  font-weight: 500;
+}
+
+.hop-badge {
+  font-family: var(--font-hud);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  padding: 2px 6px;
+  border: 1px solid var(--type-color, var(--dim));
+  color: var(--type-color, var(--dim));
+  clip-path: polygon(0 0, calc(100%-4px) 0, 100% 4px, 100% 100%, 4px 100%, 0 calc(100%-4px));
+  flex-shrink: 0;
+  width: 70px;
+  text-align: center;
+}
+
+/* ── DETAIL PANE ────────────────────────────────────────────────── */
+.detail-pane {
+  width: 340px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.detail-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px 16px;
+}
+
+.detail-scroll::-webkit-scrollbar { width: 3px; }
+.detail-scroll::-webkit-scrollbar-track { background: transparent; }
+.detail-scroll::-webkit-scrollbar-thumb { background: var(--dim); }
+
+/* Empty state */
+.detail-empty {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  opacity: 0.3;
+}
+
+.detail-empty-icon {
+  font-family: var(--font-hud);
+  font-size: 32px;
+  color: var(--dim2);
+  letter-spacing: 0.1em;
+}
+
+.detail-empty-text {
+  font-family: var(--font-hud);
+  font-size: 9px;
+  letter-spacing: 0.3em;
+  color: var(--dim2);
+}
+
+/* Detail content */
+.detail-ip-header {
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--b0);
+}
+
+.detail-ip-main {
+  font-family: var(--font-data);
+  font-size: 22px;
+  font-weight: 500;
+  color: var(--type-color, var(--cyan));
+  letter-spacing: 0.06em;
+  margin-bottom: 4px;
+  word-break: break-all;
+  text-shadow: 0 0 12px rgba(0,229,255,0.3);
+}
+
+.detail-ip-sub {
+  font-size: 11px;
+  color: var(--dim2);
+  letter-spacing: 0.06em;
+}
+
+.detail-section {
+  margin-bottom: 14px;
+}
+
+.detail-section-title {
+  font-family: var(--font-hud);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.28em;
+  color: var(--dim2);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--b0);
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 3px 0;
+  gap: 8px;
+}
+
+.detail-label {
+  font-family: var(--font-hud);
+  font-size: 8px;
+  letter-spacing: 0.16em;
+  color: var(--dim2);
+  flex-shrink: 0;
+  padding-top: 1px;
+  text-transform: uppercase;
+}
+
+.detail-val {
+  font-family: var(--font-data);
+  font-size: 12px;
+  color: var(--text2);
+  text-align: right;
+  word-break: break-word;
+}
+
+.detail-val.hi  { color: var(--cyan); }
+.detail-val.good{ color: var(--green); }
+.detail-val.warn{ color: var(--amber); }
+.detail-val.bad { color: var(--red); }
+.detail-val.pur { color: var(--purple); }
+
+/* Probe bars in detail */
+.probe-bars {
+  display: flex;
+  gap: 5px;
+  align-items: flex-end;
+  height: 32px;
+  margin: 6px 0;
+}
+
+.probe-bar-wrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  height: 100%;
+  justify-content: flex-end;
+}
+
+.probe-bar {
+  width: 100%;
+  background: var(--type-color, var(--cyan));
+  opacity: 0.7;
+  border-radius: 1px 1px 0 0;
+  transition: height 0.4s ease-out;
+  min-height: 2px;
+}
+
+.probe-label {
+  font-size: 9px;
+  color: var(--dim2);
+  white-space: nowrap;
+}
+
+/* Flags */
+.flag-badges {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.flag-badge {
+  font-family: var(--font-hud);
+  font-size: 8px;
+  letter-spacing: 0.1em;
+  padding: 2px 6px;
+  border: 1px solid;
+  clip-path: polygon(0 0, calc(100%-3px) 0, 100% 3px, 100% 100%, 3px 100%, 0 calc(100%-3px));
+}
+
+.flag-proxy   { border-color: var(--amber); color: var(--amber); }
+.flag-hosting { border-color: var(--blue);  color: var(--blue); }
+.flag-mobile  { border-color: var(--green); color: var(--green); }
+.flag-private { border-color: var(--green); color: var(--green); }
+
+/* Copy button */
+.copy-btn {
+  font-family: var(--font-hud);
+  font-size: 8px;
+  letter-spacing: 0.15em;
+  padding: 3px 8px;
+  border: 1px solid var(--dim2);
+  color: var(--dim2);
+  background: transparent;
+  cursor: pointer;
+  clip-path: polygon(0 0, calc(100%-4px) 0, 100% 4px, 100% 100%, 4px 100%, 0 calc(100%-4px));
+  transition: all 0.1s;
+}
+.copy-btn:hover { border-color: var(--cyan2); color: var(--cyan); }
+
+/* ── CHART SECTION ──────────────────────────────────────────────── */
+.chart-section {
+  flex-shrink: 0;
+  border-top: 1px solid var(--b0);
+  padding: 10px 20px 0;
+  display: none;
+}
+
+.chart-section.visible { display: block; }
+
+.chart-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.chart-title {
+  font-family: var(--font-hud);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.28em;
+  color: var(--dim2);
+  text-transform: uppercase;
+}
+
+#lat-chart {
+  width: 100%;
+  height: 60px;
+  display: block;
+}
+
+/* ── STATS BAR ──────────────────────────────────────────────────── */
+.stats-bar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: stretch;
+  border-top: 1px solid var(--b0);
+  background: rgba(3,8,16,0.9);
+  overflow: hidden;
+}
+
+.stat-cell {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 6px;
+  border-right: 1px solid var(--b0);
+  gap: 2px;
+}
+
+.stat-cell:last-child { border-right: none; }
+
+.stat-label {
+  font-family: var(--font-hud);
+  font-size: 7px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: var(--dim2);
+  text-transform: uppercase;
+}
+
+.stat-val {
+  font-family: var(--font-hud);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--cyan);
+  letter-spacing: 0.05em;
+  line-height: 1;
+}
+
+.stat-val.green  { color: var(--green); }
+.stat-val.amber  { color: var(--amber); }
+.stat-val.red    { color: var(--red); }
+.stat-val.pink   { color: var(--pink); }
+
+/* ── Misc animations ────────────────────────────────────────────── */
+@keyframes glitch {
+  0%,94%,100% { transform: none; clip-path: none; }
+  95% { transform: skew(-2deg); clip-path: polygon(0 20%, 100% 20%, 100% 40%, 0 40%); color: var(--pink); }
+  97% { transform: skew(1deg) translateX(2px); clip-path: polygon(0 60%, 100% 60%, 100% 80%, 0 80%); color: var(--cyan); }
+}
+
+.logo-main { animation: glitch 6s ease-in-out infinite; }
+
+/* ── Responsive ─────────────────────────────────────────────────── */
+@media (max-width: 860px) {
+  .detail-pane { display: none; }
+}
+
+@media (max-width: 600px) {
+  .header-top { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .stat-label { font-size: 6px; }
+  .stat-val   { font-size: 11px; }
+}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- ── HEADER ─────────────────────────────────────────────────── -->
+  <header class="header">
+    <div class="header-top">
+      <div class="logo">
+        <div>
+          <div class="logo-main">NETRECON</div>
+          <div class="logo-sub">PATH INTELLIGENCE SYSTEM &nbsp;·&nbsp; v2.1</div>
+        </div>
+      </div>
+
+      <div class="input-row">
+        <div class="input-wrap">
+          <span class="input-prefix">TARGET://</span>
+          <input id="target-input" class="target-input" type="text"
+                 placeholder="ip address or domain name"
+                 autocomplete="off" spellcheck="false" />
+        </div>
+        <button id="exec-btn" class="btn btn-exec" onclick="execTrace()">EXECUTE</button>
+        <button class="btn btn-sec" onclick="clearAll()">CLR</button>
+        <button class="btn btn-sec" id="export-btn" onclick="exportResults()" style="display:none">EXPORT</button>
+      </div>
+    </div>
+
+    <div class="status-bar">
+      <div class="status-dot idle" id="status-dot"></div>
+      <span id="status-text" class="status-text">AWAITING TARGET</span>
+      <span class="status-sep">·</span>
+      <span id="status-meta" style="color:var(--dim2)">SYSTEM READY</span>
+    </div>
+  </header>
+
+  <!-- ── BODY ───────────────────────────────────────────────────── -->
+  <div class="body">
+
+    <!-- Hop list pane -->
+    <div class="hops-pane">
+      <div class="pane-header">
+        <div class="pane-title">
+          PATH ANALYSIS
+          <span class="pane-title-count" id="hop-count-label"></span>
+        </div>
+        <div class="pane-actions">
+          <div style="display:flex;gap:16px;font-family:var(--font-hud);font-size:8px;letter-spacing:0.15em;color:var(--dim2)">
+            <span id="legend-fast" style="color:var(--green)">■ FAST</span>
+            <span id="legend-med"  style="color:var(--amber)">■ MED</span>
+            <span id="legend-slow" style="color:var(--red)">■ SLOW</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="hop-list-wrap" id="hop-list">
+        <!-- empty state -->
+        <div id="empty-state" style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:calc(100% - 40px);gap:10px;opacity:0.25;pointer-events:none">
+          <div style="font-family:var(--font-hud);font-size:11px;letter-spacing:0.3em;color:var(--dim2)">NO TRACE DATA</div>
+          <div style="font-size:10px;color:var(--dim2);letter-spacing:0.1em">ENTER A TARGET AND EXECUTE</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Detail pane -->
+    <div class="detail-pane">
+      <div class="pane-header">
+        <div class="pane-title">HOP INTELLIGENCE</div>
+        <button id="copy-ip-btn" class="copy-btn" style="display:none" onclick="copySelectedIp()">COPY IP</button>
+      </div>
+      <div class="detail-scroll" id="detail-pane-content">
+        <div class="detail-empty">
+          <div class="detail-empty-icon">◈</div>
+          <div class="detail-empty-text">SELECT A HOP</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── LATENCY CHART ──────────────────────────────────────────── -->
+  <div class="chart-section" id="chart-section">
+    <div class="chart-header">
+      <span class="chart-title">LATENCY PROFILE — RTT PER HOP (ms)</span>
+      <span id="chart-meta" style="font-family:var(--font-hud);font-size:8px;letter-spacing:0.15em;color:var(--dim2)"></span>
+    </div>
+    <canvas id="lat-chart"></canvas>
+  </div>
+
+  <!-- ── STATS BAR ──────────────────────────────────────────────── -->
+  <div class="stats-bar">
+    <div class="stat-cell"><div class="stat-label">HOPS</div><div class="stat-val" id="s-hops">—</div></div>
+    <div class="stat-cell"><div class="stat-label">AVG RTT</div><div class="stat-val" id="s-avg">—</div></div>
+    <div class="stat-cell"><div class="stat-label">MAX RTT</div><div class="stat-val" id="s-max">—</div></div>
+    <div class="stat-cell"><div class="stat-label">PKT LOSS</div><div class="stat-val" id="s-loss">—</div></div>
+    <div class="stat-cell"><div class="stat-label">COUNTRIES</div><div class="stat-val" id="s-countries">—</div></div>
+    <div class="stat-cell"><div class="stat-label">STATUS</div><div class="stat-val" id="s-status">—</div></div>
+  </div>
+
+</div>
+
+<script>
+"use strict";
+
+// ── Type system ────────────────────────────────────────────────────────────
+const TYPE_COLORS = {
+  GATEWAY:  '#05ffa1',
+  ISP:      '#00e5ff',
+  BACKBONE: '#4d9fff',
+  CDN:      '#c060ff',
+  CLOUD:    '#7b6bff',
+  HOSTING:  '#ffb700',
+  PROXY:    '#ff8c00',
+  TRANSIT:  '#2a7a8a',
+  TARGET:   '#ff2a6d',
+  TIMEOUT:  '#1e3040',
+};
+
+const LAT_COLORS = { fast:'#05ffa1', med:'#ffb700', slow:'#ff3355', none:'#1e3040' };
+
+// ── State ──────────────────────────────────────────────────────────────────
+let hops       = [];   // all hop data objects
+let selectedHop = null;
+let maxAvg      = 1;
+let running     = false;
+
+const $  = id => document.getElementById(id);
+const input = $('target-input');
+input.addEventListener('keydown', e => { if (e.key === 'Enter') execTrace(); });
+
+// ── Execute trace ──────────────────────────────────────────────────────────
+function execTrace() {
+  const target = input.value.trim();
+  if (!target || running) return;
+
+  clearAll(true);
+
+  $('exec-btn').disabled = true;
+  $('target-input').disabled = true;
+  running = true;
+
+  setStatus('active', `TRACING ${target.toUpperCase()}`, 'INITIALIZING PROBE SEQUENCE');
+
+  const es = new EventSource(`/trace?t=${encodeURIComponent(target)}`);
+
+  es.onmessage = ({ data }) => {
+    const msg = JSON.parse(data);
+
+    if (msg.type === 'start') {
+      const ver = msg.ip_version ? ` [IPv${msg.ip_version}]` : '';
+      const resolved = (msg.resolved && msg.resolved !== msg.target) ? ` → ${msg.resolved}` : '';
+      setStatus('active', `TRACING ${msg.target.toUpperCase()}${ver}`, `TARGET LOCKED${resolved} — LAUNCHING ICMP PROBES`);
+    }
+
+    else if (msg.type === 'hop') {
+      const h = msg.data;
+      hops.push(h);
+      if (h.avg) maxAvg = Math.max(maxAvg, h.avg);
+      renderHopCard(h);
+      updateStats();
+      $('hop-count-label').textContent = `· ${hops.length}`;
+      if ($('empty-state')) $('empty-state').style.display = 'none';
+    }
+
+    else if (msg.type === 'retag') {
+      const h = hops.find(x => x.hop === msg.hop);
+      if (h) { h.hop_type = msg.hop_type; refreshCard(h); }
+    }
+
+    else if (msg.type === 'done') {
+      finalize(msg.hops);
+      es.close();
+    }
+
+    else if (msg.type === 'error') {
+      setStatus('error', 'TRACE FAILED', msg.msg.toUpperCase());
+      finalize(0);
+      es.close();
+    }
+  };
+
+  es.onerror = () => {
+    if (running) { setStatus('error', 'STREAM ERROR', 'CONNECTION LOST'); finalize(0); }
+    es.close();
+  };
+}
+
+function finalize(hopCount) {
+  running = false;
+  $('exec-btn').disabled = false;
+  $('target-input').disabled = false;
+  if (hopCount > 0) {
+    const last = hops.filter(h => !h.timeout).pop();
+    setStatus('done',
+      `TRACE COMPLETE — ${hopCount} HOPS`,
+      last ? `FINAL HOP: ${last.ip}` : ''
+    );
+    $('export-btn').style.display = '';
+    updateStats();
+    drawChart();
+  }
+}
+
+// ── Render hop card ────────────────────────────────────────────────────────
+function renderHopCard(h) {
+  const card = document.createElement('div');
+  card.className = 'hop-card';
+  card.id = `hop-card-${h.hop}`;
+  card.style.setProperty('--type-color', TYPE_COLORS[h.hop_type] || TYPE_COLORS.TRANSIT);
+  card.style.animationDelay = '0ms';
+  card.addEventListener('click', () => selectHop(h.hop));
+  card.innerHTML = hopCardHTML(h);
+  $('hop-list').appendChild(card);
+
+  // Animate latency bar fill
+  setTimeout(() => {
+    const fill = card.querySelector('.lat-fill');
+    if (fill && h.avg) {
+      const pct = Math.min(100, (h.avg / Math.max(maxAvg, 1)) * 100);
+      fill.style.width = pct + '%';
+    }
+  }, 50);
+}
+
+function refreshCard(h) {
+  const card = $(`hop-card-${h.hop}`);
+  if (!card) return;
+  const wasSelected = card.classList.contains('selected');
+  card.style.setProperty('--type-color', TYPE_COLORS[h.hop_type] || TYPE_COLORS.TRANSIT);
+  card.innerHTML = hopCardHTML(h);
+  if (wasSelected) card.classList.add('selected');
+  // re-bind click
+  card.onclick = () => selectHop(h.hop);
+  // re-animate bar
+  const fill = card.querySelector('.lat-fill');
+  if (fill && h.avg) {
+    const pct = Math.min(100, (h.avg / Math.max(maxAvg, 1)) * 100);
+    fill.style.width = pct + '%';
+  }
+}
+
+function hopCardHTML(h) {
+  const color = TYPE_COLORS[h.hop_type] || TYPE_COLORS.TRANSIT;
+  const latCls = LAT_COLORS[h.lat_class] || LAT_COLORS.none;
+
+  const numStr   = String(h.hop).padStart(2, '0');
+  const ip       = h.ip || '* * *';
+  const org      = h.org || h.rdns || (h.timeout ? 'request timed out' : '—');
+  const badge    = h.hop_type || 'UNKNOWN';
+  const avgStr   = h.avg ? `${h.avg}ms` : '—';
+
+  return `
+    <div class="hop-num">${numStr}</div>
+    <div class="hop-type-dot"></div>
+    <div class="hop-ip ${h.timeout ? 'timeout' : (h.ip_version === 6 ? 'v6' : '')}" title="${h.ip || ''}">${h.ip || '* * *'}</div>
+    <div class="hop-bar-wrap">
+      <div class="hop-org">${esc(org.substring(0, 46))}</div>
+      <div class="hop-bar-row">
+        <div class="lat-track"><div class="lat-fill" style="width:0%;background:${latCls}"></div></div>
+        <div class="hop-avg" style="color:${latCls}">${avgStr}</div>
+      </div>
+    </div>
+    <div class="hop-badge" style="border-color:${color};color:${color}">${badge}</div>`;
+}
+
+// ── Select hop & detail panel ──────────────────────────────────────────────
+function selectHop(n) {
+  document.querySelectorAll('.hop-card').forEach(c => c.classList.remove('selected'));
+  const card = $(`hop-card-${n}`);
+  if (card) card.classList.add('selected');
+
+  const h = hops.find(x => x.hop === n);
+  if (!h) return;
+  selectedHop = h;
+
+  $('copy-ip-btn').style.display = h.ip ? '' : 'none';
+  renderDetail(h);
+}
+
+function renderDetail(h) {
+  const dp = $('detail-pane-content');
+  const color = TYPE_COLORS[h.hop_type] || TYPE_COLORS.TRANSIT;
+
+  if (h.timeout) {
+    dp.innerHTML = `
+      <div class="detail-ip-header">
+        <div class="detail-ip-main" style="color:${color};text-shadow:none">HOP ${h.hop}</div>
+        <div class="detail-ip-sub">REQUEST TIMED OUT · ALL PROBES FAILED</div>
+      </div>
+      <div class="detail-section">
+        <div class="detail-section-title">STATUS</div>
+        <div class="detail-row"><span class="detail-label">PACKET LOSS</span><span class="detail-val bad">100%</span></div>
+        <div class="detail-row"><span class="detail-label">HOP TYPE</span><span class="detail-val" style="color:${color}">TIMEOUT</span></div>
+        <div class="detail-row"><span class="detail-label">NOTE</span><span class="detail-val" style="color:var(--dim2);font-size:10px">Node filtering ICMP or congested path</span></div>
+      </div>`;
+    return;
+  }
+
+  const lats   = h.latency_ms || [];
+  const maxLat = Math.max(...lats, 1);
+  const loc    = [h.city, h.region, h.country].filter(Boolean).join(', ') || '—';
+
+  const probeBars = lats.length ? lats.map((v, i) => {
+    const pct = Math.round((v / maxLat) * 28);
+    return `<div class="probe-bar-wrap">
+      <div class="probe-bar" style="height:${pct}px;background:${color}"></div>
+      <div class="probe-label">${v}ms</div>
+    </div>`;
+  }).join('') : '<span style="font-size:11px;color:var(--dim2)">no probe data</span>';
+
+  const flags = [];
+  if (h.private)    flags.push(`<span class="flag-badge flag-private">PRIVATE</span>`);
+  if (h.is_proxy)   flags.push(`<span class="flag-badge flag-proxy">PROXY</span>`);
+  if (h.is_hosting) flags.push(`<span class="flag-badge flag-hosting">HOSTING</span>`);
+  if (h.is_mobile)  flags.push(`<span class="flag-badge flag-mobile">MOBILE</span>`);
+
+  const lossColor = h.packet_loss === 0 ? 'good' : h.packet_loss < 50 ? 'warn' : 'bad';
+
+  dp.innerHTML = `
+    <div class="detail-ip-header">
+      <div class="detail-ip-main" style="color:${color};text-shadow:0 0 12px ${color}40">${h.ip}</div>
+      <div class="detail-ip-sub">HOP ${h.hop} &nbsp;·&nbsp; ${h.hop_type}${h.ip_version ? ' &nbsp;·&nbsp; IPv' + h.ip_version : ''}</div>
+      ${flags.length ? `<div class="flag-badges">${flags.join('')}</div>` : ''}
+    </div>
+
+    <div class="detail-section">
+      <div class="detail-section-title">NETWORK IDENTITY</div>
+      ${row('HOSTNAME', h.rdns || '—', h.rdns ? 'hi' : '')}
+      ${row('ORG / ISP', h.org || '—', '')}
+      ${row('ASN', h.asn || '—', 'hi')}
+      ${row('LOCATION', loc, '')}
+    </div>
+
+    <div class="detail-section">
+      <div class="detail-section-title">LATENCY — ${lats.length} PROBES</div>
+      <div class="probe-bars">${probeBars}</div>
+      ${row('AVERAGE',  h.avg  ? h.avg  + ' ms' : '—', latValClass(h.avg))}
+      ${row('MIN',      h.min_ms ? h.min_ms + ' ms' : '—', 'good')}
+      ${row('MAX',      h.max_ms ? h.max_ms + ' ms' : '—', latValClass(h.max_ms))}
+      ${row('JITTER',   h.jitter != null ? h.jitter + ' ms' : '—', h.jitter > 10 ? 'warn' : '')}
+      ${row('PKT LOSS', (h.packet_loss ?? 0) + '%', lossColor)}
+    </div>
+
+    <div class="detail-section">
+      <div class="detail-section-title">OS FINGERPRINT</div>
+      ${row('OS HINT',    h.os || 'unknown', h.os ? 'pur' : '')}
+      ${row('TTL BASIS',  h.os_basis || '—', '')}
+    </div>`;
+}
+
+function row(label, val, cls) {
+  return `<div class="detail-row">
+    <span class="detail-label">${label}</span>
+    <span class="detail-val ${cls}">${esc(String(val))}</span>
+  </div>`;
+}
+
+function latValClass(ms) {
+  if (!ms) return '';
+  return ms < 20 ? 'good' : ms < 80 ? 'warn' : 'bad';
+}
+
+// ── Stats bar ──────────────────────────────────────────────────────────────
+function updateStats() {
+  const responding = hops.filter(h => !h.timeout && h.avg != null);
+  const timeouts   = hops.filter(h => h.timeout);
+  const countries  = [...new Set(hops.map(h => h.country).filter(Boolean))];
+  const allAvgs    = responding.map(h => h.avg);
+  const totalLoss  = hops.reduce((a, h) => a + (h.packet_loss || 0), 0);
+  const avgLoss    = hops.length ? Math.round(totalLoss / hops.length) : 0;
+
+  $('s-hops').textContent = hops.length || '—';
+
+  if (allAvgs.length) {
+    const avg = Math.round(allAvgs.reduce((a,b)=>a+b,0) / allAvgs.length);
+    const max = Math.round(Math.max(...allAvgs));
+    $('s-avg').textContent = avg + 'ms';
+    $('s-avg').className   = 'stat-val ' + (avg < 20 ? 'green' : avg < 80 ? '' : 'amber');
+    $('s-max').textContent = max + 'ms';
+    $('s-max').className   = 'stat-val ' + (max < 80 ? '' : max < 200 ? 'amber' : 'red');
+  }
+
+  $('s-loss').textContent = avgLoss + '%';
+  $('s-loss').className   = 'stat-val ' + (avgLoss === 0 ? 'green' : avgLoss < 20 ? 'amber' : 'red');
+  $('s-countries').textContent = countries.length || '—';
+  $('s-countries').className   = 'stat-val';
+
+  const last = hops[hops.length - 1];
+  if (last) {
+    const reached = last.hop_type === 'TARGET' || (!last.timeout && last.ip);
+    $('s-status').textContent = running ? 'PROBING' : (reached ? 'REACHED' : 'PARTIAL');
+    $('s-status').className   = 'stat-val ' + (running ? '' : reached ? 'green' : 'amber');
+  }
+}
+
+// ── Latency chart ──────────────────────────────────────────────────────────
+function drawChart() {
+  const section = $('chart-section');
+  section.classList.add('visible');
+
+  const canvas  = $('lat-chart');
+  const dpr     = window.devicePixelRatio || 1;
+  const W       = canvas.offsetWidth;
+  const H       = 60;
+  canvas.width  = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.height = H + 'px';
+  const ctx     = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  const responding = hops.filter(h => h.avg != null);
+  if (responding.length < 2) { section.classList.remove('visible'); return; }
+
+  const maxVal = Math.max(...responding.map(h => h.avg), 1);
+  const minVal = 0;
+  const range  = maxVal - minVal || 1;
+  const padX   = 20;
+  const usableW = W - padX * 2;
+  const usableH = H - 10;
+
+  const pts = responding.map((h, i) => ({
+    x: padX + (i / (responding.length - 1)) * usableW,
+    y: (H - 4) - ((h.avg - minVal) / range) * (usableH - 8),
+    h,
+  }));
+
+  // Fill gradient under curve
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, 'rgba(0,229,255,0.18)');
+  grad.addColorStop(1, 'rgba(0,229,255,0)');
+
+  ctx.beginPath();
+  ctx.moveTo(pts[0].x, H);
+  pts.forEach(p => ctx.lineTo(p.x, p.y));
+  ctx.lineTo(pts[pts.length-1].x, H);
+  ctx.closePath();
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Line
+  ctx.beginPath();
+  ctx.strokeStyle = '#00e5ff';
+  ctx.lineWidth = 1.5;
+  ctx.lineJoin = 'round';
+  pts.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
+  ctx.stroke();
+
+  // Dots colored by type
+  pts.forEach(p => {
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+    ctx.fillStyle = TYPE_COLORS[p.h.hop_type] || '#00e5ff';
+    ctx.fill();
+  });
+
+  // Axis labels (min/max)
+  ctx.fillStyle = '#2a4f64';
+  ctx.font = '9px JetBrains Mono, monospace';
+  ctx.textAlign = 'left';
+  ctx.fillText(`${Math.round(maxVal)}ms`, 2, 10);
+  ctx.fillText(`0ms`, 2, H - 2);
+
+  $('chart-meta').textContent = `${responding.length} DATA POINTS · MAX ${Math.round(maxVal)}MS`;
+}
+
+// ── Export ─────────────────────────────────────────────────────────────────
+function exportResults() {
+  const data = {
+    target: $('target-input').value.trim(),
+    timestamp: new Date().toISOString(),
+    hops: hops,
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `trace_${Date.now()}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function copySelectedIp() {
+  if (selectedHop?.ip) {
+    navigator.clipboard.writeText(selectedHop.ip);
+    const btn = $('copy-ip-btn');
+    btn.textContent = 'COPIED!';
+    setTimeout(() => btn.textContent = 'COPY IP', 1200);
+  }
+}
+
+// ── Clear ──────────────────────────────────────────────────────────────────
+function clearAll(keepInput) {
+  hops = []; selectedHop = null; maxAvg = 1;
+  $('hop-list').innerHTML = '';
+  const em = document.createElement('div');
+  em.id = 'empty-state';
+  em.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;height:calc(100% - 40px);gap:10px;opacity:0.25;pointer-events:none';
+  em.innerHTML = '<div style="font-family:var(--font-hud);font-size:11px;letter-spacing:0.3em;color:var(--dim2)">NO TRACE DATA</div><div style="font-size:10px;color:var(--dim2);letter-spacing:0.1em">ENTER A TARGET AND EXECUTE</div>';
+  $('hop-list').appendChild(em);
+  $('detail-pane-content').innerHTML = '<div class="detail-empty"><div class="detail-empty-icon">◈</div><div class="detail-empty-text">SELECT A HOP</div></div>';
+  $('copy-ip-btn').style.display = 'none';
+  $('chart-section').classList.remove('visible');
+  $('export-btn').style.display = 'none';
+  $('hop-count-label').textContent = '';
+  ['s-hops','s-avg','s-max','s-loss','s-countries','s-status'].forEach(id => { $(id).textContent = '—'; $(id).className = 'stat-val'; });
+  setStatus('idle', 'AWAITING TARGET', 'SYSTEM READY');
+  if (!keepInput) input.value = '';
+}
+
+// ── Status helper ──────────────────────────────────────────────────────────
+function setStatus(state, text, meta) {
+  const dot = $('status-dot');
+  dot.className = `status-dot ${state}`;
+  $('status-text').textContent = text;
+  $('status-meta').textContent = meta || '';
+}
+
+// ── Utils ──────────────────────────────────────────────────────────────────
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+</script>
+</body>
+</html>
