@@ -1,6 +1,6 @@
-# Internet Metrics — Domain Feed
+# Domain Collector
 
-Personal internet usage tracker. Collects domains from all pages you visit in Firefox
+Collects domains from all pages you visit in Firefox
 and exposes them as a local JSON feed for processing scripts.
 
 ## Architecture
