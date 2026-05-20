@@ -25,23 +25,18 @@ from telegram.ext import (
     filters,
 )
 
-# =========================
-# User-configurable settings
-# =========================
-
 load_dotenv()
 
 BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
 KEYWORDS_FILE = Path(os.getenv("KEYWORDS_FILE", "keywords.txt"))
 
-# Set to None to allow any group/supergroup.
-# Set to a Telegram group ID like -100xxxxxxxxxx to allow only one group.
+# None = allow any group/supergroup.
+# Example: ALLOWED_GROUP_ID = -100xxxxxxxxxx
 ALLOWED_GROUP_ID = None
 
 WORK_ROOT = Path("./work").resolve()
 RESULTS_DIR_NAME = "findings"
 
-MAX_EXTRACTED_MB = 4096
 MAX_FILE_READ_MB = 64
 MAX_RESULT_FILE_MB = 128
 MAX_TOTAL_RESULTS_MB = 512
@@ -65,59 +60,16 @@ ALLOWED_ARCHIVE_EXTENSIONS = {
 }
 
 IMAGE_EXTENSIONS = {
-    ".png",
-    ".jpg",
-    ".jpeg",
-    ".gif",
-    ".webp",
-    ".bmp",
-    ".tiff",
-    ".tif",
-    ".svg",
-    ".ico",
-    ".heic",
-    ".heif",
-    ".avif",
-}
-
-IMAGE_MIME_PREFIXES = {
-    "image/",
+    ".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".tiff", ".tif",
+    ".svg", ".ico", ".heic", ".heif", ".avif",
 }
 
 TEXT_EXTENSIONS_PREFERRED = {
-    ".txt",
-    ".log",
-    ".csv",
-    ".json",
-    ".xml",
-    ".html",
-    ".htm",
-    ".js",
-    ".ts",
-    ".py",
-    ".php",
-    ".java",
-    ".c",
-    ".cpp",
-    ".h",
-    ".hpp",
-    ".go",
-    ".rs",
-    ".rb",
-    ".sh",
-    ".ps1",
-    ".conf",
-    ".cfg",
-    ".ini",
-    ".env",
-    ".yaml",
-    ".yml",
-    ".sql",
+    ".txt", ".log", ".csv", ".json", ".xml", ".html", ".htm", ".js", ".ts",
+    ".py", ".php", ".java", ".c", ".cpp", ".h", ".hpp", ".go", ".rs", ".rb",
+    ".sh", ".ps1", ".conf", ".cfg", ".ini", ".env", ".yaml", ".yml", ".sql",
+    ".md", ".rtf", ".ndjson", ".jsonl", ".tsv", ".lst", ".list",
 }
-
-# =========================
-# Logging
-# =========================
 
 logging.basicConfig(
     level=logging.INFO,
@@ -152,9 +104,7 @@ def human_size(size_bytes: int | None) -> str:
 
     for unit in units:
         if size < 1024 or unit == units[-1]:
-            if unit == "B":
-                return f"{int(size)} {unit}"
-            return f"{size:.2f} {unit}"
+            return f"{int(size)} {unit}" if unit == "B" else f"{size:.2f} {unit}"
         size /= 1024
 
     return f"{size_bytes} B"
@@ -179,11 +129,10 @@ def log_file_entry(update: Update, filename: str, filesize: int | None) -> None:
     user = update.effective_user
     username = user.username if user and user.username else "-"
     user_id = user.id if user else "-"
-    readable_size = human_size(filesize)
 
     line = (
         f"{datetime.now().isoformat(timespec='seconds')} | "
-        f"{username} | {user_id} | {filename} | {readable_size}\n"
+        f"{username} | {user_id} | {filename} | {human_size(filesize)}\n"
     )
 
     with open(PROCESS_LOG_FILE, "a", encoding="utf-8") as f:
@@ -202,10 +151,7 @@ def is_image_document(document) -> bool:
     suffix = Path(filename).suffix.lower()
     mime_type = document.mime_type or ""
 
-    if suffix in IMAGE_EXTENSIONS:
-        return True
-
-    return any(mime_type.startswith(prefix) for prefix in IMAGE_MIME_PREFIXES)
+    return suffix in IMAGE_EXTENSIONS or mime_type.startswith("image/")
 
 
 def safe_name(value: str, fallback: str = "keyword") -> str:
@@ -227,6 +173,10 @@ def archive_suffix(path: Path) -> str:
 
 def is_supported_archive(path: Path) -> bool:
     return archive_suffix(path) in ALLOWED_ARCHIVE_EXTENSIONS
+
+
+def is_supported_plain_text(path: Path) -> bool:
+    return path.suffix.lower() in TEXT_EXTENSIONS_PREFERRED
 
 
 def load_keywords() -> list[str]:
@@ -269,8 +219,7 @@ def safe_extract_zip(path: Path, dest: Path, password: str | None) -> None:
 
     with zipfile.ZipFile(path) as zf:
         for member in zf.infolist():
-            target = dest / member.filename
-            ensure_inside(dest, target)
+            ensure_inside(dest, dest / member.filename)
 
         zf.extractall(dest, pwd=pwd)
 
@@ -278,8 +227,7 @@ def safe_extract_zip(path: Path, dest: Path, password: str | None) -> None:
 def safe_extract_tar(path: Path, dest: Path) -> None:
     with tarfile.open(path) as tf:
         for member in tf.getmembers():
-            target = dest / member.name
-            ensure_inside(dest, target)
+            ensure_inside(dest, dest / member.name)
 
         tf.extractall(dest)
 
@@ -287,8 +235,7 @@ def safe_extract_tar(path: Path, dest: Path) -> None:
 def safe_extract_7z(path: Path, dest: Path, password: str | None) -> None:
     with py7zr.SevenZipFile(path, mode="r", password=password) as z:
         for name in z.getnames():
-            target = dest / name
-            ensure_inside(dest, target)
+            ensure_inside(dest, dest / name)
 
         z.extractall(path=dest)
 
@@ -296,8 +243,7 @@ def safe_extract_7z(path: Path, dest: Path, password: str | None) -> None:
 def safe_extract_rar(path: Path, dest: Path, password: str | None) -> None:
     with rarfile.RarFile(path) as rf:
         for member in rf.infolist():
-            target = dest / member.filename
-            ensure_inside(dest, target)
+            ensure_inside(dest, dest / member.filename)
 
         rf.extractall(path=dest, pwd=password)
 
@@ -328,32 +274,13 @@ def extract_archive(path: Path, dest: Path, password: str | None) -> None:
     elif suffix == ".rar":
         safe_extract_rar(path, dest, password)
     elif suffix in {
-        ".tar",
-        ".tgz",
-        ".tar.gz",
-        ".tar.bz2",
-        ".tbz2",
-        ".tar.xz",
-        ".txz",
+        ".tar", ".tgz", ".tar.gz", ".tar.bz2", ".tbz2", ".tar.xz", ".txz",
     }:
         safe_extract_tar(path, dest)
     elif suffix == ".gz":
         extract_gzip_single_file(path, dest)
     else:
         raise ValueError(f"Unsupported archive type: {suffix}")
-
-
-def directory_size_bytes(path: Path) -> int:
-    total = 0
-
-    for p in path.rglob("*"):
-        if p.is_file():
-            try:
-                total += p.stat().st_size
-            except OSError:
-                continue
-
-    return total
 
 
 def looks_like_text_file(path: Path) -> bool:
@@ -364,10 +291,7 @@ def looks_like_text_file(path: Path) -> bool:
         with path.open("rb") as f:
             chunk = f.read(4096)
 
-        if b"\x00" in chunk:
-            return False
-
-        return True
+        return b"\x00" not in chunk
 
     except OSError:
         return False
@@ -390,7 +314,6 @@ def grep_recursive(
     result_sizes: dict[str, int] = {}
 
     compiled = [(kw, re.compile(re.escape(kw), re.IGNORECASE)) for kw in keywords]
-
     handles = {}
 
     try:
@@ -440,9 +363,7 @@ def grep_recursive(
                                 result_sizes[out_name] = current_size + written
                                 total_matches += 1
 
-                total_result_size = sum(result_sizes.values())
-
-                if total_result_size > MAX_TOTAL_RESULTS_MB * 1024 * 1024:
+                if sum(result_sizes.values()) > MAX_TOTAL_RESULTS_MB * 1024 * 1024:
                     raise RuntimeError(
                         f"Total findings exceeded {MAX_TOTAL_RESULTS_MB} MB limit."
                     )
@@ -475,13 +396,13 @@ def format_summary(summary: ScanSummary) -> str:
     if summary.error:
         return (
             "Processing failed.\n\n"
-            f"Archive: {summary.archive_name}\n"
+            f"Archive/File: {summary.archive_name}\n"
             f"Error: {summary.error}"
         )
 
     return (
         "Processing completed.\n\n"
-        f"Archive: {summary.archive_name}\n"
+        f"Archive/File: {summary.archive_name}\n"
         f"Password supplied: {'yes' if summary.password_used else 'no'}\n"
         f"Keywords loaded: {summary.keywords_loaded}\n"
         f"Files scanned: {summary.files_scanned}\n"
@@ -495,7 +416,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         return
 
     await update.message.reply_text(
-        "Send a compressed archive to this group with `/analyze` in the caption. "
+        "Send a compressed archive or plain text-like file with `/analyze` in the caption. "
         "If the archive has a password, put it after `/analyze`."
     )
 
@@ -523,15 +444,20 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     parts = caption.split(maxsplit=1)
     password = parts[1].strip() if len(parts) > 1 else None
 
-    original_name = document.file_name or "uploaded_archive"
-    safe_archive_name = safe_name(original_name, fallback="uploaded_archive")
+    original_name = document.file_name or "uploaded_file"
+    safe_file_name = safe_name(original_name, fallback="uploaded_file")
+    safe_file_path = Path(safe_file_name)
 
     log_file_entry(update, original_name, document.file_size)
 
-    if not is_supported_archive(Path(safe_archive_name)):
+    is_archive = is_supported_archive(safe_file_path)
+    is_plain_text = is_supported_plain_text(safe_file_path)
+
+    if not is_archive and not is_plain_text:
         await message.reply_text(
-            "Unsupported archive type. Supported: zip, 7z, rar, tar, gz, tgz, "
-            "tar.gz, tar.bz2, tar.xz."
+            "Unsupported file type. Supported archives: zip, 7z, rar, tar, gz, tgz, "
+            "tar.gz, tar.bz2, tar.xz. Supported plain files: txt, csv, json, sql, "
+            "log, xml, html, js, py, conf, ini, env, yaml, yml, md and similar."
         )
         return
 
@@ -541,8 +467,8 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     WORK_ROOT.mkdir(parents=True, exist_ok=True)
 
     job_dir = Path(tempfile.mkdtemp(prefix="tg_keyword_job_", dir=WORK_ROOT))
-    archive_path = job_dir / safe_archive_name
-    extracted_dir = job_dir / "extracted"
+    downloaded_path = job_dir / safe_file_name
+    extracted_dir = job_dir / "input"
     findings_dir = job_dir / RESULTS_DIR_NAME
 
     extracted_dir.mkdir()
@@ -550,7 +476,7 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
     summary = ScanSummary(
         archive_name=original_name,
-        password_used=bool(password),
+        password_used=bool(password) and is_archive,
         keywords_loaded=0,
         files_scanned=0,
         files_skipped=0,
@@ -560,18 +486,19 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
     try:
         tg_file = await document.get_file()
-        await tg_file.download_to_drive(custom_path=archive_path)
+        await tg_file.download_to_drive(custom_path=downloaded_path)
 
         keywords = load_keywords()
         summary.keywords_loaded = len(keywords)
 
         await message.chat.send_action(ChatAction.TYPING)
-        extract_archive(archive_path, extracted_dir, password)
 
-        extracted_size = directory_size_bytes(extracted_dir)
-
-        if extracted_size > MAX_EXTRACTED_MB * 1024 * 1024:
-            raise RuntimeError(f"Extracted content exceeded {MAX_EXTRACTED_MB} MB limit.")
+        if is_archive:
+            extract_archive(downloaded_path, extracted_dir, password)
+        else:
+            plain_target = extracted_dir / safe_file_name
+            ensure_inside(extracted_dir, plain_target)
+            shutil.copy2(downloaded_path, plain_target)
 
         await message.chat.send_action(ChatAction.TYPING)
 
@@ -640,7 +567,7 @@ async def handle_non_document(update: Update, context: ContextTypes.DEFAULT_TYPE
         return
 
     await message.reply_text(
-        "Please send `/analyze` as the caption of a compressed file, "
+        "Please send `/analyze` as the caption of a compressed or plain text-like file, "
         "not as a standalone message."
     )
 
@@ -652,7 +579,15 @@ def main() -> None:
     if not KEYWORDS_FILE.exists():
         raise SystemExit(f"Keywords file not found: {KEYWORDS_FILE}")
 
-    app = ApplicationBuilder().token(BOT_TOKEN).build()
+    app = (
+        ApplicationBuilder()
+        .token(BOT_TOKEN)
+        .connect_timeout(60)
+        .read_timeout(60)
+        .write_timeout(60)
+        .pool_timeout(60)
+        .build()
+    )
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.Document.ALL, handle_document))
