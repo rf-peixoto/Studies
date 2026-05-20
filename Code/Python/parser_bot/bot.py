@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import asyncio
 import gzip
 import logging
 import os
@@ -12,20 +13,12 @@ from datetime import datetime
 from pathlib import Path
 from typing import Iterable
 
-import aiohttp
 import py7zr
 import rarfile
 from dotenv import load_dotenv
-from telegram import Update
-from telegram.constants import ChatAction, ChatType
-from telegram.error import BadRequest
-from telegram.ext import (
-    ApplicationBuilder,
-    CommandHandler,
-    ContextTypes,
-    MessageHandler,
-    filters,
-)
+from telethon import TelegramClient, events
+from telethon.errors import RPCError
+from telethon.tl.types import DocumentAttributeFilename
 
 # =========================
 # Config
@@ -33,19 +26,23 @@ from telegram.ext import (
 
 load_dotenv()
 
-BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
+TG_API_ID = int(os.getenv("TG_API_ID", "0"))
+TG_API_HASH = os.getenv("TG_API_HASH", "").strip()
+TG_BOT_TOKEN = os.getenv("TG_BOT_TOKEN", "").strip()
+
 KEYWORDS_FILE = Path(os.getenv("KEYWORDS_FILE", "keywords.txt"))
 
-ALLOWED_GROUP_ID = None  # Example: -100xxxxxxxxxx
+_allowed_group_raw = os.getenv("ALLOWED_GROUP_ID", "").strip()
+ALLOWED_GROUP_ID = int(_allowed_group_raw) if _allowed_group_raw else None
 
-USE_LOCAL_BOT_API = True
-LOCAL_BOT_API_BASE_URL = "http://127.0.0.1:8081/bot"
-LOCAL_BOT_API_FILE_URL = "http://127.0.0.1:8081/file/bot"
+SESSION_NAME = "keyword_parser_bot"
 
 WORK_ROOT = Path("./work").resolve()
 RESULTS_DIR_NAME = "findings"
 
-DOWNLOAD_CHUNK_SIZE = 8 * 1024 * 1024
+DOWNLOAD_PROGRESS_INTERVAL_SECONDS = 10
+STATUS_INTERVAL_SECONDS = 20
+
 MAX_KEYWORDS = 5000
 
 LOG_FILE = "bot.log"
@@ -81,21 +78,19 @@ logging.basicConfig(
     ],
 )
 
-logging.getLogger("httpx").setLevel(logging.WARNING)
-logging.getLogger("telegram").setLevel(logging.WARNING)
-
-log = logging.getLogger("keyword-archive-bot")
+logging.getLogger("telethon").setLevel(logging.WARNING)
+log = logging.getLogger("keyword-telethon-bot")
 
 
 @dataclass
 class ScanSummary:
     input_name: str
     password_used: bool
-    keywords_loaded: int
-    files_scanned: int
-    files_skipped: int
-    matches: int
-    result_archive: Path | None
+    keywords_loaded: int = 0
+    files_scanned: int = 0
+    files_skipped: int = 0
+    matches: int = 0
+    result_archive: Path | None = None
     error: str | None = None
 
 
@@ -114,55 +109,11 @@ def human_size(size_bytes: int | None) -> str:
     return f"{size_bytes} B"
 
 
-def is_group_message(update: Update) -> bool:
-    chat = update.effective_chat
-
-    if not chat:
-        return False
-
-    if chat.type not in {ChatType.GROUP, ChatType.SUPERGROUP}:
-        return False
-
-    if ALLOWED_GROUP_ID is not None and chat.id != ALLOWED_GROUP_ID:
-        return False
-
-    return True
-
-
-def log_file_entry(update: Update, filename: str, filesize: int | None) -> None:
-    user = update.effective_user
-    username = user.username if user and user.username else "-"
-    user_id = user.id if user else "-"
-
-    line = (
-        f"{datetime.now().isoformat(timespec='seconds')} | "
-        f"{username} | {user_id} | {filename} | {human_size(filesize)}\n"
-    )
-
-    with open(PROCESS_LOG_FILE, "a", encoding="utf-8") as f:
-        f.write(line)
-
-
-async def react_working(message) -> None:
-    try:
-        await message.set_reaction("👀")
-    except Exception:
-        log.debug("Could not react to message.", exc_info=True)
-
-
-def is_image_document(document) -> bool:
-    filename = document.file_name or ""
-    suffix = Path(filename).suffix.lower()
-    mime_type = document.mime_type or ""
-
-    return suffix in IMAGE_EXTENSIONS or mime_type.startswith("image/")
-
-
 def safe_name(value: str, fallback: str = "file") -> str:
     value = value.strip()
     value = re.sub(r"[^\w.\-]+", "_", value, flags=re.UNICODE)
     value = value.strip("._-")
-    return value[:160] or fallback
+    return value[:180] or fallback
 
 
 def archive_suffix(path: Path) -> str:
@@ -183,12 +134,47 @@ def is_supported_plain_text(path: Path) -> bool:
     return path.suffix.lower() in TEXT_EXTENSIONS_PREFERRED
 
 
+def is_image_filename(filename: str) -> bool:
+    return Path(filename).suffix.lower() in IMAGE_EXTENSIONS
+
+
+def get_document_filename(message) -> str:
+    if not message.document:
+        return "uploaded_file"
+
+    for attr in message.document.attributes:
+        if isinstance(attr, DocumentAttributeFilename):
+            return attr.file_name or "uploaded_file"
+
+    return "uploaded_file"
+
+
+def get_document_size(message) -> int | None:
+    if message.document and getattr(message.document, "size", None):
+        return int(message.document.size)
+    return None
+
+
+def log_file_entry(event, filename: str, filesize: int | None) -> None:
+    sender = event.sender
+    username = getattr(sender, "username", None) or "-"
+    user_id = getattr(sender, "id", None) or event.sender_id or "-"
+
+    line = (
+        f"{datetime.now().isoformat(timespec='seconds')} | "
+        f"{username} | {user_id} | {filename} | {human_size(filesize)}\n"
+    )
+
+    with open(PROCESS_LOG_FILE, "a", encoding="utf-8") as f:
+        f.write(line)
+
+
 def load_keywords() -> list[str]:
     if not KEYWORDS_FILE.exists():
         raise FileNotFoundError(f"Keywords file not found: {KEYWORDS_FILE}")
 
-    keywords: list[str] = []
-    seen: set[str] = set()
+    keywords = []
+    seen = set()
 
     with KEYWORDS_FILE.open("r", encoding="utf-8", errors="replace") as f:
         for line in f:
@@ -307,11 +293,7 @@ def iter_files(root: Path) -> Iterable[Path]:
             yield p
 
 
-def grep_recursive(
-    input_dir: Path,
-    findings_dir: Path,
-    keywords: list[str],
-) -> tuple[int, int, int]:
+def grep_recursive(input_dir: Path, findings_dir: Path, keywords: list[str]) -> tuple[int, int, int]:
     files_scanned = 0
     files_skipped = 0
     total_matches = 0
@@ -388,104 +370,89 @@ def format_summary(summary: ScanSummary) -> str:
     )
 
 
-async def download_telegram_file_chunked(document, destination: Path) -> None:
+async def send_status(event, text: str) -> None:
     try:
-        tg_file = await document.get_file()
-    except BadRequest as e:
-        if "file is too big" in str(e).lower():
-            raise RuntimeError(
-                "Telegram refused getFile because the file is too big. "
-                "Chunked download cannot bypass this on the public Bot API. "
-                "Run a local Telegram Bot API server and set USE_LOCAL_BOT_API=True."
-            ) from e
-        raise
+        await event.reply(text)
+    except RPCError:
+        log.exception("Failed to send status message.")
 
-    file_path = tg_file.file_path
 
-    if not file_path:
-        raise RuntimeError("Telegram did not return file_path.")
+async def react_working(event) -> None:
+    try:
+        await event.message.react("👀")
+    except Exception:
+        log.debug("Could not react to message.", exc_info=True)
 
-    local_path = Path(file_path)
 
-    if local_path.is_absolute() and local_path.exists():
-        shutil.copy2(local_path, destination)
+class DownloadProgress:
+    def __init__(self, filename: str):
+        self.filename = filename
+        self.last_log = 0.0
+
+    def __call__(self, current: int, total: int) -> None:
+        now = asyncio.get_event_loop().time()
+
+        if now - self.last_log < DOWNLOAD_PROGRESS_INTERVAL_SECONDS:
+            return
+
+        self.last_log = now
+
+        if total:
+            pct = (current / total) * 100
+            log.info(
+                "Downloading %s: %s / %s %.2f%%",
+                self.filename,
+                human_size(current),
+                human_size(total),
+                pct,
+            )
+        else:
+            log.info("Downloading %s: %s", self.filename, human_size(current))
+
+
+async def handle_analyze(event) -> None:
+    if event.is_private:
         return
 
-    if file_path.startswith("http://") or file_path.startswith("https://"):
-        download_url = file_path
-    elif USE_LOCAL_BOT_API:
-        download_url = f"{LOCAL_BOT_API_FILE_URL}{BOT_TOKEN}/{file_path}"
-    else:
-        download_url = f"https://api.telegram.org/file/bot{BOT_TOKEN}/{file_path}"
-
-    timeout = aiohttp.ClientTimeout(total=None, sock_connect=60, sock_read=300)
-
-    async with aiohttp.ClientSession(timeout=timeout) as session:
-        async with session.get(download_url) as response:
-            if response.status != 200:
-                body = await response.text()
-                raise RuntimeError(
-                    f"File download failed with HTTP {response.status}: {body[:500]}"
-                )
-
-            with destination.open("wb") as f:
-                async for chunk in response.content.iter_chunked(DOWNLOAD_CHUNK_SIZE):
-                    if chunk:
-                        f.write(chunk)
-
-
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if not is_group_message(update):
+    if ALLOWED_GROUP_ID is not None and event.chat_id != ALLOWED_GROUP_ID:
         return
 
-    await update.message.reply_text(
-        "Send a compressed archive or plain text-like file with `/analyze` in the caption. "
-        "If the archive has a password, put it after `/analyze`."
-    )
-
-
-async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if not is_group_message(update):
+    if not event.message.document:
         return
 
-    message = update.message
-    document = message.document
+    text = event.raw_text or ""
 
-    if not document:
+    if not text.startswith("/analyze"):
         return
 
-    if is_image_document(document):
+    filename = get_document_filename(event.message)
+
+    if is_image_filename(filename):
         return
 
-    caption = message.caption.strip() if message.caption else ""
-
-    if not caption.startswith("/analyze"):
-        return
-
-    await react_working(message)
-
-    parts = caption.split(maxsplit=1)
-    password = parts[1].strip() if len(parts) > 1 else None
-
-    original_name = document.file_name or "uploaded_file"
-    safe_file_name = safe_name(original_name, fallback="uploaded_file")
+    safe_file_name = safe_name(filename, fallback="uploaded_file")
     safe_file_path = Path(safe_file_name)
-
-    log_file_entry(update, original_name, document.file_size)
 
     is_archive = is_supported_archive(safe_file_path)
     is_plain_text = is_supported_plain_text(safe_file_path)
 
     if not is_archive and not is_plain_text:
-        await message.reply_text(
+        await event.reply(
             "Unsupported file type. Supported archives: zip, 7z, rar, tar, gz, tgz, "
             "tar.gz, tar.bz2, tar.xz. Supported plain files: txt, csv, json, sql, "
             "log, xml, html, js, py, conf, ini, env, yaml, yml, md and similar."
         )
         return
 
-    await message.chat.send_action(ChatAction.TYPING)
-    await message.reply_text("File received. Processing started.")
+    await react_working(event)
+
+    parts = text.split(maxsplit=1)
+    password = parts[1].strip() if len(parts) > 1 else None
+
+    filesize = get_document_size(event.message)
+    log_file_entry(event, filename, filesize)
+
+    await event.reply("File received. Processing started.")
 
     WORK_ROOT.mkdir(parents=True, exist_ok=True)
 
@@ -498,31 +465,29 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     findings_dir.mkdir()
 
     summary = ScanSummary(
-        input_name=original_name,
+        input_name=filename,
         password_used=bool(password) and is_archive,
-        keywords_loaded=0,
-        files_scanned=0,
-        files_skipped=0,
-        matches=0,
-        result_archive=None,
     )
 
     try:
-        await download_telegram_file_chunked(document, downloaded_path)
+        await event.client.download_media(
+            event.message,
+            file=str(downloaded_path),
+            progress_callback=DownloadProgress(filename),
+        )
 
         keywords = load_keywords()
         summary.keywords_loaded = len(keywords)
 
-        await message.chat.send_action(ChatAction.TYPING)
-
         if is_archive:
+            await send_status(event, "Download finished. Extracting archive.")
             extract_archive(downloaded_path, input_dir, password)
         else:
             plain_target = input_dir / safe_file_name
             ensure_inside(input_dir, plain_target)
             shutil.copy2(downloaded_path, plain_target)
 
-        await message.chat.send_action(ChatAction.TYPING)
+        await send_status(event, "Searching keywords.")
 
         files_scanned, files_skipped, matches = grep_recursive(
             input_dir=input_dir,
@@ -535,28 +500,25 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         summary.matches = matches
 
         if matches == 0:
-            await message.reply_text(
-                format_summary(summary) + "\n\nNo findings archive was generated."
-            )
+            await event.reply(format_summary(summary) + "\n\nNo findings archive was generated.")
             return
 
         result_archive = make_results_archive(findings_dir, job_dir)
         summary.result_archive = result_archive
 
-        await message.reply_text(format_summary(summary))
-        await message.chat.send_action(ChatAction.UPLOAD_DOCUMENT)
+        await event.reply(format_summary(summary))
 
-        with result_archive.open("rb") as f:
-            await message.reply_document(
-                document=f,
-                filename="findings.zip",
-                caption="Keyword findings.",
-            )
+        await event.client.send_file(
+            entity=event.chat_id,
+            file=str(result_archive),
+            caption="Keyword findings.",
+            reply_to=event.message.id,
+        )
 
     except Exception as e:
         log.exception("Processing failed")
         summary.error = str(e)
-        await message.reply_text(format_summary(summary))
+        await event.reply(format_summary(summary))
 
     finally:
         try:
@@ -565,72 +527,56 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             log.exception("Cleanup failed for job directory: %s", job_dir)
 
 
-async def handle_non_document(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if not is_group_message(update):
+async def handle_text_command(event) -> None:
+    if event.is_private:
         return
 
-    message = update.message
-
-    if (
-        message.sticker
-        or message.photo
-        or message.animation
-        or message.video
-        or message.video_note
-        or message.voice
-        or message.audio
-    ):
+    if ALLOWED_GROUP_ID is not None and event.chat_id != ALLOWED_GROUP_ID:
         return
 
-    text = message.text or ""
+    text = event.raw_text or ""
 
-    if not text.startswith("/analyze"):
-        return
-
-    await message.reply_text(
-        "Please send `/analyze` as the caption of a compressed or plain text-like file, "
-        "not as a standalone message."
-    )
-
-
-def build_application():
-    builder = (
-        ApplicationBuilder()
-        .token(BOT_TOKEN)
-        .connect_timeout(60)
-        .read_timeout(300)
-        .write_timeout(300)
-        .pool_timeout(60)
-        .media_write_timeout(300)
-    )
-
-    if USE_LOCAL_BOT_API:
-        builder = (
-            builder
-            .base_url(LOCAL_BOT_API_BASE_URL)
-            .base_file_url(LOCAL_BOT_API_FILE_URL)
-            .local_mode(True)
+    if text.startswith("/analyze") and not event.message.document:
+        await event.reply(
+            "Please send `/analyze` as the caption of a compressed or plain text-like file, "
+            "not as a standalone message."
         )
 
-    return builder.build()
 
+def validate_config() -> None:
+    if not TG_API_ID:
+        raise SystemExit("TG_API_ID is missing in .env.")
 
-def main() -> None:
-    if not BOT_TOKEN:
-        raise SystemExit("TELEGRAM_BOT_TOKEN is missing. Put it in .env.")
+    if not TG_API_HASH:
+        raise SystemExit("TG_API_HASH is missing in .env.")
+
+    if not TG_BOT_TOKEN:
+        raise SystemExit("TG_BOT_TOKEN is missing in .env.")
 
     if not KEYWORDS_FILE.exists():
         raise SystemExit(f"Keywords file not found: {KEYWORDS_FILE}")
 
-    app = build_application()
 
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(MessageHandler(filters.Document.ALL, handle_document))
-    app.add_handler(MessageHandler(~filters.Document.ALL, handle_non_document))
+async def main() -> None:
+    validate_config()
 
-    log.info("Bot started.")
-    app.run_polling()
+    client = TelegramClient(
+        SESSION_NAME,
+        TG_API_ID,
+        TG_API_HASH,
+        sequential_updates=True,
+    )
+
+    await client.start(bot_token=TG_BOT_TOKEN)
+
+    me = await client.get_me()
+    log.info("Telethon client started as @%s", getattr(me, "username", None))
+
+    client.add_event_handler(handle_analyze, events.NewMessage)
+    client.add_event_handler(handle_text_command, events.NewMessage(pattern=r"^/analyze"))
+
+    await client.run_until_disconnected()
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
