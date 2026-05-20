@@ -38,11 +38,10 @@ ALLOWED_GROUP_ID = int(_allowed_group_raw) if _allowed_group_raw else None
 SESSION_NAME = "keyword_parser_bot"
 
 WORK_ROOT = Path("./work").resolve()
+FAILED_RESULTS_DIR = Path("./failed_results").resolve()
 RESULTS_DIR_NAME = "findings"
 
 DOWNLOAD_PROGRESS_INTERVAL_SECONDS = 10
-STATUS_INTERVAL_SECONDS = 20
-
 MAX_KEYWORDS = 5000
 
 LOG_FILE = "bot.log"
@@ -354,7 +353,7 @@ def make_results_archive(findings_dir: Path, job_dir: Path) -> Path:
 def format_summary(summary: ScanSummary) -> str:
     if summary.error:
         return (
-            "Processing failed.\n\n"
+            "⚠️ Processing failed.\n\n"
             f"Input: {summary.input_name}\n"
             f"Error: {summary.error}"
         )
@@ -377,6 +376,13 @@ async def send_status(event, text: str) -> None:
         log.exception("Failed to send status message.")
 
 
+async def send_warning(event, text: str) -> None:
+    try:
+        await event.reply(f"⚠️ {text}")
+    except Exception:
+        log.exception("Failed to send warning message.")
+
+
 async def react_working(event) -> None:
     try:
         await event.message.react("👀")
@@ -384,9 +390,9 @@ async def react_working(event) -> None:
         log.debug("Could not react to message.", exc_info=True)
 
 
-class DownloadProgress:
-    def __init__(self, filename: str):
-        self.filename = filename
+class TransferProgress:
+    def __init__(self, label: str):
+        self.label = label
         self.last_log = 0.0
 
     def __call__(self, current: int, total: int) -> None:
@@ -400,14 +406,14 @@ class DownloadProgress:
         if total:
             pct = (current / total) * 100
             log.info(
-                "Downloading %s: %s / %s %.2f%%",
-                self.filename,
+                "%s: %s / %s %.2f%%",
+                self.label,
                 human_size(current),
                 human_size(total),
                 pct,
             )
         else:
-            log.info("Downloading %s: %s", self.filename, human_size(current))
+            log.info("%s: %s", self.label, human_size(current))
 
 
 async def handle_analyze(event) -> None:
@@ -437,7 +443,8 @@ async def handle_analyze(event) -> None:
     is_plain_text = is_supported_plain_text(safe_file_path)
 
     if not is_archive and not is_plain_text:
-        await event.reply(
+        await send_warning(
+            event,
             "Unsupported file type. Supported archives: zip, 7z, rar, tar, gz, tgz, "
             "tar.gz, tar.bz2, tar.xz. Supported plain files: txt, csv, json, sql, "
             "log, xml, html, js, py, conf, ini, env, yaml, yml, md and similar."
@@ -452,7 +459,7 @@ async def handle_analyze(event) -> None:
     filesize = get_document_size(event.message)
     log_file_entry(event, filename, filesize)
 
-    await event.reply("File received. Processing started.")
+    await send_status(event, "File received. Processing started.")
 
     WORK_ROOT.mkdir(parents=True, exist_ok=True)
 
@@ -470,61 +477,136 @@ async def handle_analyze(event) -> None:
     )
 
     try:
-        await event.client.download_media(
-            event.message,
-            file=str(downloaded_path),
-            progress_callback=DownloadProgress(filename),
-        )
+        try:
+            await send_status(event, f"Downloading file: {filename} ({human_size(filesize)}).")
 
-        keywords = load_keywords()
-        summary.keywords_loaded = len(keywords)
+            await event.client.download_media(
+                event.message,
+                file=str(downloaded_path),
+                progress_callback=TransferProgress(f"download {filename}"),
+            )
 
-        if is_archive:
-            await send_status(event, "Download finished. Extracting archive.")
-            extract_archive(downloaded_path, input_dir, password)
-        else:
-            plain_target = input_dir / safe_file_name
-            ensure_inside(input_dir, plain_target)
-            shutil.copy2(downloaded_path, plain_target)
+        except Exception as e:
+            log.exception("Download failed")
+            await send_warning(event, f"Download failed: {e}")
+            raise
 
-        await send_status(event, "Searching keywords.")
+        try:
+            keywords = load_keywords()
+            summary.keywords_loaded = len(keywords)
 
-        files_scanned, files_skipped, matches = grep_recursive(
-            input_dir=input_dir,
-            findings_dir=findings_dir,
-            keywords=keywords,
-        )
+        except Exception as e:
+            log.exception("Failed to load keywords")
+            await send_warning(event, f"Failed to load keywords: {e}")
+            raise
 
-        summary.files_scanned = files_scanned
-        summary.files_skipped = files_skipped
-        summary.matches = matches
+        try:
+            if is_archive:
+                await send_status(event, "Download finished. Extracting archive.")
+                extract_archive(downloaded_path, input_dir, password)
+            else:
+                await send_status(event, "Download finished. Preparing plain file.")
+                plain_target = input_dir / safe_file_name
+                ensure_inside(input_dir, plain_target)
+                shutil.copy2(downloaded_path, plain_target)
 
-        if matches == 0:
-            await event.reply(format_summary(summary) + "\n\nNo findings archive was generated.")
+        except Exception as e:
+            log.exception("Extraction/preparation failed")
+            await send_warning(event, f"Extraction/preparation failed: {e}")
+            raise
+
+        try:
+            await send_status(event, "Searching keywords.")
+
+            files_scanned, files_skipped, matches = grep_recursive(
+                input_dir=input_dir,
+                findings_dir=findings_dir,
+                keywords=keywords,
+            )
+
+            summary.files_scanned = files_scanned
+            summary.files_skipped = files_skipped
+            summary.matches = matches
+
+        except Exception as e:
+            log.exception("Keyword search failed")
+            await send_warning(event, f"Keyword search failed: {e}")
+            raise
+
+        if summary.matches == 0:
+            await event.reply(
+                format_summary(summary) + "\n\nNo findings archive was generated."
+            )
             return
 
-        result_archive = make_results_archive(findings_dir, job_dir)
-        summary.result_archive = result_archive
+        try:
+            await send_status(event, "Search finished. Compressing findings.")
 
-        await event.reply(format_summary(summary))
+            result_archive = make_results_archive(findings_dir, job_dir)
+            summary.result_archive = result_archive
+            archive_size = result_archive.stat().st_size
 
-        await event.client.send_file(
-            entity=event.chat_id,
-            file=str(result_archive),
-            caption="Keyword findings.",
-            reply_to=event.message.id,
+        except Exception as e:
+            log.exception("Failed to compress findings")
+            await send_warning(event, f"Failed to compress findings: {e}")
+            raise
+
+        await event.reply(
+            format_summary(summary)
+            + f"\n\nFindings archive size: {human_size(archive_size)}\n"
+            + "Uploading findings to Telegram now."
         )
+
+        try:
+            await event.client.send_file(
+                entity=await event.get_chat(),
+                file=str(result_archive),
+                caption="Keyword findings.",
+                reply_to=event.message.id,
+                force_document=True,
+                progress_callback=TransferProgress("upload findings.zip"),
+            )
+
+            await send_status(event, "Findings archive uploaded successfully.")
+
+        except Exception as upload_error:
+            log.exception("Failed to upload findings archive")
+
+            FAILED_RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+
+            preserved_path = (
+                FAILED_RESULTS_DIR
+                / f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{safe_name(filename)}_findings.zip"
+            )
+
+            shutil.copy2(result_archive, preserved_path)
+
+            await send_warning(
+                event,
+                "Search completed, but Telegram failed to upload the findings archive.\n\n"
+                f"Archive size: {human_size(archive_size)}\n"
+                f"Saved locally at:\n{preserved_path}\n\n"
+                f"Upload error: {upload_error}"
+            )
 
     except Exception as e:
         log.exception("Processing failed")
         summary.error = str(e)
-        await event.reply(format_summary(summary))
+
+        try:
+            await event.reply(format_summary(summary))
+        except Exception:
+            log.exception("Failed to send final failure summary.")
 
     finally:
         try:
             shutil.rmtree(job_dir, ignore_errors=True)
-        except Exception:
+        except Exception as cleanup_error:
             log.exception("Cleanup failed for job directory: %s", job_dir)
+            await send_warning(
+                event,
+                f"Cleanup failed for temporary directory:\n{job_dir}\n\nError: {cleanup_error}"
+            )
 
 
 async def handle_text_command(event) -> None:
