@@ -33,12 +33,14 @@ load_dotenv()
 
 BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
 KEYWORDS_FILE = Path(os.getenv("KEYWORDS_FILE", "keywords.txt"))
-ALLOWED_GROUP_ID = Your group ID goes here
+
+# Set to None to allow any group/supergroup.
+# Set to a Telegram group ID like -100xxxxxxxxxx to allow only one group.
+ALLOWED_GROUP_ID = None
 
 WORK_ROOT = Path("./work").resolve()
 RESULTS_DIR_NAME = "findings"
 
-MAX_DOWNLOAD_MB = 1024
 MAX_EXTRACTED_MB = 4096
 MAX_FILE_READ_MB = 64
 MAX_RESULT_FILE_MB = 128
@@ -60,6 +62,26 @@ ALLOWED_ARCHIVE_EXTENSIONS = {
     ".tbz2",
     ".tar.xz",
     ".txz",
+}
+
+IMAGE_EXTENSIONS = {
+    ".png",
+    ".jpg",
+    ".jpeg",
+    ".gif",
+    ".webp",
+    ".bmp",
+    ".tiff",
+    ".tif",
+    ".svg",
+    ".ico",
+    ".heic",
+    ".heif",
+    ".avif",
+}
+
+IMAGE_MIME_PREFIXES = {
+    "image/",
 }
 
 TEXT_EXTENSIONS_PREFERRED = {
@@ -147,7 +169,10 @@ def is_group_message(update: Update) -> bool:
     if chat.type not in {ChatType.GROUP, ChatType.SUPERGROUP}:
         return False
 
-    return chat.id == ALLOWED_GROUP_ID
+    if ALLOWED_GROUP_ID is not None and chat.id != ALLOWED_GROUP_ID:
+        return False
+
+    return True
 
 
 def log_file_entry(update: Update, filename: str, filesize: int | None) -> None:
@@ -163,6 +188,24 @@ def log_file_entry(update: Update, filename: str, filesize: int | None) -> None:
 
     with open(PROCESS_LOG_FILE, "a", encoding="utf-8") as f:
         f.write(line)
+
+
+async def react_working(message) -> None:
+    try:
+        await message.set_reaction("👀")
+    except Exception:
+        log.debug("Could not react to message.", exc_info=True)
+
+
+def is_image_document(document) -> bool:
+    filename = document.file_name or ""
+    suffix = Path(filename).suffix.lower()
+    mime_type = document.mime_type or ""
+
+    if suffix in IMAGE_EXTENSIONS:
+        return True
+
+    return any(mime_type.startswith(prefix) for prefix in IMAGE_MIME_PREFIXES)
 
 
 def safe_name(value: str, fallback: str = "keyword") -> str:
@@ -452,8 +495,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         return
 
     await update.message.reply_text(
-        "Send a compressed archive to this group. "
-        "If the archive has a password, put the password in the message caption."
+        "Send a compressed archive to this group with `/analyze` in the caption. "
+        "If the archive has a password, put it after `/analyze`."
     )
 
 
@@ -467,10 +510,15 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     if not document:
         return
 
+    if is_image_document(document):
+        return
+
     caption = message.caption.strip() if message.caption else ""
 
     if not caption.startswith("/analyze"):
         return
+
+    await react_working(message)
 
     parts = caption.split(maxsplit=1)
     password = parts[1].strip() if len(parts) > 1 else None
@@ -485,10 +533,6 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             "Unsupported archive type. Supported: zip, 7z, rar, tar, gz, tgz, "
             "tar.gz, tar.bz2, tar.xz."
         )
-        return
-
-    if document.file_size and document.file_size > MAX_DOWNLOAD_MB * 1024 * 1024:
-        await message.reply_text(f"File too large. Limit is {MAX_DOWNLOAD_MB} MB.")
         return
 
     await message.chat.send_action(ChatAction.TYPING)
@@ -574,13 +618,30 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
 
 async def handle_non_document(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    print(update.effective_chat.id)
     if not is_group_message(update):
         return
 
-    await update.message.reply_text(
-        "Please send a compressed file as a Telegram document. "
-        "Use the caption as the archive password if needed."
+    message = update.message
+
+    if (
+        message.sticker
+        or message.photo
+        or message.animation
+        or message.video
+        or message.video_note
+        or message.voice
+        or message.audio
+    ):
+        return
+
+    text = message.text or ""
+
+    if not text.startswith("/analyze"):
+        return
+
+    await message.reply_text(
+        "Please send `/analyze` as the caption of a compressed file, "
+        "not as a standalone message."
     )
 
 
