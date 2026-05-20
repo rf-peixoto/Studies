@@ -12,11 +12,13 @@ from datetime import datetime
 from pathlib import Path
 from typing import Iterable
 
+import aiohttp
 import py7zr
 import rarfile
 from dotenv import load_dotenv
 from telegram import Update
 from telegram.constants import ChatAction, ChatType
+from telegram.error import BadRequest
 from telegram.ext import (
     ApplicationBuilder,
     CommandHandler,
@@ -25,38 +27,33 @@ from telegram.ext import (
     filters,
 )
 
+# =========================
+# Config
+# =========================
+
 load_dotenv()
 
 BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
 KEYWORDS_FILE = Path(os.getenv("KEYWORDS_FILE", "keywords.txt"))
 
-# None = allow any group/supergroup.
-# Example: ALLOWED_GROUP_ID = -100xxxxxxxxxx
-ALLOWED_GROUP_ID = None
+ALLOWED_GROUP_ID = None  # Example: -100xxxxxxxxxx
+
+USE_LOCAL_BOT_API = True
+LOCAL_BOT_API_BASE_URL = "http://127.0.0.1:8081/bot"
+LOCAL_BOT_API_FILE_URL = "http://127.0.0.1:8081/file/bot"
 
 WORK_ROOT = Path("./work").resolve()
 RESULTS_DIR_NAME = "findings"
 
-MAX_FILE_READ_MB = 64
-MAX_RESULT_FILE_MB = 128
-MAX_TOTAL_RESULTS_MB = 512
+DOWNLOAD_CHUNK_SIZE = 8 * 1024 * 1024
 MAX_KEYWORDS = 5000
 
 LOG_FILE = "bot.log"
 PROCESS_LOG_FILE = "processed_files.log"
 
 ALLOWED_ARCHIVE_EXTENSIONS = {
-    ".zip",
-    ".7z",
-    ".rar",
-    ".tar",
-    ".gz",
-    ".tgz",
-    ".tar.gz",
-    ".tar.bz2",
-    ".tbz2",
-    ".tar.xz",
-    ".txz",
+    ".zip", ".7z", ".rar", ".tar", ".gz", ".tgz",
+    ".tar.gz", ".tar.bz2", ".tbz2", ".tar.xz", ".txz",
 }
 
 IMAGE_EXTENSIONS = {
@@ -71,6 +68,10 @@ TEXT_EXTENSIONS_PREFERRED = {
     ".md", ".rtf", ".ndjson", ".jsonl", ".tsv", ".lst", ".list",
 }
 
+# =========================
+# Logging
+# =========================
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(levelname)s %(name)s :: %(message)s",
@@ -80,12 +81,15 @@ logging.basicConfig(
     ],
 )
 
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("telegram").setLevel(logging.WARNING)
+
 log = logging.getLogger("keyword-archive-bot")
 
 
 @dataclass
 class ScanSummary:
-    archive_name: str
+    input_name: str
     password_used: bool
     keywords_loaded: int
     files_scanned: int
@@ -154,11 +158,11 @@ def is_image_document(document) -> bool:
     return suffix in IMAGE_EXTENSIONS or mime_type.startswith("image/")
 
 
-def safe_name(value: str, fallback: str = "keyword") -> str:
+def safe_name(value: str, fallback: str = "file") -> str:
     value = value.strip()
     value = re.sub(r"[^\w.\-]+", "_", value, flags=re.UNICODE)
     value = value.strip("._-")
-    return value[:120] or fallback
+    return value[:160] or fallback
 
 
 def archive_suffix(path: Path) -> str:
@@ -188,14 +192,14 @@ def load_keywords() -> list[str]:
 
     with KEYWORDS_FILE.open("r", encoding="utf-8", errors="replace") as f:
         for line in f:
-            kw = line.strip()
+            keyword = line.strip()
 
-            if not kw or kw.startswith("#"):
+            if not keyword or keyword.startswith("#"):
                 continue
 
-            if kw not in seen:
-                seen.add(kw)
-                keywords.append(kw)
+            if keyword not in seen:
+                seen.add(keyword)
+                keywords.append(keyword)
 
     if not keywords:
         raise ValueError("Keywords file is empty.")
@@ -304,30 +308,19 @@ def iter_files(root: Path) -> Iterable[Path]:
 
 
 def grep_recursive(
-    extracted_dir: Path,
+    input_dir: Path,
     findings_dir: Path,
     keywords: list[str],
 ) -> tuple[int, int, int]:
     files_scanned = 0
     files_skipped = 0
     total_matches = 0
-    result_sizes: dict[str, int] = {}
 
     compiled = [(kw, re.compile(re.escape(kw), re.IGNORECASE)) for kw in keywords]
     handles = {}
 
     try:
-        for file_path in iter_files(extracted_dir):
-            try:
-                size = file_path.stat().st_size
-            except OSError:
-                files_skipped += 1
-                continue
-
-            if size > MAX_FILE_READ_MB * 1024 * 1024:
-                files_skipped += 1
-                continue
-
+        for file_path in iter_files(input_dir):
             if not looks_like_text_file(file_path):
                 files_skipped += 1
                 continue
@@ -335,19 +328,14 @@ def grep_recursive(
             files_scanned += 1
 
             try:
-                rel = file_path.relative_to(extracted_dir)
+                rel = file_path.relative_to(input_dir)
 
                 with file_path.open("r", encoding="utf-8", errors="replace") as f:
                     for line_no, line in enumerate(f, start=1):
                         for keyword, pattern in compiled:
                             if pattern.search(line):
-                                out_name = safe_name(keyword) + ".txt"
+                                out_name = safe_name(keyword, fallback="keyword") + ".txt"
                                 out_path = findings_dir / out_name
-
-                                current_size = result_sizes.get(out_name, 0)
-
-                                if current_size >= MAX_RESULT_FILE_MB * 1024 * 1024:
-                                    continue
 
                                 if out_name not in handles:
                                     handles[out_name] = out_path.open(
@@ -356,26 +344,15 @@ def grep_recursive(
                                         errors="replace",
                                     )
 
-                                record = f"{rel}:{line_no}: {line}"
-                                handles[out_name].write(record)
-
-                                written = len(record.encode("utf-8", errors="replace"))
-                                result_sizes[out_name] = current_size + written
+                                handles[out_name].write(f"{rel}:{line_no}: {line}")
                                 total_matches += 1
 
-                if sum(result_sizes.values()) > MAX_TOTAL_RESULTS_MB * 1024 * 1024:
-                    raise RuntimeError(
-                        f"Total findings exceeded {MAX_TOTAL_RESULTS_MB} MB limit."
-                    )
-
-            except UnicodeError:
-                files_skipped += 1
             except OSError:
                 files_skipped += 1
 
     finally:
-        for h in handles.values():
-            h.close()
+        for handle in handles.values():
+            handle.close()
 
     return files_scanned, files_skipped, total_matches
 
@@ -396,19 +373,65 @@ def format_summary(summary: ScanSummary) -> str:
     if summary.error:
         return (
             "Processing failed.\n\n"
-            f"Archive/File: {summary.archive_name}\n"
+            f"Input: {summary.input_name}\n"
             f"Error: {summary.error}"
         )
 
     return (
         "Processing completed.\n\n"
-        f"Archive/File: {summary.archive_name}\n"
+        f"Input: {summary.input_name}\n"
         f"Password supplied: {'yes' if summary.password_used else 'no'}\n"
         f"Keywords loaded: {summary.keywords_loaded}\n"
         f"Files scanned: {summary.files_scanned}\n"
         f"Files skipped: {summary.files_skipped}\n"
         f"Matches found: {summary.matches}"
     )
+
+
+async def download_telegram_file_chunked(document, destination: Path) -> None:
+    try:
+        tg_file = await document.get_file()
+    except BadRequest as e:
+        if "file is too big" in str(e).lower():
+            raise RuntimeError(
+                "Telegram refused getFile because the file is too big. "
+                "Chunked download cannot bypass this on the public Bot API. "
+                "Run a local Telegram Bot API server and set USE_LOCAL_BOT_API=True."
+            ) from e
+        raise
+
+    file_path = tg_file.file_path
+
+    if not file_path:
+        raise RuntimeError("Telegram did not return file_path.")
+
+    local_path = Path(file_path)
+
+    if local_path.is_absolute() and local_path.exists():
+        shutil.copy2(local_path, destination)
+        return
+
+    if file_path.startswith("http://") or file_path.startswith("https://"):
+        download_url = file_path
+    elif USE_LOCAL_BOT_API:
+        download_url = f"{LOCAL_BOT_API_FILE_URL}{BOT_TOKEN}/{file_path}"
+    else:
+        download_url = f"https://api.telegram.org/file/bot{BOT_TOKEN}/{file_path}"
+
+    timeout = aiohttp.ClientTimeout(total=None, sock_connect=60, sock_read=300)
+
+    async with aiohttp.ClientSession(timeout=timeout) as session:
+        async with session.get(download_url) as response:
+            if response.status != 200:
+                body = await response.text()
+                raise RuntimeError(
+                    f"File download failed with HTTP {response.status}: {body[:500]}"
+                )
+
+            with destination.open("wb") as f:
+                async for chunk in response.content.iter_chunked(DOWNLOAD_CHUNK_SIZE):
+                    if chunk:
+                        f.write(chunk)
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -468,14 +491,14 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
     job_dir = Path(tempfile.mkdtemp(prefix="tg_keyword_job_", dir=WORK_ROOT))
     downloaded_path = job_dir / safe_file_name
-    extracted_dir = job_dir / "input"
+    input_dir = job_dir / "input"
     findings_dir = job_dir / RESULTS_DIR_NAME
 
-    extracted_dir.mkdir()
+    input_dir.mkdir()
     findings_dir.mkdir()
 
     summary = ScanSummary(
-        archive_name=original_name,
+        input_name=original_name,
         password_used=bool(password) and is_archive,
         keywords_loaded=0,
         files_scanned=0,
@@ -485,8 +508,7 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     )
 
     try:
-        tg_file = await document.get_file()
-        await tg_file.download_to_drive(custom_path=downloaded_path)
+        await download_telegram_file_chunked(document, downloaded_path)
 
         keywords = load_keywords()
         summary.keywords_loaded = len(keywords)
@@ -494,16 +516,16 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         await message.chat.send_action(ChatAction.TYPING)
 
         if is_archive:
-            extract_archive(downloaded_path, extracted_dir, password)
+            extract_archive(downloaded_path, input_dir, password)
         else:
-            plain_target = extracted_dir / safe_file_name
-            ensure_inside(extracted_dir, plain_target)
+            plain_target = input_dir / safe_file_name
+            ensure_inside(input_dir, plain_target)
             shutil.copy2(downloaded_path, plain_target)
 
         await message.chat.send_action(ChatAction.TYPING)
 
         files_scanned, files_skipped, matches = grep_recursive(
-            extracted_dir=extracted_dir,
+            input_dir=input_dir,
             findings_dir=findings_dir,
             keywords=keywords,
         )
@@ -522,7 +544,6 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         summary.result_archive = result_archive
 
         await message.reply_text(format_summary(summary))
-
         await message.chat.send_action(ChatAction.UPLOAD_DOCUMENT)
 
         with result_archive.open("rb") as f:
@@ -572,6 +593,28 @@ async def handle_non_document(update: Update, context: ContextTypes.DEFAULT_TYPE
     )
 
 
+def build_application():
+    builder = (
+        ApplicationBuilder()
+        .token(BOT_TOKEN)
+        .connect_timeout(60)
+        .read_timeout(300)
+        .write_timeout(300)
+        .pool_timeout(60)
+        .media_write_timeout(300)
+    )
+
+    if USE_LOCAL_BOT_API:
+        builder = (
+            builder
+            .base_url(LOCAL_BOT_API_BASE_URL)
+            .base_file_url(LOCAL_BOT_API_FILE_URL)
+            .local_mode(True)
+        )
+
+    return builder.build()
+
+
 def main() -> None:
     if not BOT_TOKEN:
         raise SystemExit("TELEGRAM_BOT_TOKEN is missing. Put it in .env.")
@@ -579,15 +622,7 @@ def main() -> None:
     if not KEYWORDS_FILE.exists():
         raise SystemExit(f"Keywords file not found: {KEYWORDS_FILE}")
 
-    app = (
-        ApplicationBuilder()
-        .token(BOT_TOKEN)
-        .connect_timeout(60)
-        .read_timeout(60)
-        .write_timeout(60)
-        .pool_timeout(60)
-        .build()
-    )
+    app = build_application()
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.Document.ALL, handle_document))
