@@ -20,6 +20,9 @@ nmap -v -D RND:64 -sV -T2 --top-ports=50 --open
 # Disable bash log in this session:
 unset HITSFILE #.bash_history
 
+# Delete empty files:
+find . -maxdepth 1 -type f -empty -delete
+
 # Remote GUI program with ssh:
 ssh -fX user@host program
 # Ex: ssh -fX user@host wireshark
