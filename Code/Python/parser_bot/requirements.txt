@@ -2,3 +2,4 @@ python-telegram-bot>=21.0
 py7zr>=0.21.0
 rarfile>=4.2
 python-dotenv>=1.0.1
+aiohttp>=3.9.0
