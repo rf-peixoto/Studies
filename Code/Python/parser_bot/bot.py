@@ -463,10 +463,17 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
     message = update.message
     document = message.document
-    password = message.caption.strip() if message.caption else None
 
     if not document:
         return
+
+    caption = message.caption.strip() if message.caption else ""
+
+    if not caption.startswith("/analyze"):
+        return
+
+    parts = caption.split(maxsplit=1)
+    password = parts[1].strip() if len(parts) > 1 else None
 
     original_name = document.file_name or "uploaded_archive"
     safe_archive_name = safe_name(original_name, fallback="uploaded_archive")
