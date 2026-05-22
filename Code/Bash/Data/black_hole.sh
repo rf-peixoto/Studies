@@ -5,7 +5,7 @@ set -euo pipefail
 # CONFIG
 # ============================================================
 
-TOOL_NAME="TEMPNAME"
+TOOL_NAME="BLACKHOLE"
 
 ZSTD_LEVEL=10
 THREADS="$(nproc)"
@@ -58,8 +58,8 @@ fi
 banner() {
     printf '%b\n' "${CYAN}${BOLD}"
     printf '%s\n' "┌──────────────────────────────────────────────┐"
-    printf '%s\n' "│                  ${TOOL_NAME}                  │"
-    printf '%s\n' "│        compressed raw-text search helper      │"
+    printf '%s\n' "│                  ${TOOL_NAME}                │"
+    printf '%s\n' "│        compressed raw-text search helper     │"
     printf '%s\n' "└──────────────────────────────────────────────┘"
     printf '%b\n' "${NC}"
 }
