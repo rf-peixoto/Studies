@@ -324,8 +324,26 @@ append_file_to_group_shard() {
 }
 
 # ------------------------------------------------------------
-# FIXED: Shard management – no more overwriting, safe increments
+# FIXED: Group shard management
 # ------------------------------------------------------------
+#
+# Important guarantees:
+#   1. Every grouped shard gets a unique monotonically increasing name:
+#        group_000001.zst
+#        group_000002.zst
+#        group_000003.zst
+#        ...
+#
+#   2. The active raw shard is finalized before a new group starts.
+#
+#   3. Existing .zst shards are never overwritten.
+#
+#   4. The tmp raw file name always matches the final shard name, making
+#      debugging simple:
+#        tmp/group_000001.raw -> shards/group_000001.zst
+#
+#   5. The last partially-filled group is always compressed at the end.
+#
 compress_path() {
     local input="$1"
     local output="$2"
@@ -356,24 +374,81 @@ compress_path() {
     local error_count=0
     local total_seen=0
 
-    local shard_counter=1
-    local shard_name shard_tmp shard_out
+    local group_id=1
+    local current_group_name=""
+    local current_group_tmp=""
+    local current_group_out=""
 
-    # Helper to get a fresh, unused shard name
-    _new_shard() {
-        shard_name="group_$(printf '%06d' "$shard_counter").zst"
-        shard_tmp="$output/tmp/group_$(printf '%06d' "$shard_counter").raw"
-        shard_out="$output/shards/$shard_name"
-        while [[ -e "$shard_out" || -e "$shard_tmp" ]]; do
-            (( shard_counter += 1 ))
-            shard_name="group_$(printf '%06d' "$shard_counter").zst"
-            shard_tmp="$output/tmp/group_$(printf '%06d' "$shard_counter").raw"
-            shard_out="$output/shards/$shard_name"
+    next_available_group_id() {
+        local candidate
+
+        while true; do
+            candidate="$(printf '%06d' "$group_id")"
+
+            current_group_name="group_${candidate}.zst"
+            current_group_tmp="$output/tmp/group_${candidate}.raw"
+            current_group_out="$output/shards/$current_group_name"
+
+            if [[ ! -e "$current_group_tmp" && ! -e "$current_group_out" ]]; then
+                return 0
+            fi
+
+            (( group_id += 1 ))
         done
-        : > "$shard_tmp"
     }
 
-    _new_shard
+    start_group_shard() {
+        next_available_group_id
+
+        # Refuse accidental reuse even if the filesystem state changes between
+        # next_available_group_id and this point.
+        if [[ -e "$current_group_tmp" || -e "$current_group_out" ]]; then
+            die "Internal shard naming collision: $current_group_name"
+        fi
+
+        : > "$current_group_tmp"
+        shard_size=0
+
+        work "Started grouped shard: $current_group_name"
+    }
+
+    finalize_group_shard() {
+        if [[ -z "$current_group_tmp" || -z "$current_group_out" || -z "$current_group_name" ]]; then
+            return 0
+        fi
+
+        if (( shard_size <= 0 )) || [[ ! -s "$current_group_tmp" ]]; then
+            rm -f -- "$current_group_tmp"
+            current_group_name=""
+            current_group_tmp=""
+            current_group_out=""
+            shard_size=0
+            return 0
+        fi
+
+        if [[ -e "$current_group_out" ]]; then
+            die "Refusing to overwrite existing grouped shard: $current_group_out"
+        fi
+
+        work "Compressing grouped shard: $current_group_name raw_size=$(human_bytes "$(stat -c%s "$current_group_tmp")")"
+
+        # Do not use -f here. Existing output must remain a hard failure.
+        if zstd -q -T"$THREADS" -"${ZSTD_LEVEL}" "$current_group_tmp" -o "$current_group_out"; then
+            rm -f -- "$current_group_tmp"
+            ok "Created $current_group_out"
+        else
+            printf '%s\t%s\n' "$current_group_tmp" "group_compression_failed" >> "$output/manifests/errors.tsv"
+            warn "Failed to compress grouped shard: $current_group_tmp"
+            return 1
+        fi
+
+        (( group_id += 1 ))
+
+        current_group_name=""
+        current_group_tmp=""
+        current_group_out=""
+        shard_size=0
+    }
 
     process_one_file() {
         local file="$1"
@@ -389,6 +464,7 @@ compress_path() {
             else
                 rel="$(basename "$file")"
             fi
+
             warn "Ignoring compressed input: $rel"
             printf '%s\n' "$rel" >> "$output/manifests/ignored_compressed_files.tsv"
             (( ignored_count += 1 ))
@@ -402,36 +478,40 @@ compress_path() {
             return 0
         fi
 
-        # Standalone big file
+        # Standalone big file.
         if (( size >= BIG_FILE_MIN_BYTES )); then
             if ! compress_standalone_file "$input" "$output" "$file" "$standalone_id"; then
                 (( error_count += 1 ))
             fi
+
             (( standalone_id += 1 ))
             (( big_count += 1 ))
             return 0
         fi
 
-        # Small file: check if we need to finalize current shard and start a new one
-        if (( shard_size > 0 && shard_size + size >= SHARD_TARGET_BYTES )); then
-            if ! finalize_group_shard "$shard_tmp" "$shard_out"; then
-                (( error_count += 1 ))
-            fi
-            (( shard_counter += 1 ))
-            _new_shard
-            shard_size=0
+        # Lazily create the first group only when the first small file appears.
+        if [[ -z "$current_group_tmp" ]]; then
+            start_group_shard
         fi
 
-        # Append to the (possibly new) shard
+        # If adding this file would exceed the target, close the current group
+        # and start a fresh one. This is the critical anti-overwrite path.
+        if (( shard_size > 0 && shard_size + size > SHARD_TARGET_BYTES )); then
+            if ! finalize_group_shard; then
+                (( error_count += 1 ))
+            fi
+            start_group_shard
+        fi
+
         if [[ -d "$input" ]]; then
             rel="${file#$input/}"
         else
             rel="$(basename "$file")"
         fi
 
-        work "Grouping small file: shard=$shard_name file=$rel size=$(human_bytes "$size")"
+        work "Grouping small file: shard=$current_group_name file=$rel size=$(human_bytes "$size")"
 
-        if append_file_to_group_shard "$input" "$output" "$file" "$shard_tmp" "$shard_name"; then
+        if append_file_to_group_shard "$input" "$output" "$file" "$current_group_tmp" "$current_group_name"; then
             (( shard_size += size ))
             (( small_count += 1 ))
         else
@@ -451,13 +531,10 @@ compress_path() {
         die "Input is neither a file nor a directory: $input"
     fi
 
-    # Finalize the last group shard if it contains data
-    if (( shard_size > 0 )); then
-        if ! finalize_group_shard "$shard_tmp" "$shard_out"; then
-            (( error_count += 1 ))
-        fi
-    else
-        rm -f -- "$shard_tmp"
+    # Finalize the last partially-filled grouped shard. This is what creates
+    # group_000001.zst even when the total small-file data is below 8GB.
+    if ! finalize_group_shard; then
+        (( error_count += 1 ))
     fi
 
     rmdir "$output/tmp" 2>/dev/null || true
