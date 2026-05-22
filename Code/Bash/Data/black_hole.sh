@@ -5,7 +5,7 @@ set -euo pipefail
 # CONFIG
 # ============================================================
 
-TOOL_NAME="BLACKHOLE"
+TOOL_NAME="BLACK HOLE"
 
 ZSTD_LEVEL=10
 THREADS="$(nproc)"
@@ -58,8 +58,8 @@ fi
 banner() {
     printf '%b\n' "${CYAN}${BOLD}"
     printf '%s\n' "┌──────────────────────────────────────────────┐"
-    printf '%s\n' "│                  ${TOOL_NAME}                │"
-    printf '%s\n' "│        compressed raw-text search helper     │"
+    printf '%s\n' "│                  ${TOOL_NAME}                  │"
+    printf '%s\n' "│        compressed raw-text search helper      │"
     printf '%s\n' "└──────────────────────────────────────────────┘"
     printf '%b\n' "${NC}"
 }
@@ -323,6 +323,29 @@ append_file_to_group_shard() {
     fi
 }
 
+# ------------------------------------------------------------------
+# FIX: Generate unique shard paths to avoid overwriting
+# ------------------------------------------------------------------
+next_shard_paths() {
+    local output="$1"
+    local base_counter="$2"
+    local counter="$base_counter"
+    local shard_name shard_tmp shard_out
+
+    while true; do
+        shard_name="group_$(printf '%06d' "$counter").zst"
+        shard_tmp="$output/tmp/group_$(printf '%06d' "$counter").raw"
+        shard_out="$output/shards/$shard_name"
+
+        # If neither the final .zst nor the temporary .raw file exists, use this.
+        if [[ ! -e "$shard_out" && ! -e "$shard_tmp" ]]; then
+            printf '%s\n%s\n%s\n' "$shard_name" "$shard_tmp" "$shard_out"
+            return 0
+        fi
+        ((counter++))
+    done
+}
+
 compress_path() {
     local input="$1"
     local output="$2"
@@ -355,10 +378,8 @@ compress_path() {
     local error_count=0
     local total_seen=0
 
-    local shard_name="group_$(printf '%06d' "$shard_id").zst"
-    local shard_tmp="$output/tmp/group_$(printf '%06d' "$shard_id").raw"
-    local shard_out="$output/shards/$shard_name"
-
+    # Get initial shard paths (will be overwritten after each finalize)
+    IFS=$'\n' read -r shard_name shard_tmp shard_out <<< "$(next_shard_paths "$output" "$shard_id")"
     : > "$shard_tmp"
 
     process_one_file() {
@@ -399,18 +420,19 @@ compress_path() {
             return 0
         fi
 
+        # If current shard is non‑empty and adding this file would exceed target:
         if (( shard_size > 0 && shard_size + size >= SHARD_TARGET_BYTES )); then
+            # Finalize current shard
             if ! finalize_group_shard "$shard_tmp" "$shard_out"; then
                 error_count=$((error_count + 1))
             fi
 
+            # ------------------------------------------------------------------
+            # FIX: Create a brand new shard with a guaranteed unused name
+            # ------------------------------------------------------------------
             shard_id=$((shard_id + 1))
+            IFS=$'\n' read -r shard_name shard_tmp shard_out <<< "$(next_shard_paths "$output" "$shard_id")"
             shard_size=0
-
-            shard_name="group_$(printf '%06d' "$shard_id").zst"
-            shard_tmp="$output/tmp/group_$(printf '%06d' "$shard_id").raw"
-            shard_out="$output/shards/$shard_name"
-
             : > "$shard_tmp"
         fi
 
@@ -442,9 +464,7 @@ compress_path() {
         die "Input is neither a file nor a directory: $input"
     fi
 
-    # Critical fix:
-    # Only finalize the last group shard if it actually contains data.
-    # This prevents accidental reuse or overwrite of the last shard path.
+    # Finalize the last group shard if it contains data
     if (( shard_size > 0 )); then
         if ! finalize_group_shard "$shard_tmp" "$shard_out"; then
             error_count=$((error_count + 1))
