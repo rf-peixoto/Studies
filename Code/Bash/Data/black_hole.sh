@@ -323,29 +323,9 @@ append_file_to_group_shard() {
     fi
 }
 
-# ------------------------------------------------------------------
-# FIX: Generate unique shard paths to avoid overwriting
-# ------------------------------------------------------------------
-next_shard_paths() {
-    local output="$1"
-    local base_counter="$2"
-    local counter="$base_counter"
-    local shard_name shard_tmp shard_out
-
-    while true; do
-        shard_name="group_$(printf '%06d' "$counter").zst"
-        shard_tmp="$output/tmp/group_$(printf '%06d' "$counter").raw"
-        shard_out="$output/shards/$shard_name"
-
-        # If neither the final .zst nor the temporary .raw file exists, use this.
-        if [[ ! -e "$shard_out" && ! -e "$shard_tmp" ]]; then
-            printf '%s\n%s\n%s\n' "$shard_name" "$shard_tmp" "$shard_out"
-            return 0
-        fi
-        ((counter++))
-    done
-}
-
+# ------------------------------------------------------------
+# FIXED: Shard management – no more overwriting, safe increments
+# ------------------------------------------------------------
 compress_path() {
     local input="$1"
     local output="$2"
@@ -368,26 +348,38 @@ compress_path() {
     info "Big-file threshold: $(human_bytes "$BIG_FILE_MIN_BYTES")"
     info "Delete originals: $DELETE_ORIGINALS"
 
-    local shard_id=1
     local standalone_id=1
     local shard_size=0
-
     local small_count=0
     local big_count=0
     local ignored_count=0
     local error_count=0
     local total_seen=0
 
-    # Get initial shard paths (will be overwritten after each finalize)
-    IFS=$'\n' read -r shard_name shard_tmp shard_out <<< "$(next_shard_paths "$output" "$shard_id")"
-    : > "$shard_tmp"
+    local shard_counter=1
+    local shard_name shard_tmp shard_out
+
+    # Helper to get a fresh, unused shard name
+    _new_shard() {
+        shard_name="group_$(printf '%06d' "$shard_counter").zst"
+        shard_tmp="$output/tmp/group_$(printf '%06d' "$shard_counter").raw"
+        shard_out="$output/shards/$shard_name"
+        while [[ -e "$shard_out" || -e "$shard_tmp" ]]; do
+            (( shard_counter += 1 ))
+            shard_name="group_$(printf '%06d' "$shard_counter").zst"
+            shard_tmp="$output/tmp/group_$(printf '%06d' "$shard_counter").raw"
+            shard_out="$output/shards/$shard_name"
+        done
+        : > "$shard_tmp"
+    }
+
+    _new_shard
 
     process_one_file() {
         local file="$1"
-        local size
-        local rel
+        local size rel
 
-        total_seen=$((total_seen + 1))
+        (( total_seen += 1 ))
 
         [[ -f "$file" ]] || return 0
 
@@ -397,45 +389,40 @@ compress_path() {
             else
                 rel="$(basename "$file")"
             fi
-
             warn "Ignoring compressed input: $rel"
             printf '%s\n' "$rel" >> "$output/manifests/ignored_compressed_files.tsv"
-            ignored_count=$((ignored_count + 1))
+            (( ignored_count += 1 ))
             return 0
         fi
 
         if ! size="$(stat -c%s "$file" 2>/dev/null)"; then
             warn "Could not stat file: $file"
             printf '%s\t%s\n' "$file" "stat_failed" >> "$output/manifests/errors.tsv"
-            error_count=$((error_count + 1))
+            (( error_count += 1 ))
             return 0
         fi
 
+        # Standalone big file
         if (( size >= BIG_FILE_MIN_BYTES )); then
             if ! compress_standalone_file "$input" "$output" "$file" "$standalone_id"; then
-                error_count=$((error_count + 1))
+                (( error_count += 1 ))
             fi
-            standalone_id=$((standalone_id + 1))
-            big_count=$((big_count + 1))
+            (( standalone_id += 1 ))
+            (( big_count += 1 ))
             return 0
         fi
 
-        # If current shard is non‑empty and adding this file would exceed target:
+        # Small file: check if we need to finalize current shard and start a new one
         if (( shard_size > 0 && shard_size + size >= SHARD_TARGET_BYTES )); then
-            # Finalize current shard
             if ! finalize_group_shard "$shard_tmp" "$shard_out"; then
-                error_count=$((error_count + 1))
+                (( error_count += 1 ))
             fi
-
-            # ------------------------------------------------------------------
-            # FIX: Create a brand new shard with a guaranteed unused name
-            # ------------------------------------------------------------------
-            shard_id=$((shard_id + 1))
-            IFS=$'\n' read -r shard_name shard_tmp shard_out <<< "$(next_shard_paths "$output" "$shard_id")"
+            (( shard_counter += 1 ))
+            _new_shard
             shard_size=0
-            : > "$shard_tmp"
         fi
 
+        # Append to the (possibly new) shard
         if [[ -d "$input" ]]; then
             rel="${file#$input/}"
         else
@@ -445,12 +432,12 @@ compress_path() {
         work "Grouping small file: shard=$shard_name file=$rel size=$(human_bytes "$size")"
 
         if append_file_to_group_shard "$input" "$output" "$file" "$shard_tmp" "$shard_name"; then
-            shard_size=$((shard_size + size))
-            small_count=$((small_count + 1))
+            (( shard_size += size ))
+            (( small_count += 1 ))
         else
             warn "Failed to append file to group shard: $file"
             printf '%s\t%s\n' "$file" "append_failed" >> "$output/manifests/errors.tsv"
-            error_count=$((error_count + 1))
+            (( error_count += 1 ))
         fi
     }
 
@@ -467,7 +454,7 @@ compress_path() {
     # Finalize the last group shard if it contains data
     if (( shard_size > 0 )); then
         if ! finalize_group_shard "$shard_tmp" "$shard_out"; then
-            error_count=$((error_count + 1))
+            (( error_count += 1 ))
         fi
     else
         rm -f -- "$shard_tmp"
