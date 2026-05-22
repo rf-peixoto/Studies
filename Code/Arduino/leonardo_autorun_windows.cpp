@@ -22,7 +22,7 @@ void setup() {
     delay(1000);
 
     // Your backup command here
-    Keyboard.print("echo Arduino test > %USERPROFILE%\\Downloads\\arduino_test.txt");
+    Keyboard.print("echo Arduino test > %USERPROFILE%\\Downloads\\arduino_test.txt;exit");
     Keyboard.write(KEY_RETURN);
 
     // Stop keyboard emulation
