@@ -21,7 +21,7 @@ void setup() {
 
     delay(1000);
 
-    // Your backup command here
+    // One-liner command here
     Keyboard.print("echo Arduino test > %USERPROFILE%\\Downloads\\arduino_test.txt && exit");
     Keyboard.write(KEY_RETURN);
 
