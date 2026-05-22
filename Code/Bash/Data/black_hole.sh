@@ -12,15 +12,27 @@ SHARD_TARGET_BYTES=$((8 * 1024 * 1024 * 1024))
 DELETE_ORIGINALS="no"
 QUIET_MODE="no"
 
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-MAGENTA='\033[0;35m'
-CYAN='\033[0;36m'
-BOLD='\033[1m'
-DIM='\033[2m'
-NC='\033[0m'
+if [[ -t 2 ]]; then
+    RED="$(printf '\033[0;31m')"
+    GREEN="$(printf '\033[0;32m')"
+    YELLOW="$(printf '\033[1;33m')"
+    BLUE="$(printf '\033[0;34m')"
+    MAGENTA="$(printf '\033[0;35m')"
+    CYAN="$(printf '\033[0;36m')"
+    BOLD="$(printf '\033[1m')"
+    DIM="$(printf '\033[2m')"
+    NC="$(printf '\033[0m')"
+else
+    RED=""
+    GREEN=""
+    YELLOW=""
+    BLUE=""
+    MAGENTA=""
+    CYAN=""
+    BOLD=""
+    DIM=""
+    NC=""
+fi
 
 COMPRESSED_EXTENSIONS=(
     ".zip" ".gz" ".gzip" ".bz2" ".xz" ".zst" ".7z" ".rar"
@@ -28,12 +40,14 @@ COMPRESSED_EXTENSIONS=(
 )
 
 banner() {
-    echo -e "${CYAN}${BOLD}"
+    printf '%b
+' "${CYAN}${BOLD}"
     echo "┌──────────────────────────────────────────────┐"
     echo "│                  ${TOOL_NAME}                  │"
     echo "│        compressed raw-text search helper      │"
     echo "└──────────────────────────────────────────────┘"
-    echo -e "${NC}"
+    printf '%b
+' "${NC}"
 }
 
 help_menu() {
@@ -91,24 +105,29 @@ human_bytes() {
 }
 
 die() {
-    echo -e "${RED}${BOLD}[ERROR]${NC} $*" >&2
+    printf '%b
+' "${RED}${BOLD}[ERROR]${NC} $*" >&2
     exit 1
 }
 
 warn() {
-    echo -e "${YELLOW}${BOLD}[WARN]${NC} $*" >&2
+    printf '%b
+' "${YELLOW}${BOLD}[WARN]${NC} $*" >&2
 }
 
 ok() {
-    echo -e "${GREEN}${BOLD}[OK]${NC} $*" >&2
+    printf '%b
+' "${GREEN}${BOLD}[OK]${NC} $*" >&2
 }
 
 info() {
-    echo -e "${BLUE}${BOLD}[INFO]${NC} $*" >&2
+    printf '%b
+' "${BLUE}${BOLD}[INFO]${NC} $*" >&2
 }
 
 work() {
-    echo -e "${MAGENTA}${BOLD}[WORK]${NC} $*" >&2
+    printf '%b
+' "${MAGENTA}${BOLD}[WORK]${NC} $*" >&2
 }
 
 need_cmd() {
@@ -163,8 +182,10 @@ confirm_delete_originals() {
     fi
 
     echo
-    echo -e "${RED}${BOLD}DANGER:${NC} You requested --delete-originals."
-    echo -e "${RED}${BOLD}This will delete each original file after it is successfully compressed.${NC}"
+    printf '%b
+' "${RED}${BOLD}DANGER:${NC} You requested --delete-originals."
+    printf '%b
+' "${RED}${BOLD}This will delete each original file after it is successfully compressed.${NC}"
     echo
     read -r -p "Type DELETE to confirm: " answer
 
@@ -429,7 +450,8 @@ search_one_zst() {
     local file="$2"
 
     if [[ "$QUIET_MODE" != "yes" ]]; then
-        echo -e "${CYAN}${BOLD}[SEARCH]${NC} $file" >&2
+        printf '%b
+' "${CYAN}${BOLD}[SEARCH]${NC} $file" >&2
     fi
 
     zstdcat -- "$file" 2>/dev/null | rg \
