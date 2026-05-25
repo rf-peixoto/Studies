@@ -80,8 +80,8 @@ help_menu() {
     cat <<EOF
 ${BOLD}Usage:${NC}
   $0 install
-  $0 compress <input_file_or_dir> <output_dir> [--delete-originals] [--no-skip-known] [--quiet]
-  $0 search <pattern> <compressed_file_or_dir> [--quiet] [--fixed-string]
+  $0 compress <input_file_or_dir> <output_dir> [--delete-originals] [--no-skip-known] [--quiet|--quit]
+  $0 search <pattern> <compressed_file_or_dir> [--quiet|--quit] [--fixed-string]
 
 ${BOLD}Incremental behavior:${NC}
   - Existing manifests are not rewritten.
@@ -357,8 +357,25 @@ SUMMARY
 
 search_one_zst() {
     local pattern="$1" file="$2"
-    [[ "$QUIET_MODE" != "yes" ]] && printf '%b\n' "${CYAN}${BOLD}[SCAN]${NC} $file" >&2
-    zstdcat -- "$file" 2>/dev/null | rg -i -n --color=always --max-columns=4096 --max-columns-preview "${RG_EXTRA_ARGS[@]}" -- "$pattern" || true
+    local rg_color="always"
+
+    if [[ "$QUIET_MODE" == "yes" ]]; then
+        # Quiet mode must be safe for pipes/post-processing:
+        #   - no scan banners on stderr
+        #   - no ANSI color/control sequences in stdout
+        rg_color="never"
+    else
+        printf '%b\n' "${CYAN}${BOLD}[SCAN]${NC} $file" >&2
+    fi
+
+    zstdcat -- "$file" 2>/dev/null | rg \
+        -i \
+        -n \
+        --color="$rg_color" \
+        --max-columns=4096 \
+        --max-columns-preview \
+        "${RG_EXTRA_ARGS[@]}" \
+        -- "$pattern" || true
 }
 
 search_path() {
@@ -391,7 +408,7 @@ main() {
                 case "$1" in
                     --delete-originals) DELETE_ORIGINALS="yes" ;;
                     --no-skip-known) SKIP_KNOWN="no" ;;
-                    --quiet) QUIET_MODE="yes" ;;
+                    --quiet|--quit) QUIET_MODE="yes" ;;
                     *) die "Unknown compress option: $1" ;;
                 esac
                 shift
@@ -402,7 +419,7 @@ main() {
             local pattern="$1" target="$2"; shift 2
             while [[ $# -gt 0 ]]; do
                 case "$1" in
-                    --quiet) QUIET_MODE="yes" ;;
+                    --quiet|--quit) QUIET_MODE="yes" ;;
                     --fixed-string|-F) RG_EXTRA_ARGS+=("--fixed-strings") ;;
                     *) die "Unknown search option: $1" ;;
                 esac
