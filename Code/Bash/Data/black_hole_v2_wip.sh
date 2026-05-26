@@ -358,19 +358,22 @@ SUMMARY
 search_one_zst() {
     local pattern="$1" file="$2"
     local rg_color="always"
+    local rg_line_number_arg="-n"
 
     if [[ "$QUIET_MODE" == "yes" ]]; then
         # Quiet mode must be safe for pipes/post-processing:
         #   - no scan banners on stderr
         #   - no ANSI color/control sequences in stdout
+        #   - no ripgrep line-number prefix in stdout
         rg_color="never"
+        rg_line_number_arg="--no-line-number"
     else
         printf '%b\n' "${CYAN}${BOLD}[SCAN]${NC} $file" >&2
     fi
 
     zstdcat -- "$file" 2>/dev/null | rg \
         -i \
-        -n \
+        "$rg_line_number_arg" \
         --color="$rg_color" \
         --max-columns=4096 \
         --max-columns-preview \
@@ -380,19 +383,45 @@ search_one_zst() {
 
 search_path() {
     local pattern="$1" target="$2" scan_root
+    local search_started search_finished elapsed_seconds
+    local shard_count=0 total_shard_bytes=0 file size
+
     require_runtime_tools
     [[ -e "$target" ]] || die "Search path does not exist: $target"
+
     banner
     info "Pattern: $pattern"
     info "Target: $target"
+
+    search_started="$(date +%s)"
+
     if [[ -f "$target" ]]; then
         [[ "$target" == *.zst ]] || die "Search file is not .zst: $target"
+        size="$(file_size "$target" 2>/dev/null || printf '0')"
+        shard_count=1
+        total_shard_bytes="$size"
         search_one_zst "$pattern" "$target"
-        return 0
+    else
+        scan_root="$target"
+        [[ -d "$target/shards" ]] && scan_root="$target/shards"
+
+        while IFS= read -r -d '' file; do
+            size="$(file_size "$file" 2>/dev/null || printf '0')"
+            total_shard_bytes="$((total_shard_bytes + size))"
+            shard_count="$((shard_count + 1))"
+            search_one_zst "$pattern" "$file"
+        done < <(find "$scan_root" -type f -name '*.zst' -print0 | sort -z)
     fi
-    scan_root="$target"
-    [[ -d "$target/shards" ]] && scan_root="$target/shards"
-    find "$scan_root" -type f -name '*.zst' -print0 | sort -z | while IFS= read -r -d '' file; do search_one_zst "$pattern" "$file"; done
+
+    search_finished="$(date +%s)"
+    elapsed_seconds="$((search_finished - search_started))"
+
+    if [[ "$QUIET_MODE" != "yes" ]]; then
+        ok "Search finished."
+        info "Search time: ${elapsed_seconds}s"
+        info "Shards searched: $shard_count"
+        info "Compressed data searched: $(human_bytes "$total_shard_bytes") ($total_shard_bytes bytes)"
+    fi
 }
 
 main() {
