@@ -1,0 +1,13 @@
+services:
+  scanner:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: own-domain-scanner:latest
+    init: true
+    cpus: "4.0"
+    mem_limit: 10g
+    memswap_limit: 10g
+    volumes:
+      - ./data:/data:ro
+      - ./scan_results:/output
