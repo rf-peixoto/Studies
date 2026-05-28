@@ -3,6 +3,11 @@ set -euo pipefail
 
 VENV_DIR="venv"
 
+if [ -d "$VENV_DIR" ]; then
+    echo "── Removing existing virtual environment ──"
+    rm -rf "$VENV_DIR"
+fi
+
 echo "── Creating virtual environment in ./${VENV_DIR} ──"
 python3 -m venv "$VENV_DIR"
 
@@ -17,6 +22,9 @@ echo "── Installing remaining dependencies ──"
     face_recognition \
     fastapi \
     uvicorn[standard]
+
+echo "── Verifying face_recognition import ──"
+"$VENV_DIR/bin/python" -c "import face_recognition; print('✓ face_recognition imported successfully.')"
 
 echo ""
 echo "✓ Done. Run ./start.sh to start the server."
