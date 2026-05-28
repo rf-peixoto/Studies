@@ -98,7 +98,7 @@ ${BOLD}Examples:${NC}
   $0 search 'literal[.]domain' /data/blackhole --fixed-string
 
 ${BOLD}Environment overrides:${NC}
-  BLACK_HOLE_ZSTD_LEVEL=6
+  BLACK_HOLE_ZSTD_LEVEL=10
   BLACK_HOLE_THREADS=4
   BLACK_HOLE_SHARD_TARGET_BYTES=$((1024 * 1024 * 1024))
 
