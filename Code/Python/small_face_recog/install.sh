@@ -3,13 +3,26 @@ set -euo pipefail
 
 VENV_DIR="venv"
 
-if [ -d "$VENV_DIR" ]; then
-    echo "── Removing existing virtual environment ──"
-    rm -rf "$VENV_DIR"
+# ── Find a compatible Python version (3.11 or 3.12 preferred) ─────────────────
+PYTHON=""
+for candidate in python3.12 python3.11 python3.10; do
+    if command -v "$candidate" &>/dev/null; then
+        PYTHON="$candidate"
+        break
+    fi
+done
+
+if [ -z "$PYTHON" ]; then
+    echo "Error: Python 3.10, 3.11, or 3.12 is required but none were found."
+    echo "face_recognition is not compatible with Python 3.13+."
+    echo "Install one with: sudo apt install python3.12  (or python3.11)"
+    exit 1
 fi
 
+echo "── Using $($PYTHON --version) ──"
+
 echo "── Creating virtual environment in ./${VENV_DIR} ──"
-python3 -m venv "$VENV_DIR"
+"$PYTHON" -m venv "$VENV_DIR"
 
 echo "── Upgrading pip ──"
 "$VENV_DIR/bin/pip" install --upgrade pip
