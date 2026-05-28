@@ -12,7 +12,7 @@ chmod +x install.sh start.sh
 ./install.sh
 ```
 
-> `face_recognition` compiles C++ during install — this can take 5–10 minutes on first run. That is normal.
+No compilation required — all dependencies install as pre-built wheels.
 
 ---
 
@@ -24,6 +24,8 @@ chmod +x install.sh start.sh
 
 The server starts at `http://localhost:8000`.
 Interactive API docs are available at `http://localhost:8000/docs`.
+
+> **First start only:** InsightFace will download its face recognition models (~300 MB) to `~/.insightface/`. This happens once and is automatic.
 
 ---
 
@@ -40,7 +42,7 @@ curl -X POST http://localhost:8000/faces/register \
 
 **Tips for best results:**
 - Use a clear, well-lit, front-facing portrait.
-- One face per registration photo.
+- One face per registration photo. If multiple faces are present, only the first is used.
 - Minimum recommended size: 150×150 px.
 - If recognition feels unreliable for someone, re-registering with a better photo is the first thing to try.
 
@@ -49,7 +51,7 @@ curl -X POST http://localhost:8000/faces/register \
 {
   "face_id": "a1b2c3...",
   "name": "John Smith",
-  "message": "Face registered and encoding cached."
+  "message": "Face registered and embedding cached."
 }
 ```
 
@@ -63,20 +65,20 @@ curl -X POST http://localhost:8000/faces/detect \
   -F "file=@group_photo.jpg"
 ```
 
-With a custom tolerance (default is `0.55`):
+With a custom threshold (default is `0.40`):
 
 ```bash
-curl -X POST "http://localhost:8000/faces/detect?tolerance=0.5" \
+curl -X POST "http://localhost:8000/faces/detect?threshold=0.35" \
   -F "file=@group_photo.jpg"
 ```
 
-**Tolerance guide:**
+**Threshold guide:**
 
 | Value | Behaviour |
 |-------|-----------|
-| `0.4` | Very strict — fewer false positives, may miss some matches |
-| `0.55` | Default — good balance for clear photos |
-| `0.7` | Lenient — catches more matches but risks false positives |
+| `0.30` | Very strict — fewer false positives, may miss some matches |
+| `0.40` | Default — good balance for clear photos |
+| `0.55` | Lenient — catches more matches but risks false positives |
 
 **Response:**
 ```json
@@ -85,22 +87,22 @@ curl -X POST "http://localhost:8000/faces/detect?tolerance=0.5" \
   "faces_in_image": 3,
   "people_checked": 5,
   "people_detected": 2,
-  "tolerance": 0.55,
+  "threshold": 0.40,
   "results": [
     {
       "face_id": "a1b2c3...",
       "name": "John Smith",
       "detected": true,
-      "best_distance": 0.42,
-      "tolerance": 0.55,
-      "confidence": 23.6
+      "best_distance": 0.28,
+      "threshold": 0.40,
+      "confidence": 30.0
     },
     ...
   ]
 }
 ```
 
-Results are sorted with detected people first, then by confidence.
+Results are sorted with detected people first, then by distance.
 
 ---
 
@@ -137,17 +139,18 @@ All data is stored locally in the `face_store/` directory created next to the se
 
 ```
 face_store/
-├── index.json          ← registry of all people and their metadata
-├── <face_id>.jpg       ← original reference photos
-└── <face_id>_encoding.npy  ← cached 128-d face encodings
+├── index.json                  ← registry of all people and their metadata
+├── <face_id>.jpg               ← original reference photos
+└── <face_id>_embedding.npy     ← cached 512-d ArcFace embeddings
 ```
 
-Encodings are computed once at registration and cached — detection never re-processes the reference photos.
+Embeddings are computed once at registration and cached — detection never re-processes the reference photos.
 
 ---
 
 ## Accuracy notes
 
-- The underlying model (`dlib` ResNet) achieves **99.38 % accuracy** on the standard LFW benchmark.
+- The underlying model is **InsightFace buffalo_l** (ArcFace ResNet50), one of the most accurate publicly available face recognition models.
+- Similarity is measured as **cosine distance** on 512-d embeddings. Values closer to 0 mean a stronger match.
 - Real-world accuracy depends heavily on photo quality. Well-lit, front-facing photos significantly outperform candid or low-resolution ones.
 - Multiple reference photos of the same person are not supported in a single registration call, but you can register the same person **multiple times** under the same name with different photos to improve coverage across angles and lighting conditions.
