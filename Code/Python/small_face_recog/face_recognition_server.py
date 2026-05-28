@@ -1,24 +1,29 @@
 """
-Face Recognition API  — v1.0.0
+Face Recognition API  — v2.0.0
 ────────────────────────────────────────────────────────────────────────────────
 Designed to help people with prosopagnosia link faces to people they know.
 
+Backend: InsightFace (ArcFace / buffalo_l model via ONNX Runtime)
+  → No C++ compilation required — pure pip install.
+  → Models are downloaded automatically on first start (~300 MB, once only).
+
 Features
-  • Faces : register reference face photos, auto-compute & cache 128-d encodings
+  • Faces : register reference face photos, auto-compute & cache 512-d ArcFace
+            embeddings as .npy files in face_store/
   • Detect: POST /faces/detect — returns every registered person found in an image
 
-Encoding cache
-  At registration time the face encoding (128-d vector) is computed once and
+Embedding cache
+  At registration time the face embedding (512-d vector) is computed once and
   saved as a .npy file inside face_store/.  Detection loads these files
-  directly — no re-extraction ever happens, so detection speed stays constant
+  directly — no re-encoding ever happens, so detection speed stays constant
   regardless of how large your face library grows.
 
 Tips for best accuracy
   • Use a clear, well-lit, front-facing photo for registration.
   • One face per registration photo is strongly recommended.
   • Detection works on group photos — all registered faces are checked at once.
-  • Default match tolerance is 0.55 (lower = stricter). Tune via the
-    `tolerance` query parameter on /faces/detect.
+  • Default similarity threshold is 0.40 on cosine distance (lower = stricter).
+    Tune via the `threshold` query parameter on /faces/detect.
 ────────────────────────────────────────────────────────────────────────────────
 """
 
@@ -28,8 +33,9 @@ import uuid
 from datetime import datetime
 from pathlib import Path
 
-import face_recognition
+import cv2
 import numpy as np
+from insightface.app import FaceAnalysis
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
 
@@ -45,35 +51,42 @@ FACE_STORE_DIR  = Path("face_store")
 FACE_INDEX_FILE = FACE_STORE_DIR / "index.json"
 FACE_STORE_DIR.mkdir(exist_ok=True)
 
+# ── InsightFace model ──────────────────────────────────────────────────────────
+# ctx_id=-1 → CPU only (no GPU required)
+# Models download automatically to ~/.insightface/ on first start.
+logger.info("Loading InsightFace model (may download ~300 MB on first run)...")
+_face_app = FaceAnalysis(name="buffalo_l", providers=["CPUExecutionProvider"])
+_face_app.prepare(ctx_id=-1, det_size=(640, 640))
+logger.info("InsightFace model ready.")
+
 # ── App ────────────────────────────────────────────────────────────────────────
 app = FastAPI(
     title="Face Recognition API",
     description=__doc__,
-    version="1.0.0",
+    version="2.0.0",
 )
 
 ALLOWED_CONTENT_TYPES = {"image/jpeg", "image/jpg", "image/png"}
 ALLOWED_EXTENSIONS    = {".jpg", ".jpeg", ".png"}
 
 # ── Matching tuning ────────────────────────────────────────────────────────────
-DEFAULT_TOLERANCE = 0.55   # Euclidean distance threshold — lower = stricter
-                           # face_recognition's own default is 0.6; 0.55 reduces
-                           # false positives at a small cost in recall.
+DEFAULT_THRESHOLD = 0.40   # Cosine distance threshold — lower = stricter
+                           # Typical range: 0.30 (strict) – 0.55 (lenient)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# Encoding cache  (disk-backed .npy files)
+# Embedding cache  (disk-backed .npy files)
 # ══════════════════════════════════════════════════════════════════════════════
 
 def _cache_path(face_id: str) -> Path:
-    return FACE_STORE_DIR / f"{face_id}_encoding.npy"
+    return FACE_STORE_DIR / f"{face_id}_embedding.npy"
 
 
-def _save_encoding(face_id: str, encoding: np.ndarray) -> None:
-    np.save(str(_cache_path(face_id)), encoding)
+def _save_embedding(face_id: str, embedding: np.ndarray) -> None:
+    np.save(str(_cache_path(face_id)), embedding)
 
 
-def _load_encoding(face_id: str) -> np.ndarray | None:
+def _load_embedding(face_id: str) -> np.ndarray | None:
     path = _cache_path(face_id)
     if not path.exists():
         return None
@@ -116,74 +129,84 @@ def _validate_image(file: UploadFile) -> None:
 # Encoding helper
 # ══════════════════════════════════════════════════════════════════════════════
 
-def _encode_image(raw: bytes) -> list[np.ndarray]:
+def _get_embeddings(raw: bytes) -> list[np.ndarray]:
     """
-    Decode raw image bytes and return a list of 128-d face encodings,
+    Decode raw image bytes and return a list of 512-d ArcFace embeddings,
     one per face detected in the image.
     Returns an empty list if no faces are found.
     """
-    img = face_recognition.load_image_file(__import__("io").BytesIO(raw))
-    return face_recognition.face_encodings(img)
+    arr = np.frombuffer(raw, dtype=np.uint8)
+    img = cv2.imdecode(arr, cv2.IMREAD_COLOR)
+    if img is None:
+        raise HTTPException(status_code=422, detail="Could not decode image.")
+
+    faces = _face_app.get(img)
+    return [face.embedding for face in faces]
+
+
+def _cosine_distance(a: np.ndarray, b: np.ndarray) -> float:
+    """Cosine distance in [0, 2]. Lower means more similar."""
+    a = a / (np.linalg.norm(a) + 1e-10)
+    b = b / (np.linalg.norm(b) + 1e-10)
+    return float(1.0 - np.dot(a, b))
 
 
 # ══════════════════════════════════════════════════════════════════════════════
 # Detection core
 # ══════════════════════════════════════════════════════════════════════════════
 
-def _run_detection(query_encodings: list[np.ndarray], index: dict, tolerance: float) -> list[dict]:
+def _run_detection(
+    query_embeddings: list[np.ndarray],
+    index: dict,
+    threshold: float,
+) -> list[dict]:
     """
     Compare every face found in the query image against every registered
-    face encoding. A registered person is considered detected if at least
-    one query face is within `tolerance` distance of their stored encoding.
+    face embedding. A registered person is considered detected if at least
+    one query face is within `threshold` cosine distance of their stored embedding.
 
     Returns a list of result dicts sorted by detected-first / distance asc.
     """
     results = []
 
     for face_id, meta in index.items():
-        ref_encoding = _load_encoding(face_id)
+        ref_embedding = _load_embedding(face_id)
 
-        if ref_encoding is None:
+        if ref_embedding is None:
             logger.warning(
-                "No encoding cache for face '%s' (%s) — skipping.",
-                meta["name"], face_id,
+                "No embedding cache for '%s' (%s) — skipping.", meta["name"], face_id
             )
             continue
 
-        if len(query_encodings) == 0:
-            detected = False
+        if not query_embeddings:
+            detected     = False
             best_distance = None
         else:
-            # face_distance returns one distance per query face
-            distances = face_recognition.face_distance(query_encodings, ref_encoding)
-            best_distance = float(np.min(distances))
-            detected = bool(best_distance <= tolerance)
+            distances    = [_cosine_distance(q, ref_embedding) for q in query_embeddings]
+            best_distance = float(min(distances))
+            detected     = best_distance <= threshold
 
         confidence = None
         if best_distance is not None:
-            # Map distance [0, tolerance] → confidence [100, 0] %
-            # Distances above tolerance are capped at 0 % confidence
-            raw_conf = max(0.0, (tolerance - best_distance) / tolerance) * 100
+            raw_conf   = max(0.0, (threshold - best_distance) / threshold) * 100
             confidence = round(raw_conf, 1)
 
         logger.info(
-            "%-30s best_distance=%.4f (tolerance=%.2f) → %s",
+            "%-30s best_distance=%.4f (threshold=%.2f) → %s",
             f"'{meta['name']}':",
             best_distance if best_distance is not None else -1,
-            tolerance,
+            threshold,
             "DETECTED" if detected else "not found",
         )
 
-        results.append(
-            {
-                "face_id":       face_id,
-                "name":          meta["name"],
-                "detected":      detected,
-                "best_distance": best_distance,
-                "tolerance":     tolerance,
-                "confidence":    confidence,
-            }
-        )
+        results.append({
+            "face_id":       face_id,
+            "name":          meta["name"],
+            "detected":      detected,
+            "best_distance": best_distance,
+            "threshold":     threshold,
+            "confidence":    confidence,
+        })
 
     results.sort(key=lambda r: (not r["detected"], r["best_distance"] or 9.0))
     return results
@@ -212,8 +235,8 @@ async def register_face(
     Upload a reference photo to register a person's face.
 
     **What happens at registration:**
-    - The first face found in the photo is encoded into a 128-d vector.
-    - The encoding is saved as a `.npy` file in `face_store/`.
+    - The first face found in the photo is encoded into a 512-d ArcFace vector.
+    - The embedding is saved as a `.npy` file in `face_store/`.
     - Detection calls load this file directly — no re-encoding ever occurs.
 
     **Tips for best accuracy:**
@@ -226,9 +249,9 @@ async def register_face(
     if not raw:
         raise HTTPException(status_code=422, detail="Uploaded file is empty.")
 
-    encodings = _encode_image(raw)
+    embeddings = _get_embeddings(raw)
 
-    if not encodings:
+    if not embeddings:
         raise HTTPException(
             status_code=422,
             detail=(
@@ -237,17 +260,15 @@ async def register_face(
             ),
         )
 
-    if len(encodings) > 1:
-        logger.warning(
-            "Multiple faces detected in registration photo — using the first one only."
-        )
+    if len(embeddings) > 1:
+        logger.warning("Multiple faces in registration photo — using the first one only.")
 
     face_id  = str(uuid.uuid4())
     ext      = Path(file.filename or "face.jpg").suffix.lower() or ".jpg"
     img_path = FACE_STORE_DIR / f"{face_id}{ext}"
     img_path.write_bytes(raw)
 
-    _save_encoding(face_id, encodings[0])
+    _save_embedding(face_id, embeddings[0])
 
     face_name = name.strip() or Path(file.filename or "").stem or face_id
 
@@ -268,7 +289,7 @@ async def register_face(
     return {
         "face_id": face_id,
         "name":    face_name,
-        "message": "Face registered and encoding cached.",
+        "message": "Face registered and embedding cached.",
     }
 
 
@@ -283,7 +304,7 @@ def list_faces():
 def delete_face(face_id: str):
     """
     Delete a registered face and all its associated files
-    (reference photo + encoding cache).
+    (reference photo + embedding cache).
     """
     index = _load_index()
     if face_id not in index:
@@ -291,16 +312,13 @@ def delete_face(face_id: str):
 
     entry = index.pop(face_id)
 
-    for path in [
-        FACE_STORE_DIR / entry["filename"],
-        _cache_path(face_id),
-    ]:
+    for path in [FACE_STORE_DIR / entry["filename"], _cache_path(face_id)]:
         if path.exists():
             path.unlink()
 
     _save_index(index)
-    logger.info("Deleted face '%s' (%s) and its encoding cache.", entry["name"], face_id)
-    return {"message": f"Face '{entry['name']}' and its encoding deleted."}
+    logger.info("Deleted face '%s' (%s) and its embedding cache.", entry["name"], face_id)
+    return {"message": f"Face '{entry['name']}' and its embedding deleted."}
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -310,20 +328,19 @@ def delete_face(face_id: str):
 @app.post("/faces/detect", summary="Detect registered faces in an image", tags=["Face Detection"])
 async def detect_faces(
     file:      UploadFile = File(...),
-    tolerance: float      = DEFAULT_TOLERANCE,
+    threshold: float      = DEFAULT_THRESHOLD,
 ):
     """
     Scan an image for any registered faces.
 
-    Returns every registered person, sorted by detected-first then by
-    match confidence.
+    Returns every registered person, sorted by detected-first then by distance.
 
     | Property | Detail |
     |---|---|
-    | Model | `face_recognition` (dlib ResNet — 99.38 % accuracy on LFW) |
-    | Encoding | 128-d Euclidean distance |
-    | Default tolerance | `0.55` (stricter than library default of 0.6) |
-    | `tolerance` param | Lower → stricter. Range: `0.4` (strict) – `0.7` (lenient) |
+    | Model | InsightFace buffalo_l (ArcFace ResNet50) |
+    | Embedding | 512-d cosine distance |
+    | Default threshold | `0.40` |
+    | `threshold` param | Lower → stricter. Range: `0.30` (strict) – `0.55` (lenient) |
     | Multi-face images | ✅ All faces in the photo are checked against all registered people |
     """
     _validate_image(file)
@@ -338,24 +355,24 @@ async def detect_faces(
             detail="No faces registered. Use POST /faces/register first.",
         )
 
-    query_encodings = _encode_image(raw)
+    query_embeddings = _get_embeddings(raw)
 
-    if not query_encodings:
+    if not query_embeddings:
         logger.info("No faces found in query image '%s'.", file.filename)
 
-    results        = _run_detection(query_encodings, index, tolerance)
+    results        = _run_detection(query_embeddings, index, threshold)
     detected_count = sum(1 for r in results if r["detected"])
 
     logger.info(
         "Detection on '%s': %d face(s) in image, %d/%d registered people detected.",
-        file.filename, len(query_encodings), detected_count, len(results),
+        file.filename, len(query_embeddings), detected_count, len(results),
     )
 
     return JSONResponse({
-        "filename":         file.filename,
-        "faces_in_image":   len(query_encodings),
-        "people_checked":   len(results),
-        "people_detected":  detected_count,
-        "tolerance":        tolerance,
-        "results":          results,
+        "filename":        file.filename,
+        "faces_in_image":  len(query_embeddings),
+        "people_checked":  len(results),
+        "people_detected": detected_count,
+        "threshold":       threshold,
+        "results":         results,
     })
