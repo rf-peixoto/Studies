@@ -13,6 +13,7 @@ echo "── Installing dependencies ──"
 "$VENV_DIR/bin/pip" install \
     insightface \
     onnxruntime \
+    python-multipart \
     opencv-python-headless \
     numpy \
     fastapi \
