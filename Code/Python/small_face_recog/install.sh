@@ -9,12 +9,14 @@ python3 -m venv "$VENV_DIR"
 echo "── Upgrading pip ──"
 "$VENV_DIR/bin/pip" install --upgrade pip
 
-echo "── Installing dependencies ──"
+echo "── Installing face_recognition_models (from git) ──"
+"$VENV_DIR/bin/pip" install git+https://github.com/ageitgey/face_recognition_models
+
+echo "── Installing remaining dependencies ──"
 "$VENV_DIR/bin/pip" install \
     face_recognition \
     fastapi \
     uvicorn[standard]
-"$VENV_DIR/bin/pip" install git+https://github.com/ageitgey/face_recognition_models
 
 echo ""
 echo "✓ Done. Run ./start.sh to start the server."
