@@ -14,6 +14,7 @@ echo "── Installing dependencies ──"
     face_recognition \
     fastapi \
     uvicorn[standard]
+"$VENV_DIR/bin/pip" install git+https://github.com/ageitgey/face_recognition_models
 
 echo ""
 echo "✓ Done. Run ./start.sh to start the server."
