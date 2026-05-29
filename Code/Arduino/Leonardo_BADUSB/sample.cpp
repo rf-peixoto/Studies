@@ -74,9 +74,9 @@ void typeSimpleAsciiForRunDialog(const char *s) {
 void tapKeypadDigit(uint8_t digit) {
   if (digit > 9) return;
   Keyboard.press(RAW(KP_DIGITS[digit]));
-  delay(8);
+  delay(3);
   Keyboard.release(RAW(KP_DIGITS[digit]));
-  delay(8);
+  delay(3);
 }
 
 void typeAsciiChar(char c) {
@@ -91,16 +91,16 @@ void typeAsciiChar(char c) {
     %, &, ", :, /, \, >, etc.
   */
   Keyboard.press(KEY_LEFT_ALT);
-  delay(15);
+  delay(10);
 
   tapKeypadDigit(0);
   tapKeypadDigit((code / 100) % 10);
   tapKeypadDigit((code / 10) % 10);
   tapKeypadDigit(code % 10);
 
-  delay(15);
+  delay(10);
   Keyboard.release(KEY_LEFT_ALT);
-  delay(20);
+  delay(5);
 }
 
 void typeAsciiString(const char *s) {
