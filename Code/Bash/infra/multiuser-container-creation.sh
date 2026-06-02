@@ -9,7 +9,7 @@ TOTAL_USERS=5
 
 BASE_DIR="$PWD/kali_container_vps"
 IMAGE_NAME="multiuser-kali-ssh:latest"
-CONTAINER_PREFIX="user"
+CONTAINER_PREFIX="kali_user"
 SSH_USER="user"
 MEM_LIMIT="8g"
 
@@ -18,9 +18,50 @@ SERVICE_PORT_START=20001
 
 #########################################################
 
+MODE="default"
+ADD_USERS=0
+
 log()  { echo -e "\033[1;32m[+]\033[0m $*"; }
 warn() { echo -e "\033[1;33m[!]\033[0m $*"; }
 err()  { echo -e "\033[1;31m[-]\033[0m $*"; }
+
+usage() {
+    cat <<EOF
+Usage:
+
+  sudo $0
+      Create containers from 1 to TOTAL_USERS.
+      Existing containers are not modified.
+
+  sudo $0 --add-users N
+      Add N new users after the highest existing user number.
+
+Examples:
+
+  sudo $0
+  sudo $0 --add-users 2
+
+EOF
+}
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --add-users)
+            MODE="add"
+            ADD_USERS="${2:-}"
+            shift 2
+            ;;
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        *)
+            err "Unknown option: $1"
+            usage
+            exit 1
+            ;;
+    esac
+done
 
 if [[ $EUID -ne 0 ]]; then
     err "Run as root: sudo $0"
@@ -32,39 +73,74 @@ if ! command -v docker >/dev/null 2>&1; then
     exit 1
 fi
 
-if (( TOTAL_USERS < 1 )); then
-    err "TOTAL_USERS must be at least 1."
+if [[ "$MODE" == "add" ]]; then
+    if ! [[ "$ADD_USERS" =~ ^[0-9]+$ ]] || (( ADD_USERS < 1 )); then
+        err "--add-users requires a positive number."
+        exit 1
+    fi
+fi
+
+mkdir -p "$BASE_DIR/keys" "$BASE_DIR/docker" "$BASE_DIR/runs"
+
+ACCESS_FILE="$BASE_DIR/access.txt"
+RUN_ACCESS_FILE="$BASE_DIR/runs/access_$(date +%Y%m%d_%H%M%S).txt"
+SUMMARY_FILE="$BASE_DIR/summary.txt"
+DOCKERFILE="$BASE_DIR/docker/Dockerfile"
+
+get_existing_max_user_number() {
+    docker ps -a --format '{{.Names}}' \
+        | grep -E "^${CONTAINER_PREFIX}_[0-9]+$" \
+        | sed -E "s/^${CONTAINER_PREFIX}_([0-9]+)$/\1/" \
+        | sort -n \
+        | tail -n 1
+}
+
+get_existing_count() {
+    docker ps -a --format '{{.Names}}' \
+        | grep -E "^${CONTAINER_PREFIX}_[0-9]+$" \
+        | wc -l
+}
+
+if [[ "$MODE" == "add" ]]; then
+    EXISTING_MAX="$(get_existing_max_user_number || true)"
+    EXISTING_COUNT="$(get_existing_count || true)"
+
+    if [[ -z "$EXISTING_MAX" ]]; then
+        EXISTING_MAX=0
+    fi
+
+    START_USER=$((EXISTING_MAX + 1))
+    END_USER=$((EXISTING_MAX + ADD_USERS))
+
+    log "Existing containers detected: $EXISTING_COUNT"
+    log "Highest existing user number: $EXISTING_MAX"
+    log "Adding users from $START_USER to $END_USER"
+else
+    if (( TOTAL_USERS < 1 )); then
+        err "TOTAL_USERS must be at least 1."
+        exit 1
+    fi
+
+    START_USER=1
+    END_USER="$TOTAL_USERS"
+
+    log "Default mode: ensuring users 1 to $TOTAL_USERS exist"
+fi
+
+if (( END_USER > 1000 )); then
+    err "Refusing to create user numbers higher than 1000."
     exit 1
 fi
 
-if (( TOTAL_USERS > 1000 )); then
-    err "Refusing to create more than 1000 containers."
-    exit 1
-fi
-
-if (( SERVICE_PORT_START + TOTAL_USERS - 1 > 65535 )); then
+if (( SERVICE_PORT_START + END_USER - 1 > 65535 )); then
     err "Service port range overflow."
     exit 1
 fi
 
-if (( SSH_PORT_START - TOTAL_USERS + 1 < 1024 )); then
+if (( SSH_PORT_START - END_USER + 1 < 1024 )); then
     err "SSH port range would enter privileged ports."
     exit 1
 fi
-
-SSH_PORTS=()
-SERVICE_PORTS=()
-
-for ((i=0; i<TOTAL_USERS; i++)); do
-    SSH_PORTS+=($((SSH_PORT_START - i)))
-    SERVICE_PORTS+=($((SERVICE_PORT_START + i)))
-done
-
-mkdir -p "$BASE_DIR/keys" "$BASE_DIR/docker"
-
-ACCESS_FILE="$BASE_DIR/access.txt"
-SUMMARY_FILE="$BASE_DIR/summary.txt"
-DOCKERFILE="$BASE_DIR/docker/Dockerfile"
 
 log "Creating Kali Dockerfile..."
 
@@ -125,18 +201,12 @@ open_firewall_port() {
     warn "No supported firewall manager found for TCP port $port"
 }
 
-log "Opening firewall ports..."
+write_header() {
+    local file="$1"
 
-for port in "${SSH_PORTS[@]}" "${SERVICE_PORTS[@]}"; do
-    open_firewall_port "$port"
-done
-
-cat > "$ACCESS_FILE" <<EOF
+    cat > "$file" <<EOF
 KALI CONTAINER ACCESS FILE
 Generated at: $(date)
-
-Total users:
-$TOTAL_USERS
 
 Base directory:
 $BASE_DIR
@@ -151,81 +221,105 @@ Memory limit per container:
 $MEM_LIMIT
 
 EOF
+}
 
-cat > "$SUMMARY_FILE" <<EOF
-CONTAINER SUMMARY
-Generated at: $(date)
+write_header "$RUN_ACCESS_FILE"
+write_header "$SUMMARY_FILE"
+
+if [[ ! -f "$ACCESS_FILE" ]]; then
+    write_header "$ACCESS_FILE"
+else
+    cat >> "$ACCESS_FILE" <<EOF
+
+
+============================================================
+NEW RUN: $(date)
+============================================================
 
 EOF
+fi
 
-log "Creating containers..."
+create_user_container() {
+    local num="$1"
 
-for ((i=0; i<TOTAL_USERS; i++)); do
-    NUM=$((i + 1))
-    NAME="${CONTAINER_PREFIX}_${NUM}"
-    SSH_PORT="${SSH_PORTS[$i]}"
-    SERVICE_PORT="${SERVICE_PORTS[$i]}"
-    KEY="$BASE_DIR/keys/${NAME}_ed25519"
+    local name="${CONTAINER_PREFIX}_${num}"
+    local ssh_port=$((SSH_PORT_START - num + 1))
+    local service_port=$((SERVICE_PORT_START + num - 1))
+    local key="$BASE_DIR/keys/${name}_ed25519"
 
-    log "Configuring $NAME"
-    echo "    SSH port:     $SSH_PORT"
-    echo "    Service port: $SERVICE_PORT"
+    log "Processing $name"
+    echo "    SSH port:     $ssh_port"
+    echo "    Service port: $service_port"
     echo "    Memory limit: $MEM_LIMIT"
     echo "    Sudo:         passwordless"
 
-    if [[ ! -f "$KEY" ]]; then
-        ssh-keygen -t ed25519 -f "$KEY" -N "" -C "$NAME" >/dev/null
-        chmod 600 "$KEY"
-        log "Generated private key: $KEY"
-    else
-        warn "Key already exists, reusing: $KEY"
+    open_firewall_port "$ssh_port"
+    open_firewall_port "$service_port"
+
+    if docker ps -a --format '{{.Names}}' | grep -qx "$name"; then
+        warn "Container already exists, skipping without modification: $name"
+
+        cat >> "$SUMMARY_FILE" <<EOF
+$name
+  Status:   already exists, not modified
+  SSH:      ssh -i "$key" -p $ssh_port $SSH_USER@YOUR_SERVER_IP
+  SFTP:     sftp -i "$key" -P $ssh_port $SSH_USER@YOUR_SERVER_IP
+  Service:  YOUR_SERVER_IP:$service_port
+  Key:      $key
+
+EOF
+        return
     fi
 
-    if docker ps -a --format '{{.Names}}' | grep -qx "$NAME"; then
-        warn "Removing old container: $NAME"
-        docker rm -f "$NAME" >/dev/null
+    if [[ ! -f "$key" ]]; then
+        ssh-keygen -t ed25519 -f "$key" -N "" -C "$name" >/dev/null
+        chmod 600 "$key"
+        log "Generated private key: $key"
+    else
+        warn "Key already exists, reusing: $key"
     fi
 
     docker run -d \
-        --name "$NAME" \
+        --name "$name" \
         --restart unless-stopped \
         --memory "$MEM_LIMIT" \
         --memory-swap "$MEM_LIMIT" \
-        -p "${SSH_PORT}:22" \
-        -p "${SERVICE_PORT}:${SERVICE_PORT}" \
+        -p "${ssh_port}:22" \
+        -p "${service_port}:${service_port}" \
         "$IMAGE_NAME" >/dev/null
 
-    docker cp "${KEY}.pub" "$NAME:/home/$SSH_USER/.ssh/authorized_keys"
-    docker exec "$NAME" chown -R "$SSH_USER:$SSH_USER" "/home/$SSH_USER/.ssh"
-    docker exec "$NAME" chmod 700 "/home/$SSH_USER/.ssh"
-    docker exec "$NAME" chmod 600 "/home/$SSH_USER/.ssh/authorized_keys"
+    docker cp "${key}.pub" "$name:/home/$SSH_USER/.ssh/authorized_keys"
+    docker exec "$name" chown -R "$SSH_USER:$SSH_USER" "/home/$SSH_USER/.ssh"
+    docker exec "$name" chmod 700 "/home/$SSH_USER/.ssh"
+    docker exec "$name" chmod 600 "/home/$SSH_USER/.ssh/authorized_keys"
 
-    cat >> "$ACCESS_FILE" <<EOF
+    local block
+    block=$(cat <<EOF
 
 ============================================================
-USER $NUM
+USER $num
 ============================================================
 
 Container:
-$NAME
+$name
 
 SSH username:
 $SSH_USER
 
 SSH port:
-$SSH_PORT
+$ssh_port
 
 Service port:
-$SERVICE_PORT
+$service_port
 
 Private key:
-$KEY
+$key
 
 SSH command:
-ssh -i "$KEY" -p $SSH_PORT $SSH_USER@YOUR_SERVER_IP
+ssh -i "$key" -p $ssh_port $SSH_USER@YOUR_SERVER_IP
 
 SFTP command:
-sftp -i "$KEY" -P $SSH_PORT $SSH_USER@YOUR_SERVER_IP
+sftp -i "$key" -P $ssh_port $SSH_USER@YOUR_SERVER_IP
 
 Privilege inside container:
 The user can run sudo without a password.
@@ -237,40 +331,52 @@ sudo apt install -y nmap tmux git
 Service exposure:
 Inside the container, bind the service to:
 
-0.0.0.0:$SERVICE_PORT
+0.0.0.0:$service_port
 
 External access will be:
 
-YOUR_SERVER_IP:$SERVICE_PORT
+YOUR_SERVER_IP:$service_port
 
 Example inside the container:
-python3 -m http.server $SERVICE_PORT --bind 0.0.0.0
+python3 -m http.server $service_port --bind 0.0.0.0
 
 Useful admin commands:
 
-docker exec -it $NAME bash
-docker logs $NAME
-docker restart $NAME
-docker stop $NAME
-docker rm -f $NAME
+docker exec -it $name bash
+docker logs $name
+docker restart $name
+docker stop $name
+docker rm -f $name
 
 EOF
+)
+
+    echo "$block" >> "$ACCESS_FILE"
+    echo "$block" >> "$RUN_ACCESS_FILE"
 
     cat >> "$SUMMARY_FILE" <<EOF
-$NAME
-  SSH:      ssh -i "$KEY" -p $SSH_PORT $SSH_USER@YOUR_SERVER_IP
-  SFTP:     sftp -i "$KEY" -P $SSH_PORT $SSH_USER@YOUR_SERVER_IP
-  Service:  YOUR_SERVER_IP:$SERVICE_PORT
-  Key:      $KEY
+$name
+  Status:   created
+  SSH:      ssh -i "$key" -p $ssh_port $SSH_USER@YOUR_SERVER_IP
+  SFTP:     sftp -i "$key" -P $ssh_port $SSH_USER@YOUR_SERVER_IP
+  Service:  YOUR_SERVER_IP:$service_port
+  Key:      $key
   Sudo:     enabled, passwordless
 
 EOF
+}
+
+for ((num=START_USER; num<=END_USER; num++)); do
+    create_user_container "$num"
 done
 
 log "Provisioning complete."
 echo
-echo "Access file:"
+echo "Master access file:"
 echo "$ACCESS_FILE"
+echo
+echo "This run access file:"
+echo "$RUN_ACCESS_FILE"
 echo
 echo "Summary file:"
 echo "$SUMMARY_FILE"
