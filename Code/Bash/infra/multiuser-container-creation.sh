@@ -9,7 +9,7 @@ TOTAL_USERS=5
 
 BASE_DIR="$PWD/kali_container_vps"
 IMAGE_NAME="multiuser-kali-ssh:latest"
-CONTAINER_PREFIX="kali_user"
+CONTAINER_PREFIX="user"
 SSH_USER="user"
 MEM_LIMIT="8g"
 
