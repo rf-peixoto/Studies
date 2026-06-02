@@ -1,0 +1,1435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Recon Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0c0f;
+    --surface: #111418;
+    --surface2: #161b22;
+    --border: #1e2530;
+    --border2: #2d3748;
+    --text: #c9d1d9;
+    --muted: #6e7681;
+    --accent: #00d4ff;
+    --accent2: #0099cc;
+    --critical: #ff4444;
+    --high: #ff8800;
+    --medium: #ffcc00;
+    --low: #4488ff;
+    --info: #888;
+    --ok: #00cc88;
+    --font-mono: 'IBM Plex Mono', monospace;
+    --font-sans: 'IBM Plex Sans', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-sans);
+    font-size: 13px;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── Upload Screen ── */
+  #upload-screen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    gap: 24px;
+    padding: 40px;
+  }
+
+  .logo {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 4px;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+
+  .upload-title {
+    font-family: var(--font-mono);
+    font-size: 28px;
+    font-weight: 300;
+    color: var(--accent);
+    letter-spacing: -0.5px;
+    text-align: center;
+  }
+
+  .drop-zone {
+    width: 480px;
+    max-width: 100%;
+    border: 1px dashed var(--border2);
+    border-radius: 4px;
+    padding: 60px 40px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: var(--surface);
+    position: relative;
+  }
+  .drop-zone:hover, .drop-zone.dragging {
+    border-color: var(--accent);
+    background: rgba(0, 212, 255, 0.04);
+  }
+  .drop-zone input[type=file] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer;
+  }
+  .drop-zone-icon {
+    font-size: 32px;
+    margin-bottom: 12px;
+    opacity: 0.5;
+  }
+  .drop-zone-text {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.8;
+  }
+  .drop-zone-text strong { color: var(--text); }
+
+  .upload-status {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--accent);
+    min-height: 20px;
+    text-align: center;
+  }
+
+  /* ── App Shell ── */
+  #app { display: none; flex-direction: column; min-height: 100vh; }
+
+  .topbar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 20px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .topbar-logo {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: var(--accent);
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .domain-pill {
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: 3px;
+    padding: 3px 10px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text);
+  }
+
+  .topbar-spacer { flex: 1; }
+
+  .btn-upload-new {
+    background: none;
+    border: 1px solid var(--border2);
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    padding: 5px 12px;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: all 0.15s;
+  }
+  .btn-upload-new:hover { border-color: var(--accent); color: var(--accent); }
+
+  .nav {
+    display: flex;
+    gap: 2px;
+    flex: 1;
+    margin-left: 16px;
+  }
+
+  .nav-btn {
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 1px;
+    padding: 0 14px;
+    height: 44px;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: color 0.15s;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+  }
+  .nav-btn:hover { color: var(--text); }
+  .nav-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  .content { flex: 1; padding: 24px; max-width: 1400px; margin: 0 auto; width: 100%; }
+
+  /* ── Panels ── */
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* ── Stat Cards ── */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 10px;
+    margin-bottom: 24px;
+  }
+
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 14px 16px;
+  }
+  .stat-card .label {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .stat-card .value {
+    font-family: var(--font-mono);
+    font-size: 22px;
+    font-weight: 500;
+    color: var(--text);
+    line-height: 1;
+  }
+  .stat-card.accent .value { color: var(--accent); }
+  .stat-card.warn .value { color: var(--high); }
+  .stat-card.danger .value { color: var(--critical); }
+  .stat-card.ok .value { color: var(--ok); }
+
+  /* ── Tables ── */
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+    margin-top: 24px;
+  }
+  .section-title {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+  .section-count {
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: 10px;
+    padding: 1px 8px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--muted);
+  }
+  .section-spacer { flex: 1; }
+
+  .search-input {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 5px 10px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text);
+    width: 200px;
+    outline: none;
+  }
+  .search-input:focus { border-color: var(--accent); }
+  .search-input::placeholder { color: var(--muted); }
+
+  .filter-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .filter-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 4px 10px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 1px;
+  }
+  .filter-btn:hover { border-color: var(--border2); color: var(--text); }
+  .filter-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(0,212,255,0.07); }
+  .filter-btn.critical.active { border-color: var(--critical); color: var(--critical); background: rgba(255,68,68,0.07); }
+  .filter-btn.high.active { border-color: var(--high); color: var(--high); background: rgba(255,136,0,0.07); }
+  .filter-btn.medium.active { border-color: var(--medium); color: var(--medium); background: rgba(255,204,0,0.07); }
+  .filter-btn.low.active { border-color: var(--low); color: var(--low); background: rgba(68,136,255,0.07); }
+
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--font-mono);
+    font-size: 12px;
+  }
+  .data-table th {
+    text-align: left;
+    padding: 8px 12px;
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--muted);
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+  }
+  .data-table th:hover { color: var(--text); }
+  .data-table th.sorted { color: var(--accent); }
+  .data-table td {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+    color: var(--text);
+  }
+  .data-table tr:hover td { background: rgba(255,255,255,0.02); }
+  .data-table tr.flagged td { background: rgba(255,136,0,0.04); }
+  .data-table tr.starred td { background: rgba(0,212,255,0.04); }
+
+  .table-wrapper {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: auto;
+    max-height: 600px;
+  }
+
+  /* Severity badges */
+  .sev {
+    display: inline-block;
+    padding: 1px 7px;
+    border-radius: 2px;
+    font-size: 9px;
+    letter-spacing: 1.5px;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+  .sev-critical { background: rgba(255,68,68,0.15); color: var(--critical); border: 1px solid rgba(255,68,68,0.3); }
+  .sev-high { background: rgba(255,136,0,0.15); color: var(--high); border: 1px solid rgba(255,136,0,0.3); }
+  .sev-medium { background: rgba(255,204,0,0.12); color: var(--medium); border: 1px solid rgba(255,204,0,0.3); }
+  .sev-low { background: rgba(68,136,255,0.12); color: var(--low); border: 1px solid rgba(68,136,255,0.3); }
+  .sev-info { background: rgba(136,136,136,0.1); color: var(--info); border: 1px solid rgba(136,136,136,0.2); }
+  .sev-unknown { background: rgba(136,136,136,0.1); color: var(--muted); border: 1px solid rgba(136,136,136,0.2); }
+
+  /* Tags */
+  .tag {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 2px;
+    font-size: 9px;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    color: var(--muted);
+    margin: 1px 2px 1px 0;
+  }
+
+  /* Port chips */
+  .port {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 2px;
+    font-size: 10px;
+    background: rgba(0,212,255,0.08);
+    border: 1px solid rgba(0,212,255,0.2);
+    color: var(--accent);
+    margin: 1px 2px 1px 0;
+  }
+
+  /* CVE chips */
+  .cve {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 2px;
+    font-size: 10px;
+    background: rgba(255,68,68,0.08);
+    border: 1px solid rgba(255,68,68,0.2);
+    color: #ff7777;
+    margin: 1px 2px 1px 0;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .cve:hover { background: rgba(255,68,68,0.15); }
+
+  /* Action buttons per row */
+  .row-actions {
+    display: flex;
+    gap: 4px;
+  }
+  .row-btn {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 2px 8px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    cursor: pointer;
+    transition: all 0.15s;
+    color: var(--muted);
+  }
+  .row-btn:hover { border-color: var(--border2); color: var(--text); }
+  .row-btn.star.active { border-color: var(--accent); color: var(--accent); }
+  .row-btn.flag.active { border-color: var(--high); color: var(--high); }
+
+  /* Detail drawer */
+  .drawer {
+    position: fixed;
+    right: 0; top: 44px; bottom: 0;
+    width: 420px;
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    z-index: 200;
+    transform: translateX(100%);
+    transition: transform 0.2s ease;
+    overflow-y: auto;
+    padding: 20px;
+  }
+  .drawer.open { transform: translateX(0); }
+  .drawer-close {
+    position: absolute; top: 12px; right: 16px;
+    background: none; border: none; color: var(--muted);
+    font-family: var(--font-mono); font-size: 18px; cursor: pointer;
+  }
+  .drawer-close:hover { color: var(--text); }
+  .drawer-title {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--accent);
+    margin-bottom: 16px;
+    padding-right: 28px;
+    word-break: break-all;
+  }
+  .kv { margin-bottom: 10px; }
+  .kv .k {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 3px;
+  }
+  .kv .v {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text);
+    word-break: break-all;
+    line-height: 1.6;
+  }
+  .drawer hr { border: none; border-top: 1px solid var(--border); margin: 14px 0; }
+
+  /* Inline code */
+  code {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    background: var(--surface2);
+    padding: 1px 5px;
+    border-radius: 2px;
+    color: var(--text);
+  }
+
+  /* Alert / info banners */
+  .banner {
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 10px 14px;
+    margin-bottom: 10px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .banner.warn { border-color: rgba(255,136,0,0.4); color: var(--high); background: rgba(255,136,0,0.05); }
+  .banner.err { border-color: rgba(255,68,68,0.4); color: var(--critical); background: rgba(255,68,68,0.05); }
+
+  /* Loading overlay */
+  #loading {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(10,12,15,0.85);
+    z-index: 999;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 12px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--accent);
+  }
+  #loading.show { display: flex; }
+
+  .spinner {
+    width: 24px; height: 24px;
+    border: 2px solid var(--border2);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Notes textarea */
+  .notes-area {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: 3px;
+    padding: 8px 10px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text);
+    resize: vertical;
+    min-height: 80px;
+    outline: none;
+    margin-top: 4px;
+  }
+  .notes-area:focus { border-color: var(--accent); }
+
+  /* Export bar */
+  .export-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .export-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    padding: 5px 12px;
+    cursor: pointer;
+    border-radius: 3px;
+    letter-spacing: 1px;
+    transition: all 0.15s;
+  }
+  .export-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* Charts (simple bar) */
+  .bar-chart { display: flex; flex-direction: column; gap: 6px; }
+  .bar-row { display: flex; align-items: center; gap: 10px; font-family: var(--font-mono); font-size: 11px; }
+  .bar-label { width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); text-align: right; font-size: 10px; }
+  .bar-track { flex: 1; height: 14px; background: var(--surface2); border-radius: 2px; overflow: hidden; }
+  .bar-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.4s ease; min-width: 2px; }
+  .bar-val { width: 30px; color: var(--text); font-size: 10px; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+  .empty-state {
+    text-align: center;
+    padding: 40px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 768px) { .two-col { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<!-- Upload screen -->
+<div id="upload-screen">
+  <div class="logo">Recon</div>
+  <div class="upload-title">/ scanner dashboard</div>
+  <div class="drop-zone" id="drop-zone">
+    <input type="file" accept=".zip" id="file-input">
+    <div class="drop-zone-icon">⬡</div>
+    <div class="drop-zone-text">
+      <strong>Drop scanner output ZIP</strong><br>
+      or click to browse<br>
+      <span style="color:var(--border2)">──────────────</span><br>
+      Expects: nuclei, shodan, dns, asn data
+    </div>
+  </div>
+  <div class="upload-status" id="upload-status"></div>
+</div>
+
+<!-- App shell -->
+<div id="app">
+  <div class="topbar">
+    <div class="topbar-logo">RECON</div>
+    <div class="domain-pill" id="domain-label">—</div>
+    <div class="nav">
+      <button class="nav-btn active" data-panel="overview">Overview</button>
+      <button class="nav-btn" data-panel="nuclei">Nuclei</button>
+      <button class="nav-btn" data-panel="subdomains">Subdomains</button>
+      <button class="nav-btn" data-panel="ips">IPs</button>
+      <button class="nav-btn" data-panel="vulns">CVEs</button>
+      <button class="nav-btn" data-panel="dns">DNS</button>
+    </div>
+    <div class="topbar-spacer"></div>
+    <button class="btn-upload-new" id="btn-new-upload">↑ New Scan</button>
+  </div>
+
+  <div class="content">
+    <!-- OVERVIEW -->
+    <div class="panel active" id="panel-overview">
+      <div class="stats-grid" id="overview-stats"></div>
+      <div class="two-col">
+        <div>
+          <div class="section-header">
+            <div class="section-title">Nuclei by Template</div>
+          </div>
+          <div class="table-wrapper" style="max-height:300px;padding:16px;">
+            <div class="bar-chart" id="nuclei-bar-chart"></div>
+          </div>
+        </div>
+        <div>
+          <div class="section-header">
+            <div class="section-title">Errors / Warnings</div>
+          </div>
+          <div id="overview-errors"></div>
+        </div>
+      </div>
+      <div class="section-header" style="margin-top:24px">
+        <div class="section-title">Scan Config</div>
+      </div>
+      <div class="table-wrapper" style="padding:14px 16px;" id="overview-config"></div>
+    </div>
+
+    <!-- NUCLEI FINDINGS -->
+    <div class="panel" id="panel-nuclei">
+      <div class="section-header">
+        <div class="section-title">Nuclei Findings</div>
+        <div class="section-count" id="nuclei-count">0</div>
+        <div class="section-spacer"></div>
+        <div class="filter-row" id="nuclei-filters"></div>
+        <input class="search-input" id="nuclei-search" placeholder="Filter..." type="text">
+      </div>
+      <div class="export-row">
+        <button class="export-btn" id="export-nuclei-csv">↓ Export CSV</button>
+        <button class="export-btn" id="export-nuclei-flagged">↓ Export Flagged</button>
+      </div>
+      <div class="table-wrapper">
+        <table class="data-table" id="nuclei-table">
+          <thead>
+            <tr>
+              <th style="width:90px">Severity</th>
+              <th>Template</th>
+              <th>Host</th>
+              <th style="width:60px">Port</th>
+              <th>Matched</th>
+              <th style="width:90px">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="nuclei-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- SUBDOMAINS -->
+    <div class="panel" id="panel-subdomains">
+      <div class="section-header">
+        <div class="section-title">Subdomains</div>
+        <div class="section-count" id="sub-count">0</div>
+        <div class="section-spacer"></div>
+        <div class="filter-row">
+          <button class="filter-btn active" data-subfilter="all">All</button>
+          <button class="filter-btn" data-subfilter="has_vulns">Has CVEs</button>
+          <button class="filter-btn" data-subfilter="has_ports">Has Ports</button>
+          <button class="filter-btn" data-subfilter="starred">Starred</button>
+        </div>
+        <input class="search-input" id="sub-search" placeholder="Filter host..." type="text">
+      </div>
+      <div class="export-row">
+        <button class="export-btn" id="export-sub-txt">↓ Export TXT</button>
+        <button class="export-btn" id="export-sub-csv">↓ Export CSV</button>
+      </div>
+      <div class="table-wrapper">
+        <table class="data-table" id="sub-table">
+          <thead>
+            <tr>
+              <th>Host</th>
+              <th>IPs</th>
+              <th>Ports</th>
+              <th>CVEs</th>
+              <th>Tags</th>
+              <th style="width:90px">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="sub-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- IPs -->
+    <div class="panel" id="panel-ips">
+      <div class="section-header">
+        <div class="section-title">IP Addresses</div>
+        <div class="section-count" id="ip-count">0</div>
+        <div class="section-spacer"></div>
+        <div class="filter-row">
+          <button class="filter-btn active" data-ipfilter="all">All</button>
+          <button class="filter-btn" data-ipfilter="has_vulns">Has CVEs</button>
+          <button class="filter-btn" data-ipfilter="has_ports">Has Ports</button>
+          <button class="filter-btn" data-ipfilter="eol">EOL Product</button>
+        </div>
+        <input class="search-input" id="ip-search" placeholder="Filter IP..." type="text">
+      </div>
+      <div class="table-wrapper">
+        <table class="data-table" id="ip-table">
+          <thead>
+            <tr>
+              <th>IP</th>
+              <th>ASN</th>
+              <th>Ports</th>
+              <th>CVEs</th>
+              <th>CPEs</th>
+              <th>Tags</th>
+              <th style="width:80px">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="ip-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- CVEs -->
+    <div class="panel" id="panel-vulns">
+      <div class="section-header">
+        <div class="section-title">CVE Findings</div>
+        <div class="section-count" id="vuln-count">0</div>
+        <div class="section-spacer"></div>
+        <input class="search-input" id="vuln-search" placeholder="Filter CVE..." type="text">
+      </div>
+      <div class="export-row">
+        <button class="export-btn" id="export-cve-csv">↓ Export CSV</button>
+      </div>
+      <div class="table-wrapper">
+        <table class="data-table" id="vuln-table">
+          <thead>
+            <tr>
+              <th>CVE</th>
+              <th>Affected IPs</th>
+              <th>Affected Subdomains</th>
+              <th>CPEs</th>
+              <th style="width:80px">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="vuln-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- DNS -->
+    <div class="panel" id="panel-dns">
+      <div class="section-header">
+        <div class="section-title">DNS Records</div>
+        <div class="section-count" id="dns-count">0</div>
+        <div class="section-spacer"></div>
+        <div class="filter-row" id="dns-type-filters">
+          <button class="filter-btn active" data-dnstype="ALL">All</button>
+          <button class="filter-btn" data-dnstype="A">A</button>
+          <button class="filter-btn" data-dnstype="AAAA">AAAA</button>
+          <button class="filter-btn" data-dnstype="MX">MX</button>
+          <button class="filter-btn" data-dnstype="TXT">TXT</button>
+          <button class="filter-btn" data-dnstype="NS">NS</button>
+          <button class="filter-btn" data-dnstype="CNAME">CNAME</button>
+        </div>
+        <input class="search-input" id="dns-search" placeholder="Filter host..." type="text">
+      </div>
+      <div class="table-wrapper">
+        <table class="data-table" id="dns-table">
+          <thead>
+            <tr>
+              <th>Host</th>
+              <th>Type</th>
+              <th>Values</th>
+            </tr>
+          </thead>
+          <tbody id="dns-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Detail Drawer -->
+<div class="drawer" id="drawer">
+  <button class="drawer-close" id="drawer-close">×</button>
+  <div id="drawer-content"></div>
+</div>
+
+<!-- Loading -->
+<div id="loading">
+  <div class="spinner"></div>
+  <div id="loading-text">Parsing scan data...</div>
+</div>
+
+<script>
+// ── State ──
+let scanId = null;
+let nucleiData = [];
+let subData = {};
+let ipData = {};
+let vulnData = [];
+let dnsData = {};
+let overviewData = {};
+
+let nucleiStars = new Set(), nucleiFlags = new Set(), nucleiNotes = {};
+let subStars = new Set(), subFlags = new Set();
+let ipStars = new Set(), ipFlags = new Set();
+let vulnStars = new Set(), vulnFlags = new Set();
+
+let nucleiFilter = 'all', subFilter = 'all', ipFilter = 'all', dnsTypeFilter = 'ALL';
+
+// ── Utilities ──
+function sev(s) {
+  return `<span class="sev sev-${s}">${s}</span>`;
+}
+function severityOrder(s) {
+  return { critical: 0, high: 1, medium: 2, low: 3, info: 4, unknown: 5 }[s] ?? 5;
+}
+function portChips(ports) {
+  return ports.map(p => `<span class="port">${p}</span>`).join('');
+}
+function cveChips(cves) {
+  return cves.map(c => `<span class="cve" onclick="openCVE('${c}')">${c}</span>`).join('');
+}
+function tagChips(tags) {
+  return tags.map(t => `<span class="tag">${t}</span>`).join('');
+}
+function loading(show, text='Parsing scan data...') {
+  document.getElementById('loading').classList.toggle('show', show);
+  document.getElementById('loading-text').textContent = text;
+}
+function openCVE(cve) {
+  window.open(`https://nvd.nist.gov/vuln/detail/${cve}`, '_blank');
+}
+
+// ── Upload ──
+const dropZone = document.getElementById('drop-zone');
+const fileInput = document.getElementById('file-input');
+const status = document.getElementById('upload-status');
+
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragging'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragging'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('dragging');
+  const file = e.dataTransfer.files[0];
+  if (file) uploadFile(file);
+});
+fileInput.addEventListener('change', e => {
+  if (e.target.files[0]) uploadFile(e.target.files[0]);
+});
+
+async function uploadFile(file) {
+  status.textContent = `Uploading ${file.name}...`;
+  loading(true, 'Parsing scan data...');
+  const fd = new FormData();
+  fd.append('file', file);
+  try {
+    const r = await fetch('/api/upload', { method: 'POST', body: fd });
+    const d = await r.json();
+    if (d.error) throw new Error(d.error);
+    scanId = d.scan_id;
+    document.getElementById('domain-label').textContent = d.domain || scanId;
+    document.getElementById('upload-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'flex';
+    await loadAllData();
+    loading(false);
+  } catch(err) {
+    loading(false);
+    status.textContent = `Error: ${err.message}`;
+  }
+}
+
+document.getElementById('btn-new-upload').addEventListener('click', () => {
+  scanId = null;
+  document.getElementById('upload-screen').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('upload-status').textContent = '';
+  fileInput.value = '';
+});
+
+// ── Nav ──
+document.querySelectorAll('.nav-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('panel-' + btn.dataset.panel).classList.add('active');
+    closeDrawer();
+  });
+});
+
+// ── Drawer ──
+function openDrawer(html) {
+  document.getElementById('drawer-content').innerHTML = html;
+  document.getElementById('drawer').classList.add('open');
+}
+function closeDrawer() {
+  document.getElementById('drawer').classList.remove('open');
+}
+document.getElementById('drawer-close').addEventListener('click', closeDrawer);
+
+// ── Load Data ──
+async function loadAllData() {
+  const [ov, nuc, sub, ip, vuln, dns] = await Promise.all([
+    fetch(`/api/scan/${scanId}/overview`).then(r=>r.json()),
+    fetch(`/api/scan/${scanId}/nuclei`).then(r=>r.json()),
+    fetch(`/api/scan/${scanId}/subdomains`).then(r=>r.json()),
+    fetch(`/api/scan/${scanId}/ips`).then(r=>r.json()),
+    fetch(`/api/scan/${scanId}/vulns`).then(r=>r.json()),
+    fetch(`/api/scan/${scanId}/dns`).then(r=>r.json()),
+  ]);
+
+  overviewData = ov;
+  nucleiData = nuc.findings || [];
+  subData = sub.subdomain_details || {};
+  ipData = ip.ip_details || {};
+  vulnData = vuln.vulns || [];
+  dnsData = dns.dns_records || {};
+
+  renderOverview();
+  renderNuclei();
+  renderSubdomains();
+  renderIPs();
+  renderVulns();
+  renderDNS();
+}
+
+// ── Overview ──
+function renderOverview() {
+  const s = overviewData.stats || {};
+  const sevColors = {
+    nuclei_critical: 'danger',
+    nuclei_high: 'warn',
+    nuclei_medium: '',
+    nuclei_low: 'accent',
+  };
+
+  const cards = [
+    { label: 'Subdomains', value: s.subdomains_total ?? 0, cls: '' },
+    { label: 'Resolved Hosts', value: s.resolved_hosts_total ?? 0, cls: '' },
+    { label: 'Unique IPv4', value: s.unique_ipv4_total ?? 0, cls: 'accent' },
+    { label: 'Unique IPv6', value: s.unique_ipv6_total ?? 0, cls: '' },
+    { label: 'IPs w/ Ports', value: s.shodan_ips_with_ports ?? 0, cls: '' },
+    { label: 'Total Ports', value: s.shodan_total_ports ?? 0, cls: '' },
+    { label: 'Shodan CVEs', value: s.shodan_vulns_total ?? 0, cls: s.shodan_vulns_total ? 'warn' : '' },
+    { label: 'Nuclei Findings', value: s.nuclei_findings_total ?? 0, cls: s.nuclei_findings_total ? 'warn' : 'ok' },
+    { label: 'Critical', value: s.nuclei_critical ?? 0, cls: (s.nuclei_critical > 0) ? 'danger' : '' },
+    { label: 'High', value: s.nuclei_high ?? 0, cls: (s.nuclei_high > 0) ? 'warn' : '' },
+    { label: 'Medium', value: s.nuclei_medium ?? 0, cls: '' },
+    { label: 'Low', value: s.nuclei_low ?? 0, cls: '' },
+    { label: 'CPEs', value: s.shodan_cpes_total ?? 0, cls: '' },
+    { label: 'Shodan Tags', value: s.shodan_tags_total ?? 0, cls: '' },
+    { label: 'Duration', value: s.duration_seconds ? Math.round(s.duration_seconds/60) + 'm' : '—', cls: '' },
+  ];
+
+  document.getElementById('overview-stats').innerHTML = cards.map(c =>
+    `<div class="stat-card ${c.cls}">
+      <div class="label">${c.label}</div>
+      <div class="value">${c.value}</div>
+    </div>`
+  ).join('');
+
+  // Nuclei bar chart by template
+  const templateCounts = {};
+  nucleiData.forEach(f => {
+    const t = f['template-id'] || f.template || 'unknown';
+    templateCounts[t] = (templateCounts[t] || 0) + 1;
+  });
+  const sorted = Object.entries(templateCounts).sort((a,b) => b[1]-a[1]).slice(0, 12);
+  const max = sorted[0]?.[1] || 1;
+  document.getElementById('nuclei-bar-chart').innerHTML = sorted.length
+    ? sorted.map(([t, c]) =>
+        `<div class="bar-row">
+          <div class="bar-label" title="${t}">${t}</div>
+          <div class="bar-track"><div class="bar-fill" style="width:${Math.round(c/max*100)}%"></div></div>
+          <div class="bar-val">${c}</div>
+        </div>`
+      ).join('')
+    : '<div class="empty-state">No nuclei findings</div>';
+
+  // Errors
+  const errors = overviewData.errors || [];
+  document.getElementById('overview-errors').innerHTML = errors.length
+    ? errors.map(e => `<div class="banner warn">${e}</div>`).join('')
+    : '<div class="banner">No errors recorded.</div>';
+
+  // Config
+  const cfg = overviewData.config || {};
+  document.getElementById('overview-config').innerHTML =
+    `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;font-family:var(--font-mono);font-size:11px;">` +
+    Object.entries(cfg).map(([k, v]) =>
+      `<div><span style="color:var(--muted)">${k}: </span><span>${v === null ? 'null' : String(v)}</span></div>`
+    ).join('') + `</div>`;
+}
+
+// ── Nuclei ──
+function renderNuclei() {
+  // Build severity filter buttons
+  const sevCounts = {};
+  nucleiData.forEach(f => {
+    const s = f.info?.severity || 'unknown';
+    sevCounts[s] = (sevCounts[s] || 0) + 1;
+  });
+  const sevOrder = ['critical','high','medium','low','info','unknown'];
+  const filters = document.getElementById('nuclei-filters');
+  filters.innerHTML = `<button class="filter-btn active" data-nsev="all">All (${nucleiData.length})</button>` +
+    sevOrder.filter(s => sevCounts[s]).map(s =>
+      `<button class="filter-btn ${s}" data-nsev="${s}">${s} (${sevCounts[s]})</button>`
+    ).join('');
+
+  filters.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      filters.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      nucleiFilter = btn.dataset.nsev;
+      renderNucleiTable();
+    });
+  });
+
+  renderNucleiTable();
+
+  document.getElementById('nuclei-search').oninput = renderNucleiTable;
+  document.getElementById('export-nuclei-csv').onclick = () => exportNucleiCSV(false);
+  document.getElementById('export-nuclei-flagged').onclick = () => exportNucleiCSV(true);
+}
+
+function renderNucleiTable() {
+  const search = document.getElementById('nuclei-search').value.toLowerCase();
+  let rows = nucleiData.filter(f => {
+    const sev = f.info?.severity || 'unknown';
+    if (nucleiFilter !== 'all' && sev !== nucleiFilter) return false;
+    if (search) {
+      const text = [f['template-id'], f.host, f['matched-at'], sev].join(' ').toLowerCase();
+      if (!text.includes(search)) return false;
+    }
+    return true;
+  });
+
+  document.getElementById('nuclei-count').textContent = rows.length;
+
+  const tbody = document.getElementById('nuclei-tbody');
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state">No findings match filter</div></td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = rows.map((f, i) => {
+    const key = f['template-id'] + '_' + f.host;
+    const starred = nucleiStars.has(key);
+    const flagged = nucleiFlags.has(key);
+    const sev = f.info?.severity || 'unknown';
+    const extracted = (f['extracted-results'] || []).join(', ');
+    return `<tr class="${flagged?'flagged':starred?'starred':''}">
+      <td>${sevBadge(sev)}</td>
+      <td>
+        <div>${f['template-id'] || '—'}</div>
+        <div style="color:var(--muted);font-size:10px;margin-top:2px">${(f.info?.tags||[]).map(t=>`<span class="tag">${t}</span>`).join('')}</div>
+      </td>
+      <td><code>${f.host || '—'}</code></td>
+      <td><code>${f.port || '—'}</code></td>
+      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${extracted}">${extracted || f['matched-at'] || '—'}</td>
+      <td>
+        <div class="row-actions">
+          <button class="row-btn star ${starred?'active':''}" onclick="toggleNucleiStar('${key}',this)">★</button>
+          <button class="row-btn flag ${flagged?'active':''}" onclick="toggleNucleiFlag('${key}',this)">⚑</button>
+          <button class="row-btn" onclick="openNucleiDetail(${JSON.stringify(f).replace(/"/g,'&quot;')})">→</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function sevBadge(s) {
+  return `<span class="sev sev-${s}">${s}</span>`;
+}
+
+function toggleNucleiStar(key, btn) {
+  if (nucleiStars.has(key)) { nucleiStars.delete(key); btn.classList.remove('active'); }
+  else { nucleiStars.add(key); btn.classList.add('active'); }
+  btn.closest('tr').className = nucleiFlags.has(key) ? 'flagged' : nucleiStars.has(key) ? 'starred' : '';
+}
+function toggleNucleiFlag(key, btn) {
+  if (nucleiFlags.has(key)) { nucleiFlags.delete(key); btn.classList.remove('active'); }
+  else { nucleiFlags.add(key); btn.classList.add('active'); }
+  btn.closest('tr').className = nucleiFlags.has(key) ? 'flagged' : nucleiStars.has(key) ? 'starred' : '';
+}
+
+function openNucleiDetail(f) {
+  const extracted = (f['extracted-results'] || []).join('\n');
+  const refs = (f.info?.reference || []).map(r => `<a href="${r}" target="_blank" style="color:var(--accent)">${r}</a>`).join('<br>');
+  openDrawer(`
+    <div class="drawer-title">${f['template-id']}</div>
+    <div class="kv"><div class="k">Severity</div><div class="v">${sevBadge(f.info?.severity||'unknown')}</div></div>
+    <div class="kv"><div class="k">Host</div><div class="v"><code>${f.host}</code></div></div>
+    <div class="kv"><div class="k">Port</div><div class="v">${f.port||'—'}</div></div>
+    <div class="kv"><div class="k">IP</div><div class="v"><code>${f.ip||'—'}</code></div></div>
+    <div class="kv"><div class="k">Matched At</div><div class="v"><code>${f['matched-at']||'—'}</code></div></div>
+    <div class="kv"><div class="k">Timestamp</div><div class="v">${f.timestamp||'—'}</div></div>
+    <hr>
+    <div class="kv"><div class="k">Description</div><div class="v">${f.info?.description||'—'}</div></div>
+    <div class="kv"><div class="k">Tags</div><div class="v">${(f.info?.tags||[]).map(t=>`<span class="tag">${t}</span>`).join('')}</div></div>
+    ${extracted ? `<div class="kv"><div class="k">Extracted Results</div><div class="v"><code>${extracted}</code></div></div>` : ''}
+    <hr>
+    <div class="kv"><div class="k">References</div><div class="v">${refs||'—'}</div></div>
+    <div class="kv"><div class="k">Template URL</div><div class="v"><a href="${f['template-url']||'#'}" target="_blank" style="color:var(--accent)">${f['template-url']||'—'}</a></div></div>
+    <hr>
+    <div class="kv"><div class="k">Notes</div>
+      <textarea class="notes-area" placeholder="Add analyst notes..." oninput="nucleiNotes['${f['template-id']+'_'+f.host}']=this.value">${nucleiNotes[f['template-id']+'_'+f.host]||''}</textarea>
+    </div>
+  `);
+}
+
+// ── Subdomains ──
+function renderSubdomains() {
+  document.querySelectorAll('[data-subfilter]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('[data-subfilter]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      subFilter = btn.dataset.subfilter;
+      renderSubTable();
+    });
+  });
+  document.getElementById('sub-search').oninput = renderSubTable;
+  document.getElementById('export-sub-txt').onclick = exportSubTxt;
+  document.getElementById('export-sub-csv').onclick = exportSubCSV;
+  renderSubTable();
+}
+
+function renderSubTable() {
+  const search = document.getElementById('sub-search').value.toLowerCase();
+  let entries = Object.values(subData);
+
+  entries = entries.filter(e => {
+    if (subFilter === 'has_vulns' && !e.all_vulns.length) return false;
+    if (subFilter === 'has_ports' && !e.all_ports.length) return false;
+    if (subFilter === 'starred' && !subStars.has(e.host)) return false;
+    if (search && !e.host.toLowerCase().includes(search)) return false;
+    return true;
+  });
+
+  entries.sort((a, b) => b.all_vulns.length - a.all_vulns.length || b.all_ports.length - a.all_ports.length);
+
+  document.getElementById('sub-count').textContent = entries.length;
+  const tbody = document.getElementById('sub-tbody');
+
+  if (!entries.length) {
+    tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state">No subdomains match filter</div></td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = entries.map(e => {
+    const starred = subStars.has(e.host);
+    const flagged = subFlags.has(e.host);
+    return `<tr class="${flagged?'flagged':starred?'starred':''}">
+      <td><code>${e.host}</code></td>
+      <td style="font-size:10px">${e.ips.slice(0,3).map(ip=>`<code>${ip}</code>`).join('<br>')}${e.ips.length>3?`<span style="color:var(--muted)"> +${e.ips.length-3}</span>`:''}</td>
+      <td>${portChips(e.all_ports)}</td>
+      <td>${e.all_vulns.length ? `<span style="color:var(--critical);font-weight:600">${e.all_vulns.length}</span>` : '<span style="color:var(--muted)">0</span>'}</td>
+      <td>${tagChips(e.all_tags)}</td>
+      <td>
+        <div class="row-actions">
+          <button class="row-btn star ${starred?'active':''}" onclick="toggleSubStar('${e.host}',this)">★</button>
+          <button class="row-btn flag ${flagged?'active':''}" onclick="toggleSubFlag('${e.host}',this)">⚑</button>
+          <button class="row-btn" onclick="openSubDetail('${e.host}')">→</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function toggleSubStar(host, btn) {
+  if (subStars.has(host)) subStars.delete(host); else subStars.add(host);
+  btn.classList.toggle('active', subStars.has(host));
+  btn.closest('tr').className = subFlags.has(host) ? 'flagged' : subStars.has(host) ? 'starred' : '';
+}
+function toggleSubFlag(host, btn) {
+  if (subFlags.has(host)) subFlags.delete(host); else subFlags.add(host);
+  btn.classList.toggle('active', subFlags.has(host));
+  btn.closest('tr').className = subFlags.has(host) ? 'flagged' : subStars.has(host) ? 'starred' : '';
+}
+function openSubDetail(host) {
+  const e = subData[host];
+  if (!e) return;
+  const dns = e.dns || {};
+  const dnsHtml = Object.entries(dns).filter(([,v])=>v&&v.length).map(([k,v])=>
+    `<div class="kv"><div class="k">${k}</div><div class="v">${v.map(x=>`<code>${x}</code>`).join('<br>')}</div></div>`
+  ).join('');
+  const ipCards = e.ip_data.map(ip =>
+    `<div style="border:1px solid var(--border);border-radius:3px;padding:10px;margin-bottom:8px">
+      <div style="font-family:var(--font-mono);color:var(--accent);margin-bottom:6px">${ip.ip}</div>
+      ${ip.asn?.asn_description ? `<div style="color:var(--muted);font-size:10px;margin-bottom:4px">${ip.asn.asn_description}</div>` : ''}
+      ${ip.ports.length ? `<div class="kv"><div class="k">Ports</div><div class="v">${portChips(ip.ports)}</div></div>` : ''}
+      ${ip.cpes.length ? `<div class="kv"><div class="k">CPEs</div><div class="v">${ip.cpes.map(c=>`<span class="tag">${c}</span>`).join('')}</div></div>` : ''}
+      ${ip.vulns.length ? `<div class="kv"><div class="k">CVEs</div><div class="v">${cveChips(ip.vulns)}</div></div>` : ''}
+      ${ip.tags.length ? `<div class="kv"><div class="k">Tags</div><div class="v">${tagChips(ip.tags)}</div></div>` : ''}
+    </div>`
+  ).join('');
+  openDrawer(`
+    <div class="drawer-title">${host}</div>
+    <div class="kv"><div class="k">IPs</div><div class="v">${e.ips.map(ip=>`<code>${ip}</code>`).join(' ')}</div></div>
+    ${e.all_vulns.length ? `<div class="kv"><div class="k">CVEs (${e.all_vulns.length})</div><div class="v">${cveChips(e.all_vulns)}</div></div>` : ''}
+    <hr>
+    <div style="font-family:var(--font-mono);font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:8px">DNS Records</div>
+    ${dnsHtml || '<div style="color:var(--muted);font-size:11px">No DNS data</div>'}
+    <hr>
+    <div style="font-family:var(--font-mono);font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:8px">IP Details</div>
+    ${ipCards || '<div style="color:var(--muted);font-size:11px">No IP data</div>'}
+  `);
+}
+
+// ── IPs ──
+function renderIPs() {
+  document.querySelectorAll('[data-ipfilter]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('[data-ipfilter]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      ipFilter = btn.dataset.ipfilter;
+      renderIPTable();
+    });
+  });
+  document.getElementById('ip-search').oninput = renderIPTable;
+  renderIPTable();
+}
+
+function renderIPTable() {
+  const search = document.getElementById('ip-search').value.toLowerCase();
+  let entries = Object.values(ipData);
+
+  entries = entries.filter(e => {
+    if (ipFilter === 'has_vulns' && !e.vulns.length) return false;
+    if (ipFilter === 'has_ports' && !e.ports.length) return false;
+    if (ipFilter === 'eol' && !e.tags.includes('eol-product')) return false;
+    if (search && !e.ip.includes(search) && !JSON.stringify(e.asn).toLowerCase().includes(search)) return false;
+    return true;
+  });
+
+  entries.sort((a, b) => b.vulns.length - a.vulns.length || b.ports.length - a.ports.length);
+
+  document.getElementById('ip-count').textContent = entries.length;
+  const tbody = document.getElementById('ip-tbody');
+
+  if (!entries.length) {
+    tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state">No IPs match filter</div></td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = entries.map(e => {
+    const starred = ipStars.has(e.ip);
+    const flagged = ipFlags.has(e.ip);
+    const asn = e.asn || {};
+    return `<tr class="${flagged?'flagged':starred?'starred':''}">
+      <td><code>${e.ip}</code></td>
+      <td style="font-size:10px;color:var(--muted)">${asn.asn_description||'—'}<br>${asn.asn_cidr||''}</td>
+      <td>${portChips(e.ports)}</td>
+      <td>${e.vulns.length ? `<span style="color:var(--critical)">${e.vulns.length}</span>` : '<span style="color:var(--muted)">0</span>'}</td>
+      <td style="max-width:150px;overflow:hidden">${e.cpes.slice(0,2).map(c=>`<span class="tag" title="${c}">${c.split(':').slice(-2).join(':')}</span>`).join('')}</td>
+      <td>${tagChips(e.tags)}</td>
+      <td>
+        <div class="row-actions">
+          <button class="row-btn star ${starred?'active':''}" onclick="toggleIPStar('${e.ip}',this)">★</button>
+          <button class="row-btn flag ${flagged?'active':''}" onclick="toggleIPFlag('${e.ip}',this)">⚑</button>
+          <button class="row-btn" onclick="openIPDetail('${e.ip}')">→</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function toggleIPStar(ip, btn) {
+  if (ipStars.has(ip)) ipStars.delete(ip); else ipStars.add(ip);
+  btn.classList.toggle('active', ipStars.has(ip));
+  btn.closest('tr').className = ipFlags.has(ip) ? 'flagged' : ipStars.has(ip) ? 'starred' : '';
+}
+function toggleIPFlag(ip, btn) {
+  if (ipFlags.has(ip)) ipFlags.delete(ip); else ipFlags.add(ip);
+  btn.classList.toggle('active', ipFlags.has(ip));
+  btn.closest('tr').className = ipFlags.has(ip) ? 'flagged' : ipStars.has(ip) ? 'starred' : '';
+}
+function openIPDetail(ip) {
+  const e = ipData[ip];
+  if (!e) return;
+  const asn = e.asn || {};
+  openDrawer(`
+    <div class="drawer-title">${ip}</div>
+    <div class="kv"><div class="k">ASN</div><div class="v">${asn.asn||'—'}</div></div>
+    <div class="kv"><div class="k">Description</div><div class="v">${asn.asn_description||'—'}</div></div>
+    <div class="kv"><div class="k">CIDR</div><div class="v"><code>${asn.asn_cidr||'—'}</code></div></div>
+    <div class="kv"><div class="k">Network</div><div class="v">${asn.network_name||'—'}</div></div>
+    <hr>
+    <div class="kv"><div class="k">Open Ports</div><div class="v">${portChips(e.ports)||'—'}</div></div>
+    <div class="kv"><div class="k">Hostnames</div><div class="v">${e.hostnames.map(h=>`<code>${h}</code>`).join('<br>')||'—'}</div></div>
+    <div class="kv"><div class="k">Subdomains</div><div class="v">${e.subdomains.map(s=>`<code>${s}</code>`).join('<br>')||'—'}</div></div>
+    <hr>
+    <div class="kv"><div class="k">CPEs</div><div class="v">${e.cpes.map(c=>`<span class="tag">${c}</span>`).join('')||'—'}</div></div>
+    <div class="kv"><div class="k">Tags</div><div class="v">${tagChips(e.tags)||'—'}</div></div>
+    ${e.vulns.length ? `<hr><div class="kv"><div class="k">CVEs (${e.vulns.length})</div><div class="v">${cveChips(e.vulns)}</div></div>` : ''}
+  `);
+}
+
+// ── Vulns ──
+function renderVulns() {
+  document.getElementById('vuln-search').oninput = renderVulnTable;
+  document.getElementById('export-cve-csv').onclick = exportVulnCSV;
+  renderVulnTable();
+}
+
+function renderVulnTable() {
+  const search = document.getElementById('vuln-search').value.toLowerCase();
+  let entries = vulnData.filter(v => {
+    if (search) return v.cve.toLowerCase().includes(search) ||
+      v.subdomains.join(' ').toLowerCase().includes(search) ||
+      v.cpes.join(' ').toLowerCase().includes(search);
+    return true;
+  });
+  entries.sort((a, b) => b.ips.length - a.ips.length);
+  document.getElementById('vuln-count').textContent = entries.length;
+  const tbody = document.getElementById('vuln-tbody');
+  if (!entries.length) {
+    tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state">No CVEs found</div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = entries.map(v => {
+    const starred = vulnStars.has(v.cve);
+    const flagged = vulnFlags.has(v.cve);
+    return `<tr class="${flagged?'flagged':starred?'starred':''}">
+      <td><span class="cve" onclick="openCVE('${v.cve}')">${v.cve}</span></td>
+      <td style="font-size:10px">${v.ips.map(ip=>`<code>${ip}</code>`).join(' ')}</td>
+      <td style="font-size:10px">${v.subdomains.slice(0,3).map(s=>`<code style="font-size:9px">${s}</code>`).join('<br>')}${v.subdomains.length>3?`<span style="color:var(--muted)"> +${v.subdomains.length-3}</span>`:''}</td>
+      <td style="font-size:10px">${v.cpes.slice(0,2).map(c=>`<span class="tag" title="${c}">${c.split(':').slice(-2).join(':')}</span>`).join('')}</td>
+      <td>
+        <div class="row-actions">
+          <button class="row-btn star ${starred?'active':''}" onclick="toggleVulnStar('${v.cve}',this)">★</button>
+          <button class="row-btn flag ${flagged?'active':''}" onclick="toggleVulnFlag('${v.cve}',this)">⚑</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function toggleVulnStar(cve, btn) {
+  if (vulnStars.has(cve)) vulnStars.delete(cve); else vulnStars.add(cve);
+  btn.classList.toggle('active', vulnStars.has(cve));
+  btn.closest('tr').className = vulnFlags.has(cve) ? 'flagged' : vulnStars.has(cve) ? 'starred' : '';
+}
+function toggleVulnFlag(cve, btn) {
+  if (vulnFlags.has(cve)) vulnFlags.delete(cve); else vulnFlags.add(cve);
+  btn.classList.toggle('active', vulnFlags.has(cve));
+  btn.closest('tr').className = vulnFlags.has(cve) ? 'flagged' : vulnStars.has(cve) ? 'starred' : '';
+}
+
+// ── DNS ──
+function renderDNS() {
+  document.querySelectorAll('[data-dnstype]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('[data-dnstype]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      dnsTypeFilter = btn.dataset.dnstype;
+      renderDNSTable();
+    });
+  });
+  document.getElementById('dns-search').oninput = renderDNSTable;
+  renderDNSTable();
+}
+
+function renderDNSTable() {
+  const search = document.getElementById('dns-search').value.toLowerCase();
+  const rows = [];
+  for (const [host, types] of Object.entries(dnsData)) {
+    if (search && !host.toLowerCase().includes(search)) continue;
+    for (const [type, values] of Object.entries(types)) {
+      if (!values || !values.length) continue;
+      if (dnsTypeFilter !== 'ALL' && type !== dnsTypeFilter) continue;
+      rows.push({ host, type, values });
+    }
+  }
+  document.getElementById('dns-count').textContent = rows.length;
+  const tbody = document.getElementById('dns-tbody');
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="3"><div class="empty-state">No DNS records match filter</div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map(r =>
+    `<tr>
+      <td><code>${r.host}</code></td>
+      <td><span class="tag">${r.type}</span></td>
+      <td style="font-size:10px">${r.values.map(v=>`<code>${v}</code>`).join(' ')}</td>
+    </tr>`
+  ).join('');
+}
+
+// ── Exports ──
+function downloadCSV(rows, headers, filename) {
+  const lines = [headers.join(','), ...rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(','))];
+  const blob = new Blob([lines.join('\n')], { type: 'text/csv' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = filename; a.click();
+}
+
+function exportNucleiCSV(flaggedOnly) {
+  const data = flaggedOnly
+    ? nucleiData.filter(f => nucleiFlags.has(f['template-id']+'_'+f.host))
+    : nucleiData;
+  downloadCSV(
+    data.map(f => [f.info?.severity||'', f['template-id']||'', f.host||'', f.port||'', f['matched-at']||'', (f['extracted-results']||[]).join('; ')]),
+    ['severity','template','host','port','matched_at','extracted'],
+    flaggedOnly ? 'nuclei_flagged.csv' : 'nuclei_all.csv'
+  );
+}
+
+function exportSubTxt() {
+  const txt = Object.keys(subData).join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([txt], {type:'text/plain'}));
+  a.download = 'subdomains.txt'; a.click();
+}
+
+function exportSubCSV() {
+  downloadCSV(
+    Object.values(subData).map(e => [e.host, e.ips.join('; '), e.all_ports.join('; '), e.all_vulns.length, e.all_tags.join('; ')]),
+    ['host','ips','ports','cve_count','tags'],
+    'subdomains.csv'
+  );
+}
+
+function exportVulnCSV() {
+  downloadCSV(
+    vulnData.map(v => [v.cve, v.ips.join('; '), v.subdomains.join('; '), v.cpes.join('; ')]),
+    ['cve','ips','subdomains','cpes'],
+    'cves.csv'
+  );
+}
+</script>
+</body>
+</html>
