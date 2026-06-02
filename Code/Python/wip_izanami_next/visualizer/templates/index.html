@@ -11,24 +11,25 @@
     --bg: #0a0c0f;
     --surface: #111418;
     --surface2: #161b22;
+    --surface3: #1c2230;
     --border: #1e2530;
     --border2: #2d3748;
     --text: #c9d1d9;
     --muted: #6e7681;
     --accent: #00d4ff;
-    --accent2: #0099cc;
-    --critical: #ff4444;
-    --high: #ff8800;
-    --medium: #ffcc00;
+    --critical: #ff3b3b;
+    --high: #ff8c00;
+    --medium: #f0c000;
     --low: #4488ff;
     --info: #888;
     --ok: #00cc88;
+    --flagged-bg: rgba(255,140,0,0.05);
+    --flagged-border: rgba(255,140,0,0.25);
+    --starred-bg: rgba(0,212,255,0.04);
     --font-mono: 'IBM Plex Mono', monospace;
     --font-sans: 'IBM Plex Sans', sans-serif;
   }
-
   * { box-sizing: border-box; margin: 0; padding: 0; }
-
   body {
     background: var(--bg);
     color: var(--text);
@@ -38,534 +39,429 @@
     overflow-x: hidden;
   }
 
-  /* ── Upload Screen ── */
+  /* ──────────── UPLOAD SCREEN ──────────── */
   #upload-screen {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-height: 100vh;
-    gap: 24px;
-    padding: 40px;
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; min-height: 100vh; gap: 20px; padding: 40px;
   }
-
-  .logo {
-    font-family: var(--font-mono);
-    font-size: 11px;
-    letter-spacing: 4px;
-    color: var(--muted);
-    text-transform: uppercase;
-  }
-
-  .upload-title {
-    font-family: var(--font-mono);
-    font-size: 28px;
-    font-weight: 300;
-    color: var(--accent);
-    letter-spacing: -0.5px;
-    text-align: center;
-  }
-
+  .upload-logo { font-family: var(--font-mono); font-size: 10px; letter-spacing: 6px; color: var(--muted); text-transform: uppercase; }
+  .upload-title { font-family: var(--font-mono); font-size: 26px; font-weight: 300; color: var(--accent); }
   .drop-zone {
-    width: 480px;
-    max-width: 100%;
-    border: 1px dashed var(--border2);
-    border-radius: 4px;
-    padding: 60px 40px;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.2s;
-    background: var(--surface);
-    position: relative;
+    width: 460px; max-width: 100%;
+    border: 1px dashed var(--border2); border-radius: 4px;
+    padding: 52px 36px; text-align: center; cursor: pointer;
+    transition: all 0.2s; background: var(--surface); position: relative;
   }
-  .drop-zone:hover, .drop-zone.dragging {
-    border-color: var(--accent);
-    background: rgba(0, 212, 255, 0.04);
-  }
-  .drop-zone input[type=file] {
-    position: absolute; inset: 0; opacity: 0; cursor: pointer;
-  }
-  .drop-zone-icon {
-    font-size: 32px;
-    margin-bottom: 12px;
-    opacity: 0.5;
-  }
-  .drop-zone-text {
-    font-family: var(--font-mono);
-    font-size: 12px;
-    color: var(--muted);
-    line-height: 1.8;
-  }
+  .drop-zone:hover, .drop-zone.dragging { border-color: var(--accent); background: rgba(0,212,255,0.03); }
+  .drop-zone input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  .drop-zone-icon { font-size: 28px; margin-bottom: 10px; opacity: 0.4; }
+  .drop-zone-text { font-family: var(--font-mono); font-size: 12px; color: var(--muted); line-height: 2; }
   .drop-zone-text strong { color: var(--text); }
+  .upload-status { font-family: var(--font-mono); font-size: 11px; color: var(--accent); min-height: 18px; }
 
-  .upload-status {
-    font-family: var(--font-mono);
-    font-size: 11px;
-    color: var(--accent);
-    min-height: 20px;
-    text-align: center;
+  /* ──────────── APP SHELL ──────────── */
+  #app { display: none; flex-direction: row; min-height: 100vh; }
+
+  /* ──────────── SIDEBAR NAV ──────────── */
+  .sidebar {
+    width: 200px; flex-shrink: 0;
+    background: var(--surface); border-right: 1px solid var(--border);
+    display: flex; flex-direction: column;
+    position: sticky; top: 0; height: 100vh; overflow: hidden;
   }
-
-  /* ── App Shell ── */
-  #app { display: none; flex-direction: column; min-height: 100vh; }
-
-  .topbar {
-    background: var(--surface);
+  .sidebar-header {
+    padding: 18px 16px 14px;
     border-bottom: 1px solid var(--border);
-    padding: 0 20px;
-    height: 44px;
-    display: flex;
-    align-items: center;
-    gap: 20px;
-    position: sticky;
-    top: 0;
-    z-index: 100;
+  }
+  .sidebar-logo { font-family: var(--font-mono); font-size: 10px; letter-spacing: 4px; color: var(--accent); text-transform: uppercase; }
+  .sidebar-domain {
+    font-family: var(--font-mono); font-size: 11px; color: var(--muted);
+    margin-top: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .sidebar-scan-time {
+    font-family: var(--font-mono); font-size: 9px; color: var(--border2); margin-top: 3px;
   }
 
-  .topbar-logo {
-    font-family: var(--font-mono);
-    font-size: 11px;
-    letter-spacing: 3px;
-    color: var(--accent);
-    text-transform: uppercase;
+  /* Risk score widget */
+  .risk-widget {
+    margin: 12px 16px;
+    padding: 10px 12px;
+    border-radius: 3px;
+    border: 1px solid var(--border2);
+    background: var(--surface2);
+  }
+  .risk-label { font-family: var(--font-mono); font-size: 8px; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; margin-bottom: 4px; }
+  .risk-score { font-family: var(--font-mono); font-size: 22px; font-weight: 600; line-height: 1; }
+  .risk-score.critical { color: var(--critical); }
+  .risk-score.high { color: var(--high); }
+  .risk-score.medium { color: var(--medium); }
+  .risk-score.low { color: var(--low); }
+  .risk-score.ok { color: var(--ok); }
+  .risk-desc { font-family: var(--font-mono); font-size: 9px; color: var(--muted); margin-top: 2px; }
+
+  .sidebar-nav { flex: 1; padding: 8px 0; overflow-y: auto; }
+  .nav-group-label {
+    font-family: var(--font-mono); font-size: 8px; letter-spacing: 2px; color: var(--border2);
+    text-transform: uppercase; padding: 10px 16px 4px; margin-top: 4px;
+  }
+  .nav-btn {
+    display: flex; align-items: center; gap: 10px;
+    width: 100%; background: none; border: none;
+    color: var(--muted); font-family: var(--font-mono); font-size: 11px;
+    padding: 8px 16px; cursor: pointer; transition: all 0.12s;
+    text-align: left; border-left: 2px solid transparent;
     white-space: nowrap;
   }
-
-  .domain-pill {
-    background: var(--surface2);
-    border: 1px solid var(--border2);
-    border-radius: 3px;
-    padding: 3px 10px;
-    font-family: var(--font-mono);
-    font-size: 11px;
-    color: var(--text);
+  .nav-btn:hover { color: var(--text); background: rgba(255,255,255,0.02); }
+  .nav-btn.active { color: var(--accent); border-left-color: var(--accent); background: rgba(0,212,255,0.05); }
+  .nav-btn .nav-icon { width: 14px; text-align: center; font-size: 12px; opacity: 0.7; }
+  .nav-btn .nav-badge {
+    margin-left: auto; font-family: var(--font-mono); font-size: 9px;
+    padding: 1px 6px; border-radius: 10px;
+    background: var(--surface3); color: var(--muted);
   }
+  .nav-btn .nav-badge.alert { background: rgba(255,59,59,0.15); color: var(--critical); }
+  .nav-btn .nav-badge.warn { background: rgba(255,140,0,0.15); color: var(--high); }
 
-  .topbar-spacer { flex: 1; }
-
-  .btn-upload-new {
-    background: none;
-    border: 1px solid var(--border2);
-    color: var(--muted);
-    font-family: var(--font-mono);
-    font-size: 11px;
-    padding: 5px 12px;
-    cursor: pointer;
-    border-radius: 3px;
-    transition: all 0.15s;
+  .sidebar-footer {
+    padding: 12px 16px; border-top: 1px solid var(--border);
   }
-  .btn-upload-new:hover { border-color: var(--accent); color: var(--accent); }
-
-  .nav {
-    display: flex;
-    gap: 2px;
-    flex: 1;
-    margin-left: 16px;
-  }
-
-  .nav-btn {
-    background: none;
-    border: none;
-    color: var(--muted);
-    font-family: var(--font-mono);
-    font-size: 11px;
+  .btn-new-upload {
+    width: 100%; background: none; border: 1px solid var(--border2);
+    color: var(--muted); font-family: var(--font-mono); font-size: 10px;
+    padding: 6px 10px; cursor: pointer; border-radius: 3px; transition: all 0.15s;
     letter-spacing: 1px;
-    padding: 0 14px;
-    height: 44px;
-    cursor: pointer;
-    text-transform: uppercase;
-    transition: color 0.15s;
-    border-bottom: 2px solid transparent;
-    margin-bottom: -1px;
   }
-  .nav-btn:hover { color: var(--text); }
-  .nav-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .btn-new-upload:hover { border-color: var(--accent); color: var(--accent); }
 
-  .content { flex: 1; padding: 24px; max-width: 1400px; margin: 0 auto; width: 100%; }
+  /* ──────────── MAIN CONTENT ──────────── */
+  .main { flex: 1; overflow-y: auto; min-width: 0; }
+  .content { padding: 20px 24px; max-width: 1300px; }
 
-  /* ── Panels ── */
+  /* ──────────── PANELS ──────────── */
   .panel { display: none; }
   .panel.active { display: block; }
 
-  /* ── Stat Cards ── */
-  .stats-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-    gap: 10px;
-    margin-bottom: 24px;
+  /* ──────────── PANEL HEADER ──────────── */
+  .panel-title {
+    font-family: var(--font-mono); font-size: 12px; letter-spacing: 3px;
+    color: var(--muted); text-transform: uppercase; margin-bottom: 16px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .panel-title .count {
+    background: var(--surface2); border: 1px solid var(--border2);
+    border-radius: 10px; padding: 1px 9px; font-size: 10px; color: var(--muted);
   }
 
-  .stat-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    padding: 14px 16px;
+  /* ──────────── TOOLBAR ──────────── */
+  .toolbar {
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 12px; flex-wrap: wrap;
   }
-  .stat-card .label {
-    font-family: var(--font-mono);
-    font-size: 9px;
-    letter-spacing: 2px;
-    color: var(--muted);
-    text-transform: uppercase;
-    margin-bottom: 6px;
+  .toolbar-spacer { flex: 1; }
+  .search-box {
+    position: relative; display: flex; align-items: center;
   }
-  .stat-card .value {
-    font-family: var(--font-mono);
-    font-size: 22px;
-    font-weight: 500;
-    color: var(--text);
-    line-height: 1;
-  }
-  .stat-card.accent .value { color: var(--accent); }
-  .stat-card.warn .value { color: var(--high); }
-  .stat-card.danger .value { color: var(--critical); }
-  .stat-card.ok .value { color: var(--ok); }
-
-  /* ── Tables ── */
-  .section-header {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 12px;
-    margin-top: 24px;
-  }
-  .section-title {
-    font-family: var(--font-mono);
-    font-size: 11px;
-    letter-spacing: 3px;
-    color: var(--muted);
-    text-transform: uppercase;
-  }
-  .section-count {
-    background: var(--surface2);
-    border: 1px solid var(--border2);
-    border-radius: 10px;
-    padding: 1px 8px;
-    font-family: var(--font-mono);
-    font-size: 10px;
-    color: var(--muted);
-  }
-  .section-spacer { flex: 1; }
-
+  .search-icon { position: absolute; left: 9px; color: var(--muted); font-size: 12px; pointer-events: none; }
   .search-input {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 3px;
-    padding: 5px 10px;
-    font-family: var(--font-mono);
-    font-size: 11px;
-    color: var(--text);
-    width: 200px;
-    outline: none;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 3px; padding: 6px 10px 6px 28px;
+    font-family: var(--font-mono); font-size: 11px; color: var(--text);
+    width: 220px; outline: none; transition: border-color 0.15s;
   }
   .search-input:focus { border-color: var(--accent); }
   .search-input::placeholder { color: var(--muted); }
 
-  .filter-row {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-    align-items: center;
-  }
-
+  .filter-group { display: flex; gap: 4px; flex-wrap: wrap; }
   .filter-btn {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 3px;
-    padding: 4px 10px;
-    font-family: var(--font-mono);
-    font-size: 10px;
-    color: var(--muted);
-    cursor: pointer;
-    transition: all 0.15s;
-    letter-spacing: 1px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 3px; padding: 5px 11px;
+    font-family: var(--font-mono); font-size: 10px; color: var(--muted);
+    cursor: pointer; transition: all 0.12s; letter-spacing: 0.5px;
+    white-space: nowrap;
   }
   .filter-btn:hover { border-color: var(--border2); color: var(--text); }
   .filter-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(0,212,255,0.07); }
-  .filter-btn.critical.active { border-color: var(--critical); color: var(--critical); background: rgba(255,68,68,0.07); }
-  .filter-btn.high.active { border-color: var(--high); color: var(--high); background: rgba(255,136,0,0.07); }
-  .filter-btn.medium.active { border-color: var(--medium); color: var(--medium); background: rgba(255,204,0,0.07); }
-  .filter-btn.low.active { border-color: var(--low); color: var(--low); background: rgba(68,136,255,0.07); }
+  .filter-btn.f-critical.active { border-color: var(--critical); color: var(--critical); background: rgba(255,59,59,0.07); }
+  .filter-btn.f-high.active { border-color: var(--high); color: var(--high); background: rgba(255,140,0,0.07); }
+  .filter-btn.f-medium.active { border-color: var(--medium); color: var(--medium); background: rgba(240,192,0,0.07); }
+  .filter-btn.f-low.active { border-color: var(--low); color: var(--low); background: rgba(68,136,255,0.07); }
+  .filter-btn.f-flagged.active { border-color: var(--high); color: var(--high); background: rgba(255,140,0,0.07); }
+  .filter-btn.f-starred.active { border-color: var(--accent); color: var(--accent); background: rgba(0,212,255,0.07); }
 
-  .data-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-family: var(--font-mono);
-    font-size: 12px;
-  }
-  .data-table th {
-    text-align: left;
-    padding: 8px 12px;
-    font-size: 9px;
-    letter-spacing: 2px;
-    color: var(--muted);
-    text-transform: uppercase;
-    border-bottom: 1px solid var(--border);
-    background: var(--surface);
-    cursor: pointer;
-    user-select: none;
-    white-space: nowrap;
-  }
-  .data-table th:hover { color: var(--text); }
-  .data-table th.sorted { color: var(--accent); }
-  .data-table td {
-    padding: 8px 12px;
-    border-bottom: 1px solid var(--border);
-    vertical-align: top;
-    color: var(--text);
-  }
-  .data-table tr:hover td { background: rgba(255,255,255,0.02); }
-  .data-table tr.flagged td { background: rgba(255,136,0,0.04); }
-  .data-table tr.starred td { background: rgba(0,212,255,0.04); }
-
-  .table-wrapper {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    overflow: auto;
-    max-height: 600px;
-  }
-
-  /* Severity badges */
-  .sev {
-    display: inline-block;
-    padding: 1px 7px;
-    border-radius: 2px;
-    font-size: 9px;
-    letter-spacing: 1.5px;
-    font-weight: 600;
-    text-transform: uppercase;
-  }
-  .sev-critical { background: rgba(255,68,68,0.15); color: var(--critical); border: 1px solid rgba(255,68,68,0.3); }
-  .sev-high { background: rgba(255,136,0,0.15); color: var(--high); border: 1px solid rgba(255,136,0,0.3); }
-  .sev-medium { background: rgba(255,204,0,0.12); color: var(--medium); border: 1px solid rgba(255,204,0,0.3); }
-  .sev-low { background: rgba(68,136,255,0.12); color: var(--low); border: 1px solid rgba(68,136,255,0.3); }
-  .sev-info { background: rgba(136,136,136,0.1); color: var(--info); border: 1px solid rgba(136,136,136,0.2); }
-  .sev-unknown { background: rgba(136,136,136,0.1); color: var(--muted); border: 1px solid rgba(136,136,136,0.2); }
-
-  /* Tags */
-  .tag {
-    display: inline-block;
-    padding: 1px 6px;
-    border-radius: 2px;
-    font-size: 9px;
-    background: var(--surface2);
-    border: 1px solid var(--border2);
-    color: var(--muted);
-    margin: 1px 2px 1px 0;
-  }
-
-  /* Port chips */
-  .port {
-    display: inline-block;
-    padding: 1px 6px;
-    border-radius: 2px;
-    font-size: 10px;
-    background: rgba(0,212,255,0.08);
-    border: 1px solid rgba(0,212,255,0.2);
-    color: var(--accent);
-    margin: 1px 2px 1px 0;
-  }
-
-  /* CVE chips */
-  .cve {
-    display: inline-block;
-    padding: 1px 6px;
-    border-radius: 2px;
-    font-size: 10px;
-    background: rgba(255,68,68,0.08);
-    border: 1px solid rgba(255,68,68,0.2);
-    color: #ff7777;
-    margin: 1px 2px 1px 0;
-    cursor: pointer;
-    transition: background 0.15s;
-  }
-  .cve:hover { background: rgba(255,68,68,0.15); }
-
-  /* Action buttons per row */
-  .row-actions {
-    display: flex;
-    gap: 4px;
-  }
-  .row-btn {
-    background: none;
-    border: 1px solid var(--border);
-    border-radius: 2px;
-    padding: 2px 8px;
-    font-family: var(--font-mono);
-    font-size: 10px;
-    cursor: pointer;
-    transition: all 0.15s;
-    color: var(--muted);
-  }
-  .row-btn:hover { border-color: var(--border2); color: var(--text); }
-  .row-btn.star.active { border-color: var(--accent); color: var(--accent); }
-  .row-btn.flag.active { border-color: var(--high); color: var(--high); }
-
-  /* Detail drawer */
-  .drawer {
-    position: fixed;
-    right: 0; top: 44px; bottom: 0;
-    width: 420px;
-    background: var(--surface);
-    border-left: 1px solid var(--border);
-    z-index: 200;
-    transform: translateX(100%);
-    transition: transform 0.2s ease;
-    overflow-y: auto;
-    padding: 20px;
-  }
-  .drawer.open { transform: translateX(0); }
-  .drawer-close {
-    position: absolute; top: 12px; right: 16px;
-    background: none; border: none; color: var(--muted);
-    font-family: var(--font-mono); font-size: 18px; cursor: pointer;
-  }
-  .drawer-close:hover { color: var(--text); }
-  .drawer-title {
-    font-family: var(--font-mono);
-    font-size: 13px;
-    color: var(--accent);
-    margin-bottom: 16px;
-    padding-right: 28px;
-    word-break: break-all;
-  }
-  .kv { margin-bottom: 10px; }
-  .kv .k {
-    font-family: var(--font-mono);
-    font-size: 9px;
-    letter-spacing: 2px;
-    color: var(--muted);
-    text-transform: uppercase;
-    margin-bottom: 3px;
-  }
-  .kv .v {
-    font-family: var(--font-mono);
-    font-size: 11px;
-    color: var(--text);
-    word-break: break-all;
-    line-height: 1.6;
-  }
-  .drawer hr { border: none; border-top: 1px solid var(--border); margin: 14px 0; }
-
-  /* Inline code */
-  code {
-    font-family: var(--font-mono);
-    font-size: 11px;
-    background: var(--surface2);
-    padding: 1px 5px;
-    border-radius: 2px;
-    color: var(--text);
-  }
-
-  /* Alert / info banners */
-  .banner {
-    border: 1px solid var(--border);
-    border-radius: 3px;
-    padding: 10px 14px;
-    margin-bottom: 10px;
-    font-family: var(--font-mono);
-    font-size: 11px;
-    color: var(--muted);
-  }
-  .banner.warn { border-color: rgba(255,136,0,0.4); color: var(--high); background: rgba(255,136,0,0.05); }
-  .banner.err { border-color: rgba(255,68,68,0.4); color: var(--critical); background: rgba(255,68,68,0.05); }
-
-  /* Loading overlay */
-  #loading {
-    display: none;
-    position: fixed; inset: 0;
-    background: rgba(10,12,15,0.85);
-    z-index: 999;
-    align-items: center;
-    justify-content: center;
-    flex-direction: column;
-    gap: 12px;
-    font-family: var(--font-mono);
-    font-size: 12px;
-    color: var(--accent);
-  }
-  #loading.show { display: flex; }
-
-  .spinner {
-    width: 24px; height: 24px;
-    border: 2px solid var(--border2);
-    border-top-color: var(--accent);
-    border-radius: 50%;
-    animation: spin 0.7s linear infinite;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  /* Notes textarea */
-  .notes-area {
-    width: 100%;
-    background: var(--surface2);
-    border: 1px solid var(--border2);
-    border-radius: 3px;
-    padding: 8px 10px;
-    font-family: var(--font-mono);
-    font-size: 11px;
-    color: var(--text);
-    resize: vertical;
-    min-height: 80px;
-    outline: none;
-    margin-top: 4px;
-  }
-  .notes-area:focus { border-color: var(--accent); }
-
-  /* Export bar */
-  .export-row {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 16px;
-    flex-wrap: wrap;
-    align-items: center;
-  }
   .export-btn {
-    background: var(--surface2);
-    border: 1px solid var(--border2);
-    color: var(--muted);
-    font-family: var(--font-mono);
-    font-size: 10px;
-    padding: 5px 12px;
-    cursor: pointer;
-    border-radius: 3px;
-    letter-spacing: 1px;
-    transition: all 0.15s;
+    background: var(--surface2); border: 1px solid var(--border2);
+    color: var(--muted); font-family: var(--font-mono); font-size: 10px;
+    padding: 5px 11px; cursor: pointer; border-radius: 3px;
+    letter-spacing: 0.5px; transition: all 0.12s; white-space: nowrap;
   }
   .export-btn:hover { border-color: var(--accent); color: var(--accent); }
 
-  /* Charts (simple bar) */
-  .bar-chart { display: flex; flex-direction: column; gap: 6px; }
-  .bar-row { display: flex; align-items: center; gap: 10px; font-family: var(--font-mono); font-size: 11px; }
-  .bar-label { width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); text-align: right; font-size: 10px; }
-  .bar-track { flex: 1; height: 14px; background: var(--surface2); border-radius: 2px; overflow: hidden; }
-  .bar-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.4s ease; min-width: 2px; }
-  .bar-val { width: 30px; color: var(--text); font-size: 10px; }
+  /* ──────────── TABLE ──────────── */
+  .table-wrapper {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 4px; overflow: auto;
+  }
+  .table-wrapper.scroll { max-height: calc(100vh - 220px); }
+  .data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .data-table thead { position: sticky; top: 0; z-index: 2; }
+  .data-table th {
+    text-align: left; padding: 9px 12px;
+    font-family: var(--font-mono); font-size: 9px; letter-spacing: 2px;
+    color: var(--muted); text-transform: uppercase;
+    border-bottom: 1px solid var(--border2);
+    background: var(--surface2); white-space: nowrap;
+    cursor: pointer; user-select: none;
+  }
+  .data-table th:hover { color: var(--text); }
+  .data-table th.sorted-asc::after { content: ' ↑'; color: var(--accent); }
+  .data-table th.sorted-desc::after { content: ' ↓'; color: var(--accent); }
+  .data-table td {
+    padding: 8px 12px; border-bottom: 1px solid var(--border);
+    vertical-align: middle; font-family: var(--font-mono); color: var(--text);
+  }
+  .data-table tr:last-child td { border-bottom: none; }
+  .data-table tr:hover td { background: rgba(255,255,255,0.018); }
 
-  /* Scrollbar */
-  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  /* Row states */
+  .data-table tr.row-flagged td { background: var(--flagged-bg); border-bottom-color: var(--flagged-border); }
+  .data-table tr.row-flagged:hover td { background: rgba(255,140,0,0.08); }
+  .data-table tr.row-starred td { background: var(--starred-bg); }
+  .data-table tr.row-starred:hover td { background: rgba(0,212,255,0.07); }
+
+  /* Left accent line for critical/high rows */
+  .data-table tr.row-critical td:first-child { border-left: 3px solid var(--critical); padding-left: 9px; }
+  .data-table tr.row-high td:first-child { border-left: 3px solid var(--high); padding-left: 9px; }
+
+  /* ──────────── CHIPS & BADGES ──────────── */
+  .sev {
+    display: inline-block; padding: 2px 7px; border-radius: 2px;
+    font-family: var(--font-mono); font-size: 9px; letter-spacing: 1.5px;
+    font-weight: 600; text-transform: uppercase; white-space: nowrap;
+  }
+  .sev-critical { background: rgba(255,59,59,0.15); color: var(--critical); border: 1px solid rgba(255,59,59,0.35); }
+  .sev-high { background: rgba(255,140,0,0.15); color: var(--high); border: 1px solid rgba(255,140,0,0.35); }
+  .sev-medium { background: rgba(240,192,0,0.12); color: var(--medium); border: 1px solid rgba(240,192,0,0.35); }
+  .sev-low { background: rgba(68,136,255,0.12); color: var(--low); border: 1px solid rgba(68,136,255,0.3); }
+  .sev-info { background: rgba(136,136,136,0.1); color: var(--info); border: 1px solid rgba(136,136,136,0.2); }
+  .sev-unknown { background: rgba(136,136,136,0.08); color: var(--muted); border: 1px solid rgba(136,136,136,0.15); }
+
+  .tag {
+    display: inline-block; padding: 1px 6px; border-radius: 2px; font-size: 9px;
+    background: var(--surface2); border: 1px solid var(--border2); color: var(--muted);
+    margin: 1px 2px 1px 0; font-family: var(--font-mono); white-space: nowrap;
+  }
+  .tag.eol { background: rgba(255,59,59,0.08); border-color: rgba(255,59,59,0.25); color: #ff8080; }
+  .tag.cloud { background: rgba(0,212,255,0.06); border-color: rgba(0,212,255,0.18); color: #60b8cc; }
+
+  .port-chip {
+    display: inline-block; padding: 1px 6px; border-radius: 2px; font-size: 10px;
+    background: rgba(0,212,255,0.07); border: 1px solid rgba(0,212,255,0.18);
+    color: var(--accent); margin: 1px 2px 1px 0; font-family: var(--font-mono);
+    white-space: nowrap;
+  }
+  .port-chip.notable { background: rgba(255,140,0,0.1); border-color: rgba(255,140,0,0.25); color: var(--high); }
+
+  .cve-chip {
+    display: inline-block; padding: 2px 7px; border-radius: 2px; font-size: 10px;
+    background: rgba(255,59,59,0.08); border: 1px solid rgba(255,59,59,0.2);
+    color: #ff8080; margin: 1px 2px 1px 0; cursor: pointer;
+    transition: background 0.12s; font-family: var(--font-mono); white-space: nowrap;
+  }
+  .cve-chip:hover { background: rgba(255,59,59,0.16); }
+
+  .num-chip {
+    display: inline-block; padding: 1px 7px; border-radius: 2px; font-size: 11px;
+    font-family: var(--font-mono); font-weight: 600;
+  }
+  .num-chip.zero { color: var(--muted); }
+  .num-chip.low-count { color: var(--low); }
+  .num-chip.med-count { color: var(--medium); }
+  .num-chip.high-count { color: var(--high); }
+  .num-chip.crit-count { color: var(--critical); }
+
+  /* ──────────── ROW ACTIONS ──────────── */
+  .row-actions {
+    display: flex; gap: 3px; align-items: center;
+  }
+  .ra {
+    background: none; border: 1px solid var(--border); border-radius: 2px;
+    width: 26px; height: 22px; display: flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: all 0.12s; color: var(--muted); font-size: 11px;
+    flex-shrink: 0;
+  }
+  .ra:hover { border-color: var(--border2); color: var(--text); }
+  .ra.ra-star:hover, .ra.ra-star.on { border-color: var(--accent); color: var(--accent); }
+  .ra.ra-flag:hover, .ra.ra-flag.on { border-color: var(--high); color: var(--high); }
+  .ra.ra-open:hover { border-color: var(--ok); color: var(--ok); }
+  .ra.ra-detail:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ──────────── STAT CARDS ──────────── */
+  .stat-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px;
+    margin-bottom: 20px;
+  }
+  .stat-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 4px; padding: 13px 15px;
+  }
+  .stat-card .s-label {
+    font-family: var(--font-mono); font-size: 8px; letter-spacing: 2px;
+    color: var(--muted); text-transform: uppercase; margin-bottom: 5px;
+  }
+  .stat-card .s-val {
+    font-family: var(--font-mono); font-size: 20px; font-weight: 500; line-height: 1;
+    color: var(--text);
+  }
+  .stat-card.s-accent { border-color: rgba(0,212,255,0.2); }
+  .stat-card.s-accent .s-val { color: var(--accent); }
+  .stat-card.s-warn { border-color: rgba(255,140,0,0.3); }
+  .stat-card.s-warn .s-val { color: var(--high); }
+  .stat-card.s-danger { border-color: rgba(255,59,59,0.35); background: rgba(255,59,59,0.04); }
+  .stat-card.s-danger .s-val { color: var(--critical); }
+  .stat-card.s-ok { border-color: rgba(0,204,136,0.2); }
+  .stat-card.s-ok .s-val { color: var(--ok); }
+
+  /* ──────────── DETAIL DRAWER ──────────── */
+  .drawer {
+    position: fixed; right: 0; top: 0; bottom: 0; width: 440px;
+    background: var(--surface); border-left: 1px solid var(--border2);
+    z-index: 300; transform: translateX(100%); transition: transform 0.22s ease;
+    overflow-y: auto; display: flex; flex-direction: column;
+  }
+  .drawer.open { transform: translateX(0); box-shadow: -8px 0 32px rgba(0,0,0,0.4); }
+  .drawer-topbar {
+    display: flex; align-items: center; gap: 10px;
+    padding: 14px 16px; border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; background: var(--surface); z-index: 1;
+  }
+  .drawer-close {
+    background: none; border: 1px solid var(--border2); color: var(--muted);
+    width: 26px; height: 26px; border-radius: 3px; cursor: pointer; font-size: 14px;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .drawer-close:hover { border-color: var(--text); color: var(--text); }
+  .drawer-heading {
+    font-family: var(--font-mono); font-size: 12px; color: var(--accent);
+    word-break: break-all; flex: 1; line-height: 1.4;
+  }
+  .drawer-body { padding: 16px; flex: 1; }
+  .kv { margin-bottom: 11px; }
+  .kv .k { font-family: var(--font-mono); font-size: 8px; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; margin-bottom: 3px; }
+  .kv .v { font-family: var(--font-mono); font-size: 11px; color: var(--text); word-break: break-all; line-height: 1.7; }
+  .drawer-section { font-family: var(--font-mono); font-size: 9px; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; margin: 14px 0 8px; }
+  .drawer hr { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
+  .notes-area {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border2);
+    border-radius: 3px; padding: 8px 10px;
+    font-family: var(--font-mono); font-size: 11px; color: var(--text);
+    resize: vertical; min-height: 72px; outline: none; margin-top: 4px;
+  }
+  .notes-area:focus { border-color: var(--accent); }
+  .drawer-actions {
+    display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px;
+  }
+  .drawer-action-btn {
+    background: var(--surface2); border: 1px solid var(--border2); color: var(--muted);
+    font-family: var(--font-mono); font-size: 10px; padding: 5px 12px;
+    border-radius: 3px; cursor: pointer; transition: all 0.12s;
+  }
+  .drawer-action-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .drawer-action-btn.on { border-color: var(--high); color: var(--high); }
+
+  /* IP mini-card in drawer */
+  .ip-card {
+    border: 1px solid var(--border2); border-radius: 3px; padding: 10px 12px;
+    margin-bottom: 8px; background: var(--surface2);
+  }
+  .ip-card-title { font-family: var(--font-mono); font-size: 12px; color: var(--accent); margin-bottom: 6px; }
+
+  /* ──────────── BAR CHART ──────────── */
+  .bar-chart { display: flex; flex-direction: column; gap: 5px; }
+  .bar-row { display: flex; align-items: center; gap: 8px; }
+  .bar-label { width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-size: 10px; font-family: var(--font-mono); text-align: right; }
+  .bar-track { flex: 1; height: 12px; background: var(--surface3); border-radius: 2px; overflow: hidden; }
+  .bar-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.4s ease; min-width: 2px; }
+  .bar-val { width: 24px; color: var(--text); font-size: 10px; font-family: var(--font-mono); }
+
+  /* ──────────── OVERVIEW SECTION TITLE ──────────── */
+  .section-label {
+    font-family: var(--font-mono); font-size: 9px; letter-spacing: 3px;
+    color: var(--muted); text-transform: uppercase; margin: 18px 0 8px;
+  }
+
+  /* ──────────── TRIAGE PANEL ──────────── */
+  .triage-list { display: flex; flex-direction: column; gap: 4px; }
+  .triage-item {
+    display: flex; align-items: flex-start; gap: 10px;
+    border: 1px solid var(--border); border-radius: 3px;
+    padding: 10px 12px; background: var(--surface);
+    cursor: pointer; transition: background 0.12s;
+  }
+  .triage-item:hover { background: var(--surface2); }
+  .triage-item.ti-critical { border-left: 3px solid var(--critical); }
+  .triage-item.ti-high { border-left: 3px solid var(--high); }
+  .triage-item.ti-flagged { border-left: 3px solid var(--high); background: var(--flagged-bg); }
+  .triage-icon { font-size: 13px; flex-shrink: 0; margin-top: 1px; }
+  .triage-content { flex: 1; min-width: 0; }
+  .triage-title { font-family: var(--font-mono); font-size: 11px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .triage-sub { font-family: var(--font-mono); font-size: 10px; color: var(--muted); margin-top: 2px; }
+  .triage-meta { flex-shrink: 0; text-align: right; }
+
+  /* ──────────── INLINE CODE ──────────── */
+  code {
+    font-family: var(--font-mono); font-size: 11px;
+    background: var(--surface2); padding: 1px 5px; border-radius: 2px; color: var(--text);
+  }
+
+  /* ──────────── BANNERS ──────────── */
+  .banner {
+    border: 1px solid var(--border); border-radius: 3px;
+    padding: 9px 13px; margin-bottom: 8px;
+    font-family: var(--font-mono); font-size: 11px; color: var(--muted);
+  }
+  .banner.b-warn { border-color: rgba(255,140,0,0.35); color: var(--high); background: rgba(255,140,0,0.04); }
+  .banner.b-err { border-color: rgba(255,59,59,0.35); color: var(--critical); background: rgba(255,59,59,0.04); }
+
+  /* ──────────── LOADING ──────────── */
+  #loading {
+    display: none; position: fixed; inset: 0;
+    background: rgba(10,12,15,0.88); z-index: 999;
+    align-items: center; justify-content: center; flex-direction: column; gap: 10px;
+    font-family: var(--font-mono); font-size: 11px; color: var(--accent);
+  }
+  #loading.show { display: flex; }
+  .spinner {
+    width: 22px; height: 22px; border: 2px solid var(--border2);
+    border-top-color: var(--accent); border-radius: 50%; animation: spin 0.6s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ──────────── SCROLLBAR ──────────── */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
   ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
 
-  .empty-state {
-    text-align: center;
-    padding: 40px;
-    font-family: var(--font-mono);
-    font-size: 11px;
-    color: var(--muted);
-  }
+  .empty-state { text-align: center; padding: 36px; font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 900px) { .two-col { grid-template-columns: 1fr; } .sidebar { display: none; } }
 
-  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-  @media (max-width: 768px) { .two-col { grid-template-columns: 1fr; } }
+  /* ── tooltip ── */
+  [data-tip] { position: relative; }
+  [data-tip]:hover::after {
+    content: attr(data-tip); position: absolute; bottom: calc(100% + 5px); left: 50%;
+    transform: translateX(-50%); background: var(--surface3); border: 1px solid var(--border2);
+    color: var(--text); font-family: var(--font-mono); font-size: 10px;
+    padding: 4px 8px; border-radius: 3px; white-space: nowrap; z-index: 500; pointer-events: none;
+  }
 </style>
 </head>
 <body>
 
-<!-- Upload screen -->
+<!-- ── UPLOAD SCREEN ── -->
 <div id="upload-screen">
-  <div class="logo">Recon</div>
+  <div class="upload-logo">Recon</div>
   <div class="upload-title">/ scanner dashboard</div>
   <div class="drop-zone" id="drop-zone">
     <input type="file" accept=".zip" id="file-input">
@@ -573,305 +469,403 @@
     <div class="drop-zone-text">
       <strong>Drop scanner output ZIP</strong><br>
       or click to browse<br>
-      <span style="color:var(--border2)">──────────────</span><br>
-      Expects: nuclei, shodan, dns, asn data
+      <span style="color:var(--border2)">────────────────</span><br>
+      nuclei · shodan · dns · asn
     </div>
   </div>
   <div class="upload-status" id="upload-status"></div>
 </div>
 
-<!-- App shell -->
+<!-- ── APP SHELL ── -->
 <div id="app">
-  <div class="topbar">
-    <div class="topbar-logo">RECON</div>
-    <div class="domain-pill" id="domain-label">—</div>
-    <div class="nav">
-      <button class="nav-btn active" data-panel="overview">Overview</button>
-      <button class="nav-btn" data-panel="nuclei">Nuclei</button>
-      <button class="nav-btn" data-panel="subdomains">Subdomains</button>
-      <button class="nav-btn" data-panel="ips">IPs</button>
-      <button class="nav-btn" data-panel="vulns">CVEs</button>
-      <button class="nav-btn" data-panel="dns">DNS</button>
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">RECON</div>
+      <div class="sidebar-domain" id="domain-label">—</div>
+      <div class="sidebar-scan-time" id="scan-time"></div>
     </div>
-    <div class="topbar-spacer"></div>
-    <button class="btn-upload-new" id="btn-new-upload">↑ New Scan</button>
+    <div class="risk-widget">
+      <div class="risk-label">Risk Score</div>
+      <div class="risk-score ok" id="risk-score">—</div>
+      <div class="risk-desc" id="risk-desc">—</div>
+    </div>
+    <div class="sidebar-nav">
+      <div class="nav-group-label">Explore</div>
+      <button class="nav-btn active" data-panel="overview"><span class="nav-icon">◈</span> Overview <span class="nav-badge" id="badge-overview"></span></button>
+      <button class="nav-btn" data-panel="triage"><span class="nav-icon">⚑</span> Triage <span class="nav-badge alert" id="badge-triage"></span></button>
+      <div class="nav-group-label">Data</div>
+      <button class="nav-btn" data-panel="nuclei"><span class="nav-icon">◎</span> Nuclei <span class="nav-badge" id="badge-nuclei"></span></button>
+      <button class="nav-btn" data-panel="subdomains"><span class="nav-icon">⊹</span> Subdomains <span class="nav-badge" id="badge-subs"></span></button>
+      <button class="nav-btn" data-panel="ips"><span class="nav-icon">◉</span> IPs <span class="nav-badge" id="badge-ips"></span></button>
+      <button class="nav-btn" data-panel="vulns"><span class="nav-icon">◆</span> CVEs <span class="nav-badge warn" id="badge-vulns"></span></button>
+      <button class="nav-btn" data-panel="dns"><span class="nav-icon">⊡</span> DNS <span class="nav-badge" id="badge-dns"></span></button>
+    </div>
+    <div class="sidebar-footer">
+      <button class="btn-new-upload" id="btn-new-upload">↑ Load New Scan</button>
+    </div>
   </div>
 
-  <div class="content">
-    <!-- OVERVIEW -->
-    <div class="panel active" id="panel-overview">
-      <div class="stats-grid" id="overview-stats"></div>
-      <div class="two-col">
-        <div>
-          <div class="section-header">
-            <div class="section-title">Nuclei by Template</div>
-          </div>
-          <div class="table-wrapper" style="max-height:300px;padding:16px;">
-            <div class="bar-chart" id="nuclei-bar-chart"></div>
-          </div>
-        </div>
-        <div>
-          <div class="section-header">
-            <div class="section-title">Errors / Warnings</div>
-          </div>
-          <div id="overview-errors"></div>
-        </div>
-      </div>
-      <div class="section-header" style="margin-top:24px">
-        <div class="section-title">Scan Config</div>
-      </div>
-      <div class="table-wrapper" style="padding:14px 16px;" id="overview-config"></div>
-    </div>
+  <!-- MAIN -->
+  <div class="main">
+    <div class="content">
 
-    <!-- NUCLEI FINDINGS -->
-    <div class="panel" id="panel-nuclei">
-      <div class="section-header">
-        <div class="section-title">Nuclei Findings</div>
-        <div class="section-count" id="nuclei-count">0</div>
-        <div class="section-spacer"></div>
-        <div class="filter-row" id="nuclei-filters"></div>
-        <input class="search-input" id="nuclei-search" placeholder="Filter..." type="text">
+      <!-- OVERVIEW -->
+      <div class="panel active" id="panel-overview">
+        <div class="stat-grid" id="overview-stats"></div>
+        <div class="two-col">
+          <div>
+            <div class="section-label">Nuclei Findings by Template</div>
+            <div class="table-wrapper" style="padding:14px 16px;max-height:280px;overflow:auto">
+              <div class="bar-chart" id="nuclei-bar-chart"></div>
+            </div>
+          </div>
+          <div>
+            <div class="section-label">Errors &amp; Warnings</div>
+            <div id="overview-errors"></div>
+            <div class="section-label" style="margin-top:14px">Scan Config</div>
+            <div class="table-wrapper" style="padding:12px 14px;" id="overview-config"></div>
+          </div>
+        </div>
       </div>
-      <div class="export-row">
-        <button class="export-btn" id="export-nuclei-csv">↓ Export CSV</button>
-        <button class="export-btn" id="export-nuclei-flagged">↓ Export Flagged</button>
+
+      <!-- TRIAGE -->
+      <div class="panel" id="panel-triage">
+        <div class="panel-title">Triage Queue <span class="count" id="triage-count">0</span></div>
+        <div class="toolbar">
+          <div class="filter-group">
+            <button class="filter-btn active" data-tf="all">All</button>
+            <button class="filter-btn f-critical" data-tf="critical">Critical</button>
+            <button class="filter-btn f-high" data-tf="high">High / CVE</button>
+            <button class="filter-btn f-flagged" data-tf="flagged">Flagged</button>
+            <button class="filter-btn f-starred" data-tf="starred">Starred</button>
+          </div>
+          <div class="toolbar-spacer"></div>
+          <div class="search-box">
+            <span class="search-icon">⌕</span>
+            <input class="search-input" id="triage-search" placeholder="Filter..." type="text">
+          </div>
+        </div>
+        <div class="triage-list" id="triage-list"></div>
       </div>
-      <div class="table-wrapper">
-        <table class="data-table" id="nuclei-table">
-          <thead>
-            <tr>
-              <th style="width:90px">Severity</th>
+
+      <!-- NUCLEI -->
+      <div class="panel" id="panel-nuclei">
+        <div class="panel-title">Nuclei Findings <span class="count" id="nuclei-count">0</span></div>
+        <div class="toolbar">
+          <div class="filter-group" id="nuclei-sev-filters"></div>
+          <div class="filter-group">
+            <button class="filter-btn f-flagged" data-nf-special="flagged">⚑ Flagged</button>
+            <button class="filter-btn f-starred" data-nf-special="starred">★ Starred</button>
+          </div>
+          <div class="toolbar-spacer"></div>
+          <button class="export-btn" id="export-nuclei-csv">↓ CSV</button>
+          <button class="export-btn" id="export-nuclei-flagged">↓ Flagged CSV</button>
+          <div class="search-box">
+            <span class="search-icon">⌕</span>
+            <input class="search-input" id="nuclei-search" placeholder="Filter..." type="text">
+          </div>
+        </div>
+        <div class="table-wrapper scroll">
+          <table class="data-table">
+            <thead><tr>
+              <th style="width:88px">Severity</th>
               <th>Template</th>
               <th>Host</th>
-              <th style="width:60px">Port</th>
-              <th>Matched</th>
-              <th style="width:90px">Actions</th>
-            </tr>
-          </thead>
-          <tbody id="nuclei-tbody"></tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- SUBDOMAINS -->
-    <div class="panel" id="panel-subdomains">
-      <div class="section-header">
-        <div class="section-title">Subdomains</div>
-        <div class="section-count" id="sub-count">0</div>
-        <div class="section-spacer"></div>
-        <div class="filter-row">
-          <button class="filter-btn active" data-subfilter="all">All</button>
-          <button class="filter-btn" data-subfilter="has_vulns">Has CVEs</button>
-          <button class="filter-btn" data-subfilter="has_ports">Has Ports</button>
-          <button class="filter-btn" data-subfilter="starred">Starred</button>
+              <th style="width:55px">Port</th>
+              <th>Extracted / Matched</th>
+              <th style="width:110px">Actions</th>
+            </tr></thead>
+            <tbody id="nuclei-tbody"></tbody>
+          </table>
         </div>
-        <input class="search-input" id="sub-search" placeholder="Filter host..." type="text">
       </div>
-      <div class="export-row">
-        <button class="export-btn" id="export-sub-txt">↓ Export TXT</button>
-        <button class="export-btn" id="export-sub-csv">↓ Export CSV</button>
-      </div>
-      <div class="table-wrapper">
-        <table class="data-table" id="sub-table">
-          <thead>
-            <tr>
+
+      <!-- SUBDOMAINS -->
+      <div class="panel" id="panel-subdomains">
+        <div class="panel-title">Subdomains <span class="count" id="sub-count">0</span></div>
+        <div class="toolbar">
+          <div class="filter-group">
+            <button class="filter-btn active" data-sf="all">All</button>
+            <button class="filter-btn" data-sf="has_vulns">Has CVEs</button>
+            <button class="filter-btn" data-sf="has_ports">Has Ports</button>
+            <button class="filter-btn f-flagged" data-sf="flagged">⚑ Flagged</button>
+            <button class="filter-btn f-starred" data-sf="starred">★ Starred</button>
+          </div>
+          <div class="toolbar-spacer"></div>
+          <button class="export-btn" id="export-sub-txt">↓ TXT</button>
+          <button class="export-btn" id="export-sub-csv">↓ CSV</button>
+          <div class="search-box">
+            <span class="search-icon">⌕</span>
+            <input class="search-input" id="sub-search" placeholder="Filter host..." type="text">
+          </div>
+        </div>
+        <div class="table-wrapper scroll">
+          <table class="data-table">
+            <thead><tr>
               <th>Host</th>
               <th>IPs</th>
-              <th>Ports</th>
-              <th>CVEs</th>
-              <th>Tags</th>
-              <th style="width:90px">Actions</th>
-            </tr>
-          </thead>
-          <tbody id="sub-tbody"></tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- IPs -->
-    <div class="panel" id="panel-ips">
-      <div class="section-header">
-        <div class="section-title">IP Addresses</div>
-        <div class="section-count" id="ip-count">0</div>
-        <div class="section-spacer"></div>
-        <div class="filter-row">
-          <button class="filter-btn active" data-ipfilter="all">All</button>
-          <button class="filter-btn" data-ipfilter="has_vulns">Has CVEs</button>
-          <button class="filter-btn" data-ipfilter="has_ports">Has Ports</button>
-          <button class="filter-btn" data-ipfilter="eol">EOL Product</button>
+              <th>Open Ports</th>
+              <th style="width:55px">CVEs</th>
+              <th>CPEs / Tags</th>
+              <th style="width:114px">Actions</th>
+            </tr></thead>
+            <tbody id="sub-tbody"></tbody>
+          </table>
         </div>
-        <input class="search-input" id="ip-search" placeholder="Filter IP..." type="text">
       </div>
-      <div class="table-wrapper">
-        <table class="data-table" id="ip-table">
-          <thead>
-            <tr>
+
+      <!-- IPs -->
+      <div class="panel" id="panel-ips">
+        <div class="panel-title">IP Addresses <span class="count" id="ip-count">0</span></div>
+        <div class="toolbar">
+          <div class="filter-group">
+            <button class="filter-btn active" data-ipf="all">All</button>
+            <button class="filter-btn" data-ipf="has_vulns">Has CVEs</button>
+            <button class="filter-btn" data-ipf="has_ports">Has Ports</button>
+            <button class="filter-btn" data-ipf="eol">EOL Product</button>
+            <button class="filter-btn f-flagged" data-ipf="flagged">⚑ Flagged</button>
+          </div>
+          <div class="toolbar-spacer"></div>
+          <div class="search-box">
+            <span class="search-icon">⌕</span>
+            <input class="search-input" id="ip-search" placeholder="Filter IP or domain..." type="text">
+          </div>
+        </div>
+        <div class="table-wrapper scroll">
+          <table class="data-table">
+            <thead><tr>
               <th>IP</th>
-              <th>ASN</th>
+              <th>ASN / Network</th>
+              <th>Domains</th>
               <th>Ports</th>
-              <th>CVEs</th>
-              <th>CPEs</th>
-              <th>Tags</th>
-              <th style="width:80px">Actions</th>
-            </tr>
-          </thead>
-          <tbody id="ip-tbody"></tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- CVEs -->
-    <div class="panel" id="panel-vulns">
-      <div class="section-header">
-        <div class="section-title">CVE Findings</div>
-        <div class="section-count" id="vuln-count">0</div>
-        <div class="section-spacer"></div>
-        <input class="search-input" id="vuln-search" placeholder="Filter CVE..." type="text">
-      </div>
-      <div class="export-row">
-        <button class="export-btn" id="export-cve-csv">↓ Export CSV</button>
-      </div>
-      <div class="table-wrapper">
-        <table class="data-table" id="vuln-table">
-          <thead>
-            <tr>
-              <th>CVE</th>
-              <th>Affected IPs</th>
-              <th>Affected Subdomains</th>
-              <th>CPEs</th>
-              <th style="width:80px">Actions</th>
-            </tr>
-          </thead>
-          <tbody id="vuln-tbody"></tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- DNS -->
-    <div class="panel" id="panel-dns">
-      <div class="section-header">
-        <div class="section-title">DNS Records</div>
-        <div class="section-count" id="dns-count">0</div>
-        <div class="section-spacer"></div>
-        <div class="filter-row" id="dns-type-filters">
-          <button class="filter-btn active" data-dnstype="ALL">All</button>
-          <button class="filter-btn" data-dnstype="A">A</button>
-          <button class="filter-btn" data-dnstype="AAAA">AAAA</button>
-          <button class="filter-btn" data-dnstype="MX">MX</button>
-          <button class="filter-btn" data-dnstype="TXT">TXT</button>
-          <button class="filter-btn" data-dnstype="NS">NS</button>
-          <button class="filter-btn" data-dnstype="CNAME">CNAME</button>
+              <th style="width:55px">CVEs</th>
+              <th>CPEs / Tags</th>
+              <th style="width:90px">Actions</th>
+            </tr></thead>
+            <tbody id="ip-tbody"></tbody>
+          </table>
         </div>
-        <input class="search-input" id="dns-search" placeholder="Filter host..." type="text">
       </div>
-      <div class="table-wrapper">
-        <table class="data-table" id="dns-table">
-          <thead>
-            <tr>
+
+      <!-- CVEs -->
+      <div class="panel" id="panel-vulns">
+        <div class="panel-title">CVE Findings <span class="count" id="vuln-count">0</span></div>
+        <div class="toolbar">
+          <div class="filter-group">
+            <button class="filter-btn f-flagged" data-vf="flagged">⚑ Flagged</button>
+            <button class="filter-btn f-starred" data-vf="starred">★ Starred</button>
+          </div>
+          <div class="toolbar-spacer"></div>
+          <button class="export-btn" id="export-cve-csv">↓ CSV</button>
+          <div class="search-box">
+            <span class="search-icon">⌕</span>
+            <input class="search-input" id="vuln-search" placeholder="CVE, domain, CPE..." type="text">
+          </div>
+        </div>
+        <div class="table-wrapper scroll">
+          <table class="data-table">
+            <thead><tr>
+              <th>CVE ID</th>
+              <th>Affected IPs</th>
+              <th>Affected Domains</th>
+              <th>Software (CPEs)</th>
+              <th style="width:90px">Actions</th>
+            </tr></thead>
+            <tbody id="vuln-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- DNS -->
+      <div class="panel" id="panel-dns">
+        <div class="panel-title">DNS Records <span class="count" id="dns-count">0</span></div>
+        <div class="toolbar">
+          <div class="filter-group" id="dns-type-filters">
+            <button class="filter-btn active" data-dt="ALL">All</button>
+            <button class="filter-btn" data-dt="A">A</button>
+            <button class="filter-btn" data-dt="AAAA">AAAA</button>
+            <button class="filter-btn" data-dt="MX">MX</button>
+            <button class="filter-btn" data-dt="TXT">TXT</button>
+            <button class="filter-btn" data-dt="NS">NS</button>
+            <button class="filter-btn" data-dt="CNAME">CNAME</button>
+            <button class="filter-btn" data-dt="CAA">CAA</button>
+          </div>
+          <div class="toolbar-spacer"></div>
+          <div class="search-box">
+            <span class="search-icon">⌕</span>
+            <input class="search-input" id="dns-search" placeholder="Filter host..." type="text">
+          </div>
+        </div>
+        <div class="table-wrapper scroll">
+          <table class="data-table">
+            <thead><tr>
               <th>Host</th>
-              <th>Type</th>
+              <th style="width:70px">Type</th>
               <th>Values</th>
-            </tr>
-          </thead>
-          <tbody id="dns-tbody"></tbody>
-        </table>
+              <th style="width:90px">Actions</th>
+            </tr></thead>
+            <tbody id="dns-tbody"></tbody>
+          </table>
+        </div>
       </div>
-    </div>
-  </div>
-</div>
 
-<!-- Detail Drawer -->
+    </div><!-- /content -->
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<!-- DETAIL DRAWER -->
 <div class="drawer" id="drawer">
-  <button class="drawer-close" id="drawer-close">×</button>
-  <div id="drawer-content"></div>
+  <div class="drawer-topbar">
+    <button class="drawer-close" id="drawer-close" title="Close">×</button>
+    <div class="drawer-heading" id="drawer-heading"></div>
+  </div>
+  <div class="drawer-body" id="drawer-body"></div>
 </div>
 
-<!-- Loading -->
+<!-- LOADING -->
 <div id="loading">
   <div class="spinner"></div>
   <div id="loading-text">Parsing scan data...</div>
 </div>
 
 <script>
-// ── State ──
+// ════════════════════════════════════════
+//  STATE
+// ════════════════════════════════════════
 let scanId = null;
-let nucleiData = [];
-let subData = {};
-let ipData = {};
-let vulnData = [];
-let dnsData = {};
-let overviewData = {};
+let nucleiData = [], subData = {}, ipData = {}, vulnData = [], dnsData = {}, overviewData = {};
 
-let nucleiStars = new Set(), nucleiFlags = new Set(), nucleiNotes = {};
-let subStars = new Set(), subFlags = new Set();
-let ipStars = new Set(), ipFlags = new Set();
-let vulnStars = new Set(), vulnFlags = new Set();
+// Sets for starred/flagged — persisted in localStorage by scan domain
+let stars = { nuclei: new Set(), sub: new Set(), ip: new Set(), vuln: new Set(), dns: new Set() };
+let flags = { nuclei: new Set(), sub: new Set(), ip: new Set(), vuln: new Set(), dns: new Set() };
+let notes = {};  // key -> string
 
-let nucleiFilter = 'all', subFilter = 'all', ipFilter = 'all', dnsTypeFilter = 'ALL';
+// Filter state
+let nFilter = { sev: 'all', special: null };
+let sFilter = 'all', ipFilter = 'all', vFilter = null, dnsFilter = 'ALL', triageFilter = 'all';
 
-// ── Utilities ──
-function sev(s) {
-  return `<span class="sev sev-${s}">${s}</span>`;
+// Sort state per table
+let sort = { nuclei: null, sub: null, ip: null, vuln: null };
+
+// ════════════════════════════════════════
+//  PERSISTENCE
+// ════════════════════════════════════════
+function persistKey() { return 'recon_' + (scanId || 'default'); }
+function saveState() {
+  try {
+    localStorage.setItem(persistKey(), JSON.stringify({
+      stars: { nuclei: [...stars.nuclei], sub: [...stars.sub], ip: [...stars.ip], vuln: [...stars.vuln], dns: [...stars.dns] },
+      flags: { nuclei: [...flags.nuclei], sub: [...flags.sub], ip: [...flags.ip], vuln: [...flags.vuln], dns: [...flags.dns] },
+      notes,
+    }));
+  } catch(e) {}
 }
-function severityOrder(s) {
-  return { critical: 0, high: 1, medium: 2, low: 3, info: 4, unknown: 5 }[s] ?? 5;
+function loadState() {
+  try {
+    const raw = localStorage.getItem(persistKey());
+    if (!raw) return;
+    const d = JSON.parse(raw);
+    if (d.stars) Object.keys(stars).forEach(k => stars[k] = new Set(d.stars[k] || []));
+    if (d.flags) Object.keys(flags).forEach(k => flags[k] = new Set(d.flags[k] || []));
+    notes = d.notes || {};
+  } catch(e) {}
 }
+
+// ════════════════════════════════════════
+//  UTILITIES
+// ════════════════════════════════════════
+function sevBadge(s) { return `<span class="sev sev-${s||'unknown'}">${s||'?'}</span>`; }
+function sevOrder(s) { return {critical:0,high:1,medium:2,low:3,info:4,unknown:5}[s]??5; }
+
 function portChips(ports) {
-  return ports.map(p => `<span class="port">${p}</span>`).join('');
+  const notable = new Set([21,22,23,25,80,443,445,3306,3389,5432,6379,8080,8443,9200,27017]);
+  return ports.map(p => `<span class="port-chip ${notable.has(p)?'notable':''}">${p}</span>`).join('');
 }
-function cveChips(cves) {
-  return cves.map(c => `<span class="cve" onclick="openCVE('${c}')">${c}</span>`).join('');
-}
+function cveChips(cves) { return cves.map(c=>`<span class="cve-chip" onclick="openCVE('${c}')" title="Open NVD">${c}</span>`).join(''); }
 function tagChips(tags) {
-  return tags.map(t => `<span class="tag">${t}</span>`).join('');
+  return tags.map(t=>`<span class="tag ${t==='eol-product'?'eol':t==='cloud'||t==='cdn'?'cloud':''}">${t}</span>`).join('');
 }
-function loading(show, text='Parsing scan data...') {
+function cpeShort(cpe) { return cpe.split(':').slice(-2).join(':'); }
+function numChip(n) {
+  if (!n) return `<span class="num-chip zero">0</span>`;
+  if (n >= 10) return `<span class="num-chip crit-count">${n}</span>`;
+  if (n >= 5) return `<span class="num-chip high-count">${n}</span>`;
+  if (n >= 2) return `<span class="num-chip med-count">${n}</span>`;
+  return `<span class="num-chip low-count">${n}</span>`;
+}
+function loading(show, txt='Parsing scan data...') {
   document.getElementById('loading').classList.toggle('show', show);
-  document.getElementById('loading-text').textContent = text;
+  document.getElementById('loading-text').textContent = txt;
 }
-function openCVE(cve) {
-  window.open(`https://nvd.nist.gov/vuln/detail/${cve}`, '_blank');
+function openCVE(c) { window.open(`https://nvd.nist.gov/vuln/detail/${c}`, '_blank'); }
+function openHost(h) { window.open(`https://${h}`, '_blank'); }
+
+// Row class given flags/stars
+function rowClass(group, key) {
+  if (flags[group].has(key)) return 'row-flagged';
+  if (stars[group].has(key)) return 'row-starred';
+  return '';
 }
 
-// ── Upload ──
+// Toggle star/flag and re-render + persist
+function toggle(group, set, key, btn) {
+  if (set.has(key)) set.delete(key); else set.add(key);
+  const on = set.has(key);
+  btn.classList.toggle('on', on);
+  const tr = btn.closest('tr') || btn.closest('.triage-item');
+  if (tr) tr.className = tr.className.replace(/row-\w+/g,'').trim() + ' ' + rowClass(group, key);
+  saveState();
+  refreshBadges();
+  return on;
+}
+
+// Action buttons HTML
+function actionBtns(group, key, host, showOpen) {
+  const s = stars[group].has(key) ? 'on' : '';
+  const f = flags[group].has(key) ? 'on' : '';
+  const openBtn = (showOpen && host) ? `<button class="ra ra-open" onclick="openHost('${host}')" data-tip="Open in browser" title="Open https://${host}">↗</button>` : '';
+  return `<div class="row-actions">
+    <button class="ra ra-star ${s}" onclick="toggle('${group}', stars['${group}'], '${key}', this)" data-tip="Star" title="Star">★</button>
+    <button class="ra ra-flag ${f}" onclick="toggle('${group}', flags['${group}'], '${key}', this)" data-tip="Flag" title="Flag">⚑</button>
+    ${openBtn}
+    <button class="ra ra-detail" onclick="openDetail_${group}('${escKey(key)}')" data-tip="Details" title="Details">→</button>
+  </div>`;
+}
+function escKey(k) { return k.replace(/'/g,"\\'"); }
+
+// ════════════════════════════════════════
+//  UPLOAD
+// ════════════════════════════════════════
 const dropZone = document.getElementById('drop-zone');
 const fileInput = document.getElementById('file-input');
-const status = document.getElementById('upload-status');
-
-dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragging'); });
-dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragging'));
-dropZone.addEventListener('drop', e => {
-  e.preventDefault();
-  dropZone.classList.remove('dragging');
-  const file = e.dataTransfer.files[0];
-  if (file) uploadFile(file);
-});
-fileInput.addEventListener('change', e => {
-  if (e.target.files[0]) uploadFile(e.target.files[0]);
-});
+dropZone.addEventListener('dragover', e=>{ e.preventDefault(); dropZone.classList.add('dragging'); });
+dropZone.addEventListener('dragleave', ()=>dropZone.classList.remove('dragging'));
+dropZone.addEventListener('drop', e=>{ e.preventDefault(); dropZone.classList.remove('dragging'); if(e.dataTransfer.files[0]) uploadFile(e.dataTransfer.files[0]); });
+fileInput.addEventListener('change', e=>{ if(e.target.files[0]) uploadFile(e.target.files[0]); });
 
 async function uploadFile(file) {
-  status.textContent = `Uploading ${file.name}...`;
+  document.getElementById('upload-status').textContent = `Uploading ${file.name}...`;
   loading(true, 'Parsing scan data...');
-  const fd = new FormData();
-  fd.append('file', file);
+  const fd = new FormData(); fd.append('file', file);
   try {
-    const r = await fetch('/api/upload', { method: 'POST', body: fd });
+    const r = await fetch('/api/upload', { method:'POST', body:fd });
     const d = await r.json();
     if (d.error) throw new Error(d.error);
     scanId = d.scan_id;
     document.getElementById('domain-label').textContent = d.domain || scanId;
     document.getElementById('upload-screen').style.display = 'none';
     document.getElementById('app').style.display = 'flex';
+    loadState();
     await loadAllData();
     loading(false);
   } catch(err) {
     loading(false);
-    status.textContent = `Error: ${err.message}`;
+    document.getElementById('upload-status').textContent = `Error: ${err.message}`;
   }
 }
-
-document.getElementById('btn-new-upload').addEventListener('click', () => {
+document.getElementById('btn-new-upload').addEventListener('click', ()=>{
   scanId = null;
   document.getElementById('upload-screen').style.display = 'flex';
   document.getElementById('app').style.display = 'none';
@@ -879,30 +873,40 @@ document.getElementById('btn-new-upload').addEventListener('click', () => {
   fileInput.value = '';
 });
 
-// ── Nav ──
-document.querySelectorAll('.nav-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+// ════════════════════════════════════════
+//  NAV
+// ════════════════════════════════════════
+document.querySelectorAll('.nav-btn[data-panel]').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
     btn.classList.add('active');
-    document.getElementById('panel-' + btn.dataset.panel).classList.add('active');
+    document.getElementById('panel-'+btn.dataset.panel).classList.add('active');
     closeDrawer();
   });
 });
 
-// ── Drawer ──
-function openDrawer(html) {
-  document.getElementById('drawer-content').innerHTML = html;
+// ════════════════════════════════════════
+//  DRAWER
+// ════════════════════════════════════════
+function openDrawer(heading, bodyHtml) {
+  document.getElementById('drawer-heading').textContent = heading;
+  document.getElementById('drawer-body').innerHTML = bodyHtml;
   document.getElementById('drawer').classList.add('open');
 }
-function closeDrawer() {
-  document.getElementById('drawer').classList.remove('open');
-}
+function closeDrawer() { document.getElementById('drawer').classList.remove('open'); }
 document.getElementById('drawer-close').addEventListener('click', closeDrawer);
 
-// ── Load Data ──
+function kv(label, val) {
+  if (!val && val !== 0) return '';
+  return `<div class="kv"><div class="k">${label}</div><div class="v">${val}</div></div>`;
+}
+
+// ════════════════════════════════════════
+//  LOAD DATA
+// ════════════════════════════════════════
 async function loadAllData() {
-  const [ov, nuc, sub, ip, vuln, dns] = await Promise.all([
+  const [ov,nuc,sub,ip,vuln,dns] = await Promise.all([
     fetch(`/api/scan/${scanId}/overview`).then(r=>r.json()),
     fetch(`/api/scan/${scanId}/nuclei`).then(r=>r.json()),
     fetch(`/api/scan/${scanId}/subdomains`).then(r=>r.json()),
@@ -910,7 +914,6 @@ async function loadAllData() {
     fetch(`/api/scan/${scanId}/vulns`).then(r=>r.json()),
     fetch(`/api/scan/${scanId}/dns`).then(r=>r.json()),
   ]);
-
   overviewData = ov;
   nucleiData = nuc.findings || [];
   subData = sub.subdomain_details || {};
@@ -924,203 +927,331 @@ async function loadAllData() {
   renderIPs();
   renderVulns();
   renderDNS();
+  renderTriage();
+  refreshBadges();
+  renderRiskScore();
+
+  // scan time
+  const ts = overviewData.stats?.finished_at_utc;
+  if (ts) document.getElementById('scan-time').textContent = new Date(ts).toLocaleDateString('en-GB', {day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
 }
 
-// ── Overview ──
+// ════════════════════════════════════════
+//  BADGES
+// ════════════════════════════════════════
+function refreshBadges() {
+  const s = overviewData.stats || {};
+  setBadge('badge-nuclei', nucleiData.length);
+  setBadge('badge-subs', Object.keys(subData).length);
+  setBadge('badge-ips', Object.keys(ipData).length);
+  setBadge('badge-vulns', vulnData.length);
+  setBadge('badge-dns', Object.keys(dnsData).length);
+  const triageCount = buildTriageItems().length;
+  setBadge('badge-triage', triageCount);
+  document.getElementById('triage-count').textContent = triageCount;
+}
+function setBadge(id, n) { const el = document.getElementById(id); if(el) el.textContent = n || ''; }
+
+// ════════════════════════════════════════
+//  RISK SCORE
+// ════════════════════════════════════════
+function renderRiskScore() {
+  const s = overviewData.stats || {};
+  let score = 0;
+  score += (s.nuclei_critical||0) * 40;
+  score += (s.nuclei_high||0) * 20;
+  score += (s.nuclei_medium||0) * 8;
+  score += (s.nuclei_low||0) * 2;
+  score += (s.shodan_vulns_total||0) * 5;
+  score = Math.min(score, 100);
+
+  const el = document.getElementById('risk-score');
+  const desc = document.getElementById('risk-desc');
+  el.textContent = score;
+
+  if (score >= 60) { el.className = 'risk-score critical'; desc.textContent = 'Critical — act now'; }
+  else if (score >= 35) { el.className = 'risk-score high'; desc.textContent = 'High — review urgently'; }
+  else if (score >= 15) { el.className = 'risk-score medium'; desc.textContent = 'Medium — review soon'; }
+  else if (score > 0) { el.className = 'risk-score low'; desc.textContent = 'Low — minor findings'; }
+  else { el.className = 'risk-score ok'; desc.textContent = 'Clean scan'; }
+}
+
+// ════════════════════════════════════════
+//  OVERVIEW
+// ════════════════════════════════════════
 function renderOverview() {
   const s = overviewData.stats || {};
-  const sevColors = {
-    nuclei_critical: 'danger',
-    nuclei_high: 'warn',
-    nuclei_medium: '',
-    nuclei_low: 'accent',
-  };
-
   const cards = [
-    { label: 'Subdomains', value: s.subdomains_total ?? 0, cls: '' },
-    { label: 'Resolved Hosts', value: s.resolved_hosts_total ?? 0, cls: '' },
-    { label: 'Unique IPv4', value: s.unique_ipv4_total ?? 0, cls: 'accent' },
-    { label: 'Unique IPv6', value: s.unique_ipv6_total ?? 0, cls: '' },
-    { label: 'IPs w/ Ports', value: s.shodan_ips_with_ports ?? 0, cls: '' },
-    { label: 'Total Ports', value: s.shodan_total_ports ?? 0, cls: '' },
-    { label: 'Shodan CVEs', value: s.shodan_vulns_total ?? 0, cls: s.shodan_vulns_total ? 'warn' : '' },
-    { label: 'Nuclei Findings', value: s.nuclei_findings_total ?? 0, cls: s.nuclei_findings_total ? 'warn' : 'ok' },
-    { label: 'Critical', value: s.nuclei_critical ?? 0, cls: (s.nuclei_critical > 0) ? 'danger' : '' },
-    { label: 'High', value: s.nuclei_high ?? 0, cls: (s.nuclei_high > 0) ? 'warn' : '' },
-    { label: 'Medium', value: s.nuclei_medium ?? 0, cls: '' },
-    { label: 'Low', value: s.nuclei_low ?? 0, cls: '' },
-    { label: 'CPEs', value: s.shodan_cpes_total ?? 0, cls: '' },
-    { label: 'Shodan Tags', value: s.shodan_tags_total ?? 0, cls: '' },
-    { label: 'Duration', value: s.duration_seconds ? Math.round(s.duration_seconds/60) + 'm' : '—', cls: '' },
+    { label:'Subdomains', val:s.subdomains_total??0, cls:'' },
+    { label:'Resolved Hosts', val:s.resolved_hosts_total??0, cls:'' },
+    { label:'Unique IPv4', val:s.unique_ipv4_total??0, cls:'s-accent' },
+    { label:'IPs w/ Ports', val:s.shodan_ips_with_ports??0, cls:'' },
+    { label:'Total Ports', val:s.shodan_total_ports??0, cls:'' },
+    { label:'Shodan CVEs', val:s.shodan_vulns_total??0, cls:s.shodan_vulns_total?'s-warn':'' },
+    { label:'Nuclei Findings', val:s.nuclei_findings_total??0, cls:s.nuclei_findings_total?'s-warn':'s-ok' },
+    { label:'Critical', val:s.nuclei_critical??0, cls:(s.nuclei_critical>0)?'s-danger':'' },
+    { label:'High', val:s.nuclei_high??0, cls:(s.nuclei_high>0)?'s-warn':'' },
+    { label:'Medium', val:s.nuclei_medium??0, cls:'' },
+    { label:'Low', val:s.nuclei_low??0, cls:'' },
+    { label:'CPEs', val:s.shodan_cpes_total??0, cls:'' },
+    { label:'Duration', val:s.duration_seconds?Math.round(s.duration_seconds/60)+'m':'—', cls:'' },
   ];
-
-  document.getElementById('overview-stats').innerHTML = cards.map(c =>
-    `<div class="stat-card ${c.cls}">
-      <div class="label">${c.label}</div>
-      <div class="value">${c.value}</div>
-    </div>`
+  document.getElementById('overview-stats').innerHTML = cards.map(c=>
+    `<div class="stat-card ${c.cls}"><div class="s-label">${c.label}</div><div class="s-val">${c.val}</div></div>`
   ).join('');
 
-  // Nuclei bar chart by template
-  const templateCounts = {};
-  nucleiData.forEach(f => {
-    const t = f['template-id'] || f.template || 'unknown';
-    templateCounts[t] = (templateCounts[t] || 0) + 1;
-  });
-  const sorted = Object.entries(templateCounts).sort((a,b) => b[1]-a[1]).slice(0, 12);
-  const max = sorted[0]?.[1] || 1;
+  // Bar chart
+  const tc = {};
+  nucleiData.forEach(f=>{ const t=f['template-id']||'unknown'; tc[t]=(tc[t]||0)+1; });
+  const sorted = Object.entries(tc).sort((a,b)=>b[1]-a[1]).slice(0,12);
+  const max = sorted[0]?.[1]||1;
   document.getElementById('nuclei-bar-chart').innerHTML = sorted.length
-    ? sorted.map(([t, c]) =>
-        `<div class="bar-row">
-          <div class="bar-label" title="${t}">${t}</div>
-          <div class="bar-track"><div class="bar-fill" style="width:${Math.round(c/max*100)}%"></div></div>
-          <div class="bar-val">${c}</div>
-        </div>`
-      ).join('')
+    ? sorted.map(([t,c])=>`<div class="bar-row"><div class="bar-label" title="${t}">${t}</div><div class="bar-track"><div class="bar-fill" style="width:${Math.round(c/max*100)}%"></div></div><div class="bar-val">${c}</div></div>`).join('')
     : '<div class="empty-state">No nuclei findings</div>';
 
   // Errors
-  const errors = overviewData.errors || [];
-  document.getElementById('overview-errors').innerHTML = errors.length
-    ? errors.map(e => `<div class="banner warn">${e}</div>`).join('')
+  const errs = overviewData.errors || [];
+  document.getElementById('overview-errors').innerHTML = errs.length
+    ? errs.map(e=>`<div class="banner b-warn">${e}</div>`).join('')
     : '<div class="banner">No errors recorded.</div>';
 
   // Config
   const cfg = overviewData.config || {};
   document.getElementById('overview-config').innerHTML =
-    `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;font-family:var(--font-mono);font-size:11px;">` +
-    Object.entries(cfg).map(([k, v]) =>
-      `<div><span style="color:var(--muted)">${k}: </span><span>${v === null ? 'null' : String(v)}</span></div>`
-    ).join('') + `</div>`;
+    `<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;font-family:var(--font-mono);font-size:10px;">` +
+    Object.entries(cfg).map(([k,v])=>`<div><span style="color:var(--muted)">${k}: </span><span>${v===null?'null':String(v)}</span></div>`).join('') + `</div>`;
 }
 
-// ── Nuclei ──
-function renderNuclei() {
-  // Build severity filter buttons
-  const sevCounts = {};
+// ════════════════════════════════════════
+//  TRIAGE
+// ════════════════════════════════════════
+function buildTriageItems() {
+  const items = [];
+
+  // Nuclei critical/high
   nucleiData.forEach(f => {
-    const s = f.info?.severity || 'unknown';
-    sevCounts[s] = (sevCounts[s] || 0) + 1;
-  });
-  const sevOrder = ['critical','high','medium','low','info','unknown'];
-  const filters = document.getElementById('nuclei-filters');
-  filters.innerHTML = `<button class="filter-btn active" data-nsev="all">All (${nucleiData.length})</button>` +
-    sevOrder.filter(s => sevCounts[s]).map(s =>
-      `<button class="filter-btn ${s}" data-nsev="${s}">${s} (${sevCounts[s]})</button>`
-    ).join('');
-
-  filters.querySelectorAll('.filter-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      filters.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      nucleiFilter = btn.dataset.nsev;
-      renderNucleiTable();
-    });
+    const sev = f.info?.severity;
+    if (sev === 'critical' || sev === 'high') {
+      const key = f['template-id'] + '_' + f.host;
+      items.push({ type:'nuclei', sev, key, title: f['template-id'] || '?', sub: f.host, icon:'◎', f });
+    }
   });
 
-  renderNucleiTable();
+  // Flagged nuclei (any severity)
+  nucleiData.forEach(f => {
+    const key = f['template-id'] + '_' + f.host;
+    if (flags.nuclei.has(key) && f.info?.severity !== 'critical' && f.info?.severity !== 'high') {
+      items.push({ type:'nuclei', sev:'flagged', key, title: f['template-id'], sub: f.host, icon:'⚑', f });
+    }
+  });
 
+  // IPs with CVEs
+  Object.values(ipData).forEach(e => {
+    if (e.vulns.length) {
+      items.push({ type:'ip', sev:'high', key:e.ip, title:e.ip, sub:`${e.vulns.length} CVEs · ${e.subdomains.join(', ').slice(0,60)}`, icon:'◉', e });
+    }
+  });
+
+  // Subdomains with CVEs
+  Object.values(subData).forEach(e => {
+    if (e.all_vulns.length) {
+      items.push({ type:'sub', sev:'high', key:e.host, title:e.host, sub:`${e.all_vulns.length} CVEs`, icon:'⊹', e });
+    }
+  });
+
+  // Flagged subs/IPs
+  [...flags.sub].forEach(k => {
+    if (!items.find(i=>i.key===k)) {
+      const e = subData[k]; if(e) items.push({ type:'sub', sev:'flagged', key:k, title:k, sub:'Flagged subdomain', icon:'⚑', e });
+    }
+  });
+  [...flags.ip].forEach(k => {
+    if (!items.find(i=>i.key===k)) {
+      const e = ipData[k]; if(e) items.push({ type:'ip', sev:'flagged', key:k, title:k, sub:'Flagged IP', icon:'⚑', e });
+    }
+  });
+
+  // EOL products
+  Object.values(ipData).forEach(e => {
+    if (e.tags.includes('eol-product') && !items.find(i=>i.key===e.ip)) {
+      items.push({ type:'ip', sev:'medium', key:e.ip, title:e.ip, sub:`EOL product · ${e.cpes.map(cpeShort).join(', ')}`, icon:'◉', e });
+    }
+  });
+
+  // Notable ports (23=telnet, 21=ftp, 3389=rdp, 445=smb)
+  const dangerPorts = new Set([21,23,445,3389]);
+  Object.values(ipData).forEach(e => {
+    const dp = e.ports.filter(p=>dangerPorts.has(p));
+    if (dp.length && !items.find(i=>i.key===e.ip && i.type==='ip')) {
+      items.push({ type:'ip', sev:'medium', key:e.ip, title:e.ip, sub:`Notable ports: ${dp.join(', ')}`, icon:'◉', e });
+    }
+  });
+
+  // Deduplicate by key+type
+  const seen = new Set();
+  return items.filter(i => { const k = i.type+':'+i.key; if(seen.has(k)) return false; seen.add(k); return true; });
+}
+
+function renderTriage() {
+  const search = (document.getElementById('triage-search')?.value||'').toLowerCase();
+  let items = buildTriageItems();
+
+  items = items.filter(i => {
+    if (triageFilter === 'critical' && i.sev !== 'critical') return false;
+    if (triageFilter === 'high' && i.sev !== 'high' && i.sev !== 'critical') return false;
+    if (triageFilter === 'flagged' && i.sev !== 'flagged' && !flags[i.type]?.has(i.key)) return false;
+    if (triageFilter === 'starred' && !stars[i.type]?.has(i.key)) return false;
+    if (search && !i.title.toLowerCase().includes(search) && !i.sub.toLowerCase().includes(search)) return false;
+    return true;
+  });
+
+  // Sort: critical first, then high, flagged, medium
+  const so = {critical:0,high:1,flagged:2,medium:3};
+  items.sort((a,b)=>(so[a.sev]??4)-(so[b.sev]??4));
+
+  document.getElementById('triage-list').innerHTML = items.length
+    ? items.map(i => {
+        const cls = i.sev==='flagged'?'ti-flagged':i.sev==='critical'?'ti-critical':i.sev==='high'?'ti-high':'';
+        const badge = i.sev==='flagged'?'':'`'+sevBadge(i.sev)+'`';
+        const openBtnHtml = (i.type==='sub'||i.type==='nuclei') ? `<button class="ra ra-open" onclick="openHost('${i.title}')" title="Open" style="width:24px;height:20px;font-size:10px">↗</button>` : '';
+        const detailFn = i.type==='nuclei'
+          ? `openDetail_nuclei('${escKey(i.f['template-id']+'_'+i.f.host)}')`
+          : i.type==='sub' ? `openDetail_sub('${escKey(i.key)}')`
+          : `openDetail_ip('${escKey(i.key)}')`;
+        return `<div class="triage-item ${cls}" onclick="${detailFn}">
+          <div class="triage-icon" style="color:${i.sev==='critical'?'var(--critical)':i.sev==='high'||i.sev==='flagged'?'var(--high)':'var(--muted)'}">${i.icon}</div>
+          <div class="triage-content">
+            <div class="triage-title">${i.title}</div>
+            <div class="triage-sub">${i.sub}</div>
+          </div>
+          <div class="triage-meta" style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:60px">
+            ${sevBadge(i.sev==='flagged'?'high':i.sev)}
+            <div style="display:flex;gap:3px">${openBtnHtml}</div>
+          </div>
+        </div>`;
+      }).join('')
+    : '<div class="empty-state">No triage items match filter.</div>';
+}
+
+document.querySelectorAll('[data-tf]').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('[data-tf]').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active'); triageFilter=btn.dataset.tf; renderTriage();
+  });
+});
+// triage search attached after DOM ready below
+
+// ════════════════════════════════════════
+//  NUCLEI
+// ════════════════════════════════════════
+function renderNuclei() {
+  const sevCounts = {};
+  nucleiData.forEach(f=>{ const s=f.info?.severity||'unknown'; sevCounts[s]=(sevCounts[s]||0)+1; });
+  const sevOrder2 = ['critical','high','medium','low','info','unknown'];
+  const fEl = document.getElementById('nuclei-sev-filters');
+  fEl.innerHTML = `<button class="filter-btn active" data-ns="all">All (${nucleiData.length})</button>` +
+    sevOrder2.filter(s=>sevCounts[s]).map(s=>`<button class="filter-btn f-${s}" data-ns="${s}">${s[0].toUpperCase()+s.slice(1)} (${sevCounts[s]})</button>`).join('');
+  fEl.querySelectorAll('[data-ns]').forEach(btn=>btn.addEventListener('click',()=>{
+    fEl.querySelectorAll('[data-ns]').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active'); nFilter.sev=btn.dataset.ns; nFilter.special=null;
+    document.querySelectorAll('[data-nf-special]').forEach(b=>b.classList.remove('active'));
+    renderNucleiTable();
+  }));
+  document.querySelectorAll('[data-nf-special]').forEach(btn=>btn.addEventListener('click',()=>{
+    const cur = btn.classList.contains('active');
+    document.querySelectorAll('[data-nf-special]').forEach(b=>b.classList.remove('active'));
+    fEl.querySelectorAll('[data-ns]').forEach(b=>b.classList.remove('active'));
+    if (!cur) { btn.classList.add('active'); nFilter.special=btn.dataset.nfSpecial; nFilter.sev='all'; }
+    else { nFilter.special=null; fEl.querySelector('[data-ns=all]').classList.add('active'); }
+    renderNucleiTable();
+  }));
   document.getElementById('nuclei-search').oninput = renderNucleiTable;
-  document.getElementById('export-nuclei-csv').onclick = () => exportNucleiCSV(false);
-  document.getElementById('export-nuclei-flagged').onclick = () => exportNucleiCSV(true);
+  document.getElementById('export-nuclei-csv').onclick = ()=>exportNucleiCSV(false);
+  document.getElementById('export-nuclei-flagged').onclick = ()=>exportNucleiCSV(true);
+  renderNucleiTable();
 }
 
 function renderNucleiTable() {
   const search = document.getElementById('nuclei-search').value.toLowerCase();
-  let rows = nucleiData.filter(f => {
-    const sev = f.info?.severity || 'unknown';
-    if (nucleiFilter !== 'all' && sev !== nucleiFilter) return false;
+  let rows = nucleiData.filter(f=>{
+    const s = f.info?.severity||'unknown';
+    const key = f['template-id']+'_'+f.host;
+    if (nFilter.special === 'flagged' && !flags.nuclei.has(key)) return false;
+    if (nFilter.special === 'starred' && !stars.nuclei.has(key)) return false;
+    if (!nFilter.special && nFilter.sev !== 'all' && s !== nFilter.sev) return false;
     if (search) {
-      const text = [f['template-id'], f.host, f['matched-at'], sev].join(' ').toLowerCase();
-      if (!text.includes(search)) return false;
+      const txt = [f['template-id'],f.host,s,(f['extracted-results']||[]).join(' ')].join(' ').toLowerCase();
+      if (!txt.includes(search)) return false;
     }
     return true;
   });
-
   document.getElementById('nuclei-count').textContent = rows.length;
 
   const tbody = document.getElementById('nuclei-tbody');
-  if (!rows.length) {
-    tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state">No findings match filter</div></td></tr>`;
-    return;
-  }
+  if (!rows.length) { tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state">No findings match filter</div></td></tr>`; return; }
 
-  tbody.innerHTML = rows.map((f, i) => {
-    const key = f['template-id'] + '_' + f.host;
-    const starred = nucleiStars.has(key);
-    const flagged = nucleiFlags.has(key);
-    const sev = f.info?.severity || 'unknown';
-    const extracted = (f['extracted-results'] || []).join(', ');
-    return `<tr class="${flagged?'flagged':starred?'starred':''}">
-      <td>${sevBadge(sev)}</td>
+  tbody.innerHTML = rows.map(f=>{
+    const s = f.info?.severity||'unknown';
+    const key = f['template-id']+'_'+f.host;
+    const extracted = (f['extracted-results']||[]).join(' · ').slice(0,80);
+    const rowCls = rowClass('nuclei',key) + (s==='critical'?' row-critical':s==='high'?' row-high':'');
+    const host = f.host||'';
+    return `<tr class="${rowCls.trim()}">
+      <td>${sevBadge(s)}</td>
       <td>
-        <div>${f['template-id'] || '—'}</div>
-        <div style="color:var(--muted);font-size:10px;margin-top:2px">${(f.info?.tags||[]).map(t=>`<span class="tag">${t}</span>`).join('')}</div>
+        <div style="font-size:11px">${f['template-id']||'—'}</div>
+        <div style="margin-top:2px">${(f.info?.tags||[]).slice(0,3).map(t=>`<span class="tag">${t}</span>`).join('')}</div>
       </td>
-      <td><code>${f.host || '—'}</code></td>
-      <td><code>${f.port || '—'}</code></td>
-      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${extracted}">${extracted || f['matched-at'] || '—'}</td>
-      <td>
-        <div class="row-actions">
-          <button class="row-btn star ${starred?'active':''}" onclick="toggleNucleiStar('${key}',this)">★</button>
-          <button class="row-btn flag ${flagged?'active':''}" onclick="toggleNucleiFlag('${key}',this)">⚑</button>
-          <button class="row-btn" onclick="openNucleiDetail(${JSON.stringify(f).replace(/"/g,'&quot;')})">→</button>
-        </div>
-      </td>
+      <td><code style="font-size:10px">${host}</code></td>
+      <td><code style="font-size:10px">${f.port||'—'}</code></td>
+      <td style="font-size:10px;color:var(--muted);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${extracted}">${extracted||f['matched-at']||'—'}</td>
+      <td>${actionBtns('nuclei', key, host, true)}</td>
     </tr>`;
   }).join('');
 }
 
-function sevBadge(s) {
-  return `<span class="sev sev-${s}">${s}</span>`;
-}
-
-function toggleNucleiStar(key, btn) {
-  if (nucleiStars.has(key)) { nucleiStars.delete(key); btn.classList.remove('active'); }
-  else { nucleiStars.add(key); btn.classList.add('active'); }
-  btn.closest('tr').className = nucleiFlags.has(key) ? 'flagged' : nucleiStars.has(key) ? 'starred' : '';
-}
-function toggleNucleiFlag(key, btn) {
-  if (nucleiFlags.has(key)) { nucleiFlags.delete(key); btn.classList.remove('active'); }
-  else { nucleiFlags.add(key); btn.classList.add('active'); }
-  btn.closest('tr').className = nucleiFlags.has(key) ? 'flagged' : nucleiStars.has(key) ? 'starred' : '';
-}
-
-function openNucleiDetail(f) {
-  const extracted = (f['extracted-results'] || []).join('\n');
-  const refs = (f.info?.reference || []).map(r => `<a href="${r}" target="_blank" style="color:var(--accent)">${r}</a>`).join('<br>');
-  openDrawer(`
-    <div class="drawer-title">${f['template-id']}</div>
-    <div class="kv"><div class="k">Severity</div><div class="v">${sevBadge(f.info?.severity||'unknown')}</div></div>
-    <div class="kv"><div class="k">Host</div><div class="v"><code>${f.host}</code></div></div>
-    <div class="kv"><div class="k">Port</div><div class="v">${f.port||'—'}</div></div>
-    <div class="kv"><div class="k">IP</div><div class="v"><code>${f.ip||'—'}</code></div></div>
-    <div class="kv"><div class="k">Matched At</div><div class="v"><code>${f['matched-at']||'—'}</code></div></div>
-    <div class="kv"><div class="k">Timestamp</div><div class="v">${f.timestamp||'—'}</div></div>
-    <hr>
-    <div class="kv"><div class="k">Description</div><div class="v">${f.info?.description||'—'}</div></div>
-    <div class="kv"><div class="k">Tags</div><div class="v">${(f.info?.tags||[]).map(t=>`<span class="tag">${t}</span>`).join('')}</div></div>
-    ${extracted ? `<div class="kv"><div class="k">Extracted Results</div><div class="v"><code>${extracted}</code></div></div>` : ''}
-    <hr>
-    <div class="kv"><div class="k">References</div><div class="v">${refs||'—'}</div></div>
-    <div class="kv"><div class="k">Template URL</div><div class="v"><a href="${f['template-url']||'#'}" target="_blank" style="color:var(--accent)">${f['template-url']||'—'}</a></div></div>
-    <hr>
-    <div class="kv"><div class="k">Notes</div>
-      <textarea class="notes-area" placeholder="Add analyst notes..." oninput="nucleiNotes['${f['template-id']+'_'+f.host}']=this.value">${nucleiNotes[f['template-id']+'_'+f.host]||''}</textarea>
+// Nuclei detail
+const _nucleiMap = {};
+function openDetail_nuclei(key) {
+  // rebuild map if needed
+  if (!_nucleiMap[key]) {
+    nucleiData.forEach(f => { _nucleiMap[f['template-id']+'_'+f.host] = f; });
+  }
+  const f = _nucleiMap[key]; if(!f) return;
+  const refs = (f.info?.reference||[]).map(r=>`<a href="${r}" target="_blank" style="color:var(--accent);word-break:break-all">${r}</a>`).join('<br>');
+  const flagged = flags.nuclei.has(key);
+  openDrawer(f['template-id']||key, `
+    <div class="drawer-actions">
+      <button class="drawer-action-btn ${flags.nuclei.has(key)?'on':''}" onclick="flags.nuclei.${flagged?'delete':'add'}('${escKey(key)}');saveState();refreshBadges();this.classList.toggle('on');renderTriage()">⚑ ${flagged?'Unflag':'Flag'}</button>
+      <button class="drawer-action-btn" onclick="openHost('${f.host||''}')">↗ Open in Browser</button>
+      <a href="https://nvd.nist.gov/vuln/search/results?query=${f['template-id']}" target="_blank" style="text-decoration:none"><button class="drawer-action-btn">⌕ Search NVD</button></a>
     </div>
+    ${kv('Severity', sevBadge(f.info?.severity||'unknown'))}
+    ${kv('Host', `<code>${f.host}</code>`)}
+    ${kv('IP', `<code>${f.ip||'—'}</code>`)}
+    ${kv('Port', f.port||'—')}
+    ${kv('Matched At', `<code>${f['matched-at']||'—'}</code>`)}
+    ${kv('Timestamp', f.timestamp||'—')}
+    <hr>
+    ${kv('Description', f.info?.description||'—')}
+    ${kv('Tags', (f.info?.tags||[]).map(t=>`<span class="tag">${t}</span>`).join(''))}
+    ${(f['extracted-results']||[]).length ? kv('Extracted', `<code>${(f['extracted-results']||[]).join('<br>')}</code>`) : ''}
+    <hr>
+    ${refs ? kv('References', refs) : ''}
+    ${kv('Template', `<a href="${f['template-url']||'#'}" target="_blank" style="color:var(--accent)">${f['template-url']||'—'}</a>`)}
+    <hr>
+    ${kv('Analyst Notes', `<textarea class="notes-area" placeholder="Add notes..." oninput="notes['${escKey(key)}']=this.value;saveState()">${notes[key]||''}</textarea>`)}
   `);
 }
 
-// ── Subdomains ──
+// ════════════════════════════════════════
+//  SUBDOMAINS
+// ════════════════════════════════════════
 function renderSubdomains() {
-  document.querySelectorAll('[data-subfilter]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('[data-subfilter]').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      subFilter = btn.dataset.subfilter;
-      renderSubTable();
-    });
-  });
+  document.querySelectorAll('[data-sf]').forEach(btn=>btn.addEventListener('click',()=>{
+    document.querySelectorAll('[data-sf]').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active'); sFilter=btn.dataset.sf; renderSubTable();
+  }));
   document.getElementById('sub-search').oninput = renderSubTable;
   document.getElementById('export-sub-txt').onclick = exportSubTxt;
   document.getElementById('export-sub-csv').onclick = exportSubCSV;
@@ -1129,177 +1260,145 @@ function renderSubdomains() {
 
 function renderSubTable() {
   const search = document.getElementById('sub-search').value.toLowerCase();
-  let entries = Object.values(subData);
-
-  entries = entries.filter(e => {
-    if (subFilter === 'has_vulns' && !e.all_vulns.length) return false;
-    if (subFilter === 'has_ports' && !e.all_ports.length) return false;
-    if (subFilter === 'starred' && !subStars.has(e.host)) return false;
+  let entries = Object.values(subData).filter(e=>{
+    if (sFilter==='has_vulns' && !e.all_vulns.length) return false;
+    if (sFilter==='has_ports' && !e.all_ports.length) return false;
+    if (sFilter==='flagged' && !flags.sub.has(e.host)) return false;
+    if (sFilter==='starred' && !stars.sub.has(e.host)) return false;
     if (search && !e.host.toLowerCase().includes(search)) return false;
     return true;
   });
-
-  entries.sort((a, b) => b.all_vulns.length - a.all_vulns.length || b.all_ports.length - a.all_ports.length);
-
+  entries.sort((a,b)=>b.all_vulns.length-a.all_vulns.length||b.all_ports.length-a.all_ports.length);
   document.getElementById('sub-count').textContent = entries.length;
   const tbody = document.getElementById('sub-tbody');
-
-  if (!entries.length) {
-    tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state">No subdomains match filter</div></td></tr>`;
-    return;
-  }
-
-  tbody.innerHTML = entries.map(e => {
-    const starred = subStars.has(e.host);
-    const flagged = subFlags.has(e.host);
-    return `<tr class="${flagged?'flagged':starred?'starred':''}">
-      <td><code>${e.host}</code></td>
-      <td style="font-size:10px">${e.ips.slice(0,3).map(ip=>`<code>${ip}</code>`).join('<br>')}${e.ips.length>3?`<span style="color:var(--muted)"> +${e.ips.length-3}</span>`:''}</td>
+  if (!entries.length) { tbody.innerHTML=`<tr><td colspan="6"><div class="empty-state">No subdomains match filter</div></td></tr>`; return; }
+  tbody.innerHTML = entries.map(e=>{
+    const cpeList = [...new Set(e.all_cpes||[])].slice(0,2).map(c=>`<span class="tag" title="${c}">${cpeShort(c)}</span>`).join('');
+    return `<tr class="${rowClass('sub',e.host)}">
+      <td><code style="font-size:11px">${e.host}</code></td>
+      <td style="font-size:10px;color:var(--muted)">${e.ips.slice(0,3).map(ip=>`<code style="font-size:9px">${ip}</code>`).join('<br>')}${e.ips.length>3?`<span style="color:var(--muted)"> +${e.ips.length-3}</span>`:''}</td>
       <td>${portChips(e.all_ports)}</td>
-      <td>${e.all_vulns.length ? `<span style="color:var(--critical);font-weight:600">${e.all_vulns.length}</span>` : '<span style="color:var(--muted)">0</span>'}</td>
-      <td>${tagChips(e.all_tags)}</td>
-      <td>
-        <div class="row-actions">
-          <button class="row-btn star ${starred?'active':''}" onclick="toggleSubStar('${e.host}',this)">★</button>
-          <button class="row-btn flag ${flagged?'active':''}" onclick="toggleSubFlag('${e.host}',this)">⚑</button>
-          <button class="row-btn" onclick="openSubDetail('${e.host}')">→</button>
-        </div>
-      </td>
+      <td>${numChip(e.all_vulns.length)}</td>
+      <td>${cpeList}${tagChips(e.all_tags)}</td>
+      <td>${actionBtns('sub', e.host, e.host, true)}</td>
     </tr>`;
   }).join('');
 }
 
-function toggleSubStar(host, btn) {
-  if (subStars.has(host)) subStars.delete(host); else subStars.add(host);
-  btn.classList.toggle('active', subStars.has(host));
-  btn.closest('tr').className = subFlags.has(host) ? 'flagged' : subStars.has(host) ? 'starred' : '';
-}
-function toggleSubFlag(host, btn) {
-  if (subFlags.has(host)) subFlags.delete(host); else subFlags.add(host);
-  btn.classList.toggle('active', subFlags.has(host));
-  btn.closest('tr').className = subFlags.has(host) ? 'flagged' : subStars.has(host) ? 'starred' : '';
-}
-function openSubDetail(host) {
-  const e = subData[host];
-  if (!e) return;
-  const dns = e.dns || {};
-  const dnsHtml = Object.entries(dns).filter(([,v])=>v&&v.length).map(([k,v])=>
-    `<div class="kv"><div class="k">${k}</div><div class="v">${v.map(x=>`<code>${x}</code>`).join('<br>')}</div></div>`
+function openDetail_sub(host) {
+  const e = subData[host]; if(!e) return;
+  const dns = e.dns||{};
+  const dnsHtml = Object.entries(dns).filter(([,v])=>v&&v.length).map(([t,vals])=>
+    `<div class="kv"><div class="k">${t}</div><div class="v">${vals.map(x=>`<code>${x}</code>`).join(' ')}</div></div>`
   ).join('');
-  const ipCards = e.ip_data.map(ip =>
-    `<div style="border:1px solid var(--border);border-radius:3px;padding:10px;margin-bottom:8px">
-      <div style="font-family:var(--font-mono);color:var(--accent);margin-bottom:6px">${ip.ip}</div>
-      ${ip.asn?.asn_description ? `<div style="color:var(--muted);font-size:10px;margin-bottom:4px">${ip.asn.asn_description}</div>` : ''}
-      ${ip.ports.length ? `<div class="kv"><div class="k">Ports</div><div class="v">${portChips(ip.ports)}</div></div>` : ''}
-      ${ip.cpes.length ? `<div class="kv"><div class="k">CPEs</div><div class="v">${ip.cpes.map(c=>`<span class="tag">${c}</span>`).join('')}</div></div>` : ''}
-      ${ip.vulns.length ? `<div class="kv"><div class="k">CVEs</div><div class="v">${cveChips(ip.vulns)}</div></div>` : ''}
-      ${ip.tags.length ? `<div class="kv"><div class="k">Tags</div><div class="v">${tagChips(ip.tags)}</div></div>` : ''}
-    </div>`
-  ).join('');
-  openDrawer(`
-    <div class="drawer-title">${host}</div>
-    <div class="kv"><div class="k">IPs</div><div class="v">${e.ips.map(ip=>`<code>${ip}</code>`).join(' ')}</div></div>
-    ${e.all_vulns.length ? `<div class="kv"><div class="k">CVEs (${e.all_vulns.length})</div><div class="v">${cveChips(e.all_vulns)}</div></div>` : ''}
+  const ipCards = e.ip_data.map(ip=>`
+    <div class="ip-card">
+      <div class="ip-card-title">${ip.ip}</div>
+      ${ip.asn?.asn_description?`<div style="color:var(--muted);font-size:10px;margin-bottom:5px">${ip.asn.asn_description}</div>`:''}
+      ${ip.ports.length?kv('Ports',portChips(ip.ports)):''}
+      ${ip.cpes.length?kv('CPEs',ip.cpes.map(c=>`<span class="tag">${c}</span>`).join('')):''}
+      ${ip.vulns.length?kv(`CVEs (${ip.vulns.length})`,cveChips(ip.vulns)):''}
+      ${ip.tags.length?kv('Tags',tagChips(ip.tags)):''}
+    </div>`).join('');
+  openDrawer(host, `
+    <div class="drawer-actions">
+      <button class="drawer-action-btn" onclick="openHost('${host}')">↗ Open in Browser</button>
+      <button class="drawer-action-btn ${flags.sub.has(host)?'on':''}" onclick="flags.sub.${flags.sub.has(host)?'delete':'add'}('${host}');saveState();refreshBadges();this.classList.toggle('on');renderTriage()">⚑ ${flags.sub.has(host)?'Unflag':'Flag'}</button>
+    </div>
+    ${kv('IPs', e.ips.map(ip=>`<code>${ip}</code>`).join(' '))}
+    ${e.all_vulns.length?kv(`CVEs (${e.all_vulns.length})`,cveChips(e.all_vulns)):''}
+    <div class="drawer-section">DNS Records</div>
+    ${dnsHtml||'<div style="color:var(--muted);font-size:11px">No DNS data</div>'}
+    <div class="drawer-section" style="margin-top:12px">IP Details</div>
+    ${ipCards||'<div style="color:var(--muted);font-size:11px">No IP data</div>'}
     <hr>
-    <div style="font-family:var(--font-mono);font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:8px">DNS Records</div>
-    ${dnsHtml || '<div style="color:var(--muted);font-size:11px">No DNS data</div>'}
-    <hr>
-    <div style="font-family:var(--font-mono);font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:8px">IP Details</div>
-    ${ipCards || '<div style="color:var(--muted);font-size:11px">No IP data</div>'}
+    ${kv('Analyst Notes',`<textarea class="notes-area" placeholder="Add notes..." oninput="notes['sub:${escKey(host)}']=this.value;saveState()">${notes['sub:'+host]||''}</textarea>`)}
   `);
 }
 
-// ── IPs ──
+// ════════════════════════════════════════
+//  IPs
+// ════════════════════════════════════════
 function renderIPs() {
-  document.querySelectorAll('[data-ipfilter]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('[data-ipfilter]').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      ipFilter = btn.dataset.ipfilter;
-      renderIPTable();
-    });
-  });
+  document.querySelectorAll('[data-ipf]').forEach(btn=>btn.addEventListener('click',()=>{
+    document.querySelectorAll('[data-ipf]').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active'); ipFilter=btn.dataset.ipf; renderIPTable();
+  }));
   document.getElementById('ip-search').oninput = renderIPTable;
   renderIPTable();
 }
 
 function renderIPTable() {
   const search = document.getElementById('ip-search').value.toLowerCase();
-  let entries = Object.values(ipData);
-
-  entries = entries.filter(e => {
-    if (ipFilter === 'has_vulns' && !e.vulns.length) return false;
-    if (ipFilter === 'has_ports' && !e.ports.length) return false;
-    if (ipFilter === 'eol' && !e.tags.includes('eol-product')) return false;
-    if (search && !e.ip.includes(search) && !JSON.stringify(e.asn).toLowerCase().includes(search)) return false;
+  let entries = Object.values(ipData).filter(e=>{
+    if (ipFilter==='has_vulns' && !e.vulns.length) return false;
+    if (ipFilter==='has_ports' && !e.ports.length) return false;
+    if (ipFilter==='eol' && !e.tags.includes('eol-product')) return false;
+    if (ipFilter==='flagged' && !flags.ip.has(e.ip)) return false;
+    if (search) {
+      const allDomains = [...(e.hostnames||[]),...(e.subdomains||[])].join(' ').toLowerCase();
+      if (!e.ip.includes(search) && !JSON.stringify(e.asn).toLowerCase().includes(search) && !allDomains.includes(search)) return false;
+    }
     return true;
   });
-
-  entries.sort((a, b) => b.vulns.length - a.vulns.length || b.ports.length - a.ports.length);
-
+  entries.sort((a,b)=>b.vulns.length-a.vulns.length||b.ports.length-a.ports.length);
   document.getElementById('ip-count').textContent = entries.length;
   const tbody = document.getElementById('ip-tbody');
-
-  if (!entries.length) {
-    tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state">No IPs match filter</div></td></tr>`;
-    return;
-  }
-
-  tbody.innerHTML = entries.map(e => {
-    const starred = ipStars.has(e.ip);
-    const flagged = ipFlags.has(e.ip);
-    const asn = e.asn || {};
-    return `<tr class="${flagged?'flagged':starred?'starred':''}">
-      <td><code>${e.ip}</code></td>
-      <td style="font-size:10px;color:var(--muted)">${asn.asn_description||'—'}<br>${asn.asn_cidr||''}</td>
+  if (!entries.length) { tbody.innerHTML=`<tr><td colspan="7"><div class="empty-state">No IPs match filter</div></td></tr>`; return; }
+  tbody.innerHTML = entries.map(e=>{
+    const asn = e.asn||{};
+    const allDomains = [...new Set([...(e.subdomains||[]),...(e.hostnames||[])])];
+    const domainDisplay = allDomains.slice(0,2).map(d=>`<code style="font-size:9px">${d}</code>`).join('<br>')
+      + (allDomains.length>2?`<span style="color:var(--muted);font-size:9px"> +${allDomains.length-2}</span>`:'');
+    return `<tr class="${rowClass('ip',e.ip)}">
+      <td><code style="font-size:11px">${e.ip}</code></td>
+      <td style="font-size:10px;color:var(--muted)">${asn.asn_description||'—'}<br><span style="font-size:9px">${asn.asn_cidr||''}</span></td>
+      <td style="font-size:10px">${domainDisplay||'<span style="color:var(--muted)">—</span>'}</td>
       <td>${portChips(e.ports)}</td>
-      <td>${e.vulns.length ? `<span style="color:var(--critical)">${e.vulns.length}</span>` : '<span style="color:var(--muted)">0</span>'}</td>
-      <td style="max-width:150px;overflow:hidden">${e.cpes.slice(0,2).map(c=>`<span class="tag" title="${c}">${c.split(':').slice(-2).join(':')}</span>`).join('')}</td>
-      <td>${tagChips(e.tags)}</td>
-      <td>
-        <div class="row-actions">
-          <button class="row-btn star ${starred?'active':''}" onclick="toggleIPStar('${e.ip}',this)">★</button>
-          <button class="row-btn flag ${flagged?'active':''}" onclick="toggleIPFlag('${e.ip}',this)">⚑</button>
-          <button class="row-btn" onclick="openIPDetail('${e.ip}')">→</button>
-        </div>
-      </td>
+      <td>${numChip(e.vulns.length)}</td>
+      <td>${e.cpes.slice(0,2).map(c=>`<span class="tag" title="${c}">${cpeShort(c)}</span>`).join('')}${tagChips(e.tags)}</td>
+      <td>${actionBtns('ip', e.ip, null, false)}</td>
     </tr>`;
   }).join('');
 }
 
-function toggleIPStar(ip, btn) {
-  if (ipStars.has(ip)) ipStars.delete(ip); else ipStars.add(ip);
-  btn.classList.toggle('active', ipStars.has(ip));
-  btn.closest('tr').className = ipFlags.has(ip) ? 'flagged' : ipStars.has(ip) ? 'starred' : '';
-}
-function toggleIPFlag(ip, btn) {
-  if (ipFlags.has(ip)) ipFlags.delete(ip); else ipFlags.add(ip);
-  btn.classList.toggle('active', ipFlags.has(ip));
-  btn.closest('tr').className = ipFlags.has(ip) ? 'flagged' : ipStars.has(ip) ? 'starred' : '';
-}
-function openIPDetail(ip) {
-  const e = ipData[ip];
-  if (!e) return;
-  const asn = e.asn || {};
-  openDrawer(`
-    <div class="drawer-title">${ip}</div>
-    <div class="kv"><div class="k">ASN</div><div class="v">${asn.asn||'—'}</div></div>
-    <div class="kv"><div class="k">Description</div><div class="v">${asn.asn_description||'—'}</div></div>
-    <div class="kv"><div class="k">CIDR</div><div class="v"><code>${asn.asn_cidr||'—'}</code></div></div>
-    <div class="kv"><div class="k">Network</div><div class="v">${asn.network_name||'—'}</div></div>
+function openDetail_ip(ip) {
+  const e = ipData[ip]; if(!e) return;
+  const asn = e.asn||{};
+  const allDomains = [...new Set([...(e.subdomains||[]),...(e.hostnames||[])])];
+  openDrawer(ip, `
+    <div class="drawer-actions">
+      <button class="drawer-action-btn ${flags.ip.has(ip)?'on':''}" onclick="flags.ip.${flags.ip.has(ip)?'delete':'add'}('${escKey(ip)}');saveState();refreshBadges();this.classList.toggle('on');renderTriage()">⚑ ${flags.ip.has(ip)?'Unflag':'Flag'}</button>
+      <a href="https://www.shodan.io/host/${ip}" target="_blank" style="text-decoration:none"><button class="drawer-action-btn">↗ Shodan</button></a>
+      <a href="https://www.virustotal.com/gui/ip-address/${ip}" target="_blank" style="text-decoration:none"><button class="drawer-action-btn">↗ VirusTotal</button></a>
+    </div>
+    ${kv('ASN', asn.asn||'—')}
+    ${kv('Provider', asn.asn_description||'—')}
+    ${kv('CIDR', `<code>${asn.asn_cidr||'—'}</code>`)}
+    ${kv('Network', asn.network_name||'—')}
     <hr>
-    <div class="kv"><div class="k">Open Ports</div><div class="v">${portChips(e.ports)||'—'}</div></div>
-    <div class="kv"><div class="k">Hostnames</div><div class="v">${e.hostnames.map(h=>`<code>${h}</code>`).join('<br>')||'—'}</div></div>
-    <div class="kv"><div class="k">Subdomains</div><div class="v">${e.subdomains.map(s=>`<code>${s}</code>`).join('<br>')||'—'}</div></div>
+    ${kv('Open Ports', portChips(e.ports)||'—')}
+    ${allDomains.length?kv(`Domains (${allDomains.length})`, allDomains.map(d=>`<code style="font-size:10px">${d}</code>`).join('<br>')):''}
     <hr>
-    <div class="kv"><div class="k">CPEs</div><div class="v">${e.cpes.map(c=>`<span class="tag">${c}</span>`).join('')||'—'}</div></div>
-    <div class="kv"><div class="k">Tags</div><div class="v">${tagChips(e.tags)||'—'}</div></div>
-    ${e.vulns.length ? `<hr><div class="kv"><div class="k">CVEs (${e.vulns.length})</div><div class="v">${cveChips(e.vulns)}</div></div>` : ''}
+    ${kv('CPEs', e.cpes.map(c=>`<span class="tag">${c}</span>`).join('')||'—')}
+    ${kv('Tags', tagChips(e.tags)||'—')}
+    ${e.vulns.length?`<hr>${kv(`CVEs (${e.vulns.length})`,cveChips(e.vulns))}`:''}
+    <hr>
+    ${kv('Analyst Notes',`<textarea class="notes-area" placeholder="Add notes..." oninput="notes['ip:${escKey(ip)}']=this.value;saveState()">${notes['ip:'+ip]||''}</textarea>`)}
   `);
 }
 
-// ── Vulns ──
+// ════════════════════════════════════════
+//  CVEs
+// ════════════════════════════════════════
 function renderVulns() {
+  document.querySelectorAll('[data-vf]').forEach(btn=>btn.addEventListener('click',()=>{
+    const wasActive = btn.classList.contains('active');
+    document.querySelectorAll('[data-vf]').forEach(b=>b.classList.remove('active'));
+    if (!wasActive) { btn.classList.add('active'); vFilter=btn.dataset.vf; }
+    else vFilter=null;
+    renderVulnTable();
+  }));
   document.getElementById('vuln-search').oninput = renderVulnTable;
   document.getElementById('export-cve-csv').onclick = exportVulnCSV;
   renderVulnTable();
@@ -1307,58 +1406,45 @@ function renderVulns() {
 
 function renderVulnTable() {
   const search = document.getElementById('vuln-search').value.toLowerCase();
-  let entries = vulnData.filter(v => {
-    if (search) return v.cve.toLowerCase().includes(search) ||
-      v.subdomains.join(' ').toLowerCase().includes(search) ||
-      v.cpes.join(' ').toLowerCase().includes(search);
+  let entries = vulnData.filter(v=>{
+    if (vFilter==='flagged' && !flags.vuln.has(v.cve)) return false;
+    if (vFilter==='starred' && !stars.vuln.has(v.cve)) return false;
+    if (search && !v.cve.toLowerCase().includes(search) && !v.subdomains.join(' ').toLowerCase().includes(search) && !v.cpes.join(' ').toLowerCase().includes(search)) return false;
     return true;
   });
-  entries.sort((a, b) => b.ips.length - a.ips.length);
+  entries.sort((a,b)=>b.ips.length-a.ips.length);
   document.getElementById('vuln-count').textContent = entries.length;
   const tbody = document.getElementById('vuln-tbody');
-  if (!entries.length) {
-    tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state">No CVEs found</div></td></tr>`;
-    return;
-  }
-  tbody.innerHTML = entries.map(v => {
-    const starred = vulnStars.has(v.cve);
-    const flagged = vulnFlags.has(v.cve);
-    return `<tr class="${flagged?'flagged':starred?'starred':''}">
-      <td><span class="cve" onclick="openCVE('${v.cve}')">${v.cve}</span></td>
-      <td style="font-size:10px">${v.ips.map(ip=>`<code>${ip}</code>`).join(' ')}</td>
-      <td style="font-size:10px">${v.subdomains.slice(0,3).map(s=>`<code style="font-size:9px">${s}</code>`).join('<br>')}${v.subdomains.length>3?`<span style="color:var(--muted)"> +${v.subdomains.length-3}</span>`:''}</td>
-      <td style="font-size:10px">${v.cpes.slice(0,2).map(c=>`<span class="tag" title="${c}">${c.split(':').slice(-2).join(':')}</span>`).join('')}</td>
+  if (!entries.length) { tbody.innerHTML=`<tr><td colspan="5"><div class="empty-state">No CVEs found</div></td></tr>`; return; }
+  tbody.innerHTML = entries.map(v=>{
+    const domainsDisplay = v.subdomains.slice(0,3).map(d=>`<code style="font-size:9px">${d}</code>`).join('<br>')
+      + (v.subdomains.length>3?`<span style="color:var(--muted);font-size:9px"> +${v.subdomains.length-3}</span>`:'');
+    return `<tr class="${rowClass('vuln',v.cve)}">
+      <td><span class="cve-chip" onclick="openCVE('${v.cve}')">${v.cve}</span></td>
+      <td style="font-size:10px">${v.ips.map(ip=>`<code style="font-size:9px">${ip}</code>`).join(' ')}</td>
+      <td style="font-size:10px">${domainsDisplay||'—'}</td>
+      <td>${v.cpes.slice(0,2).map(c=>`<span class="tag" title="${c}">${cpeShort(c)}</span>`).join('')}</td>
       <td>
         <div class="row-actions">
-          <button class="row-btn star ${starred?'active':''}" onclick="toggleVulnStar('${v.cve}',this)">★</button>
-          <button class="row-btn flag ${flagged?'active':''}" onclick="toggleVulnFlag('${v.cve}',this)">⚑</button>
+          <button class="ra ra-star ${stars.vuln.has(v.cve)?'on':''}" onclick="toggle('vuln',stars.vuln,'${escKey(v.cve)}',this)" title="Star">★</button>
+          <button class="ra ra-flag ${flags.vuln.has(v.cve)?'on':''}" onclick="toggle('vuln',flags.vuln,'${escKey(v.cve)}',this)" title="Flag">⚑</button>
+          <button class="ra ra-open" onclick="openCVE('${v.cve}')" title="Open NVD">↗</button>
         </div>
       </td>
     </tr>`;
   }).join('');
 }
 
-function toggleVulnStar(cve, btn) {
-  if (vulnStars.has(cve)) vulnStars.delete(cve); else vulnStars.add(cve);
-  btn.classList.toggle('active', vulnStars.has(cve));
-  btn.closest('tr').className = vulnFlags.has(cve) ? 'flagged' : vulnStars.has(cve) ? 'starred' : '';
-}
-function toggleVulnFlag(cve, btn) {
-  if (vulnFlags.has(cve)) vulnFlags.delete(cve); else vulnFlags.add(cve);
-  btn.classList.toggle('active', vulnFlags.has(cve));
-  btn.closest('tr').className = vulnFlags.has(cve) ? 'flagged' : vulnStars.has(cve) ? 'starred' : '';
-}
+function openDetail_vuln(cve) { openCVE(cve); }
 
-// ── DNS ──
+// ════════════════════════════════════════
+//  DNS
+// ════════════════════════════════════════
 function renderDNS() {
-  document.querySelectorAll('[data-dnstype]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('[data-dnstype]').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      dnsTypeFilter = btn.dataset.dnstype;
-      renderDNSTable();
-    });
-  });
+  document.querySelectorAll('[data-dt]').forEach(btn=>btn.addEventListener('click',()=>{
+    document.querySelectorAll('[data-dt]').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active'); dnsFilter=btn.dataset.dt; renderDNSTable();
+  }));
   document.getElementById('dns-search').oninput = renderDNSTable;
   renderDNSTable();
 }
@@ -1366,70 +1452,65 @@ function renderDNS() {
 function renderDNSTable() {
   const search = document.getElementById('dns-search').value.toLowerCase();
   const rows = [];
-  for (const [host, types] of Object.entries(dnsData)) {
+  for (const [host,types] of Object.entries(dnsData)) {
     if (search && !host.toLowerCase().includes(search)) continue;
-    for (const [type, values] of Object.entries(types)) {
-      if (!values || !values.length) continue;
-      if (dnsTypeFilter !== 'ALL' && type !== dnsTypeFilter) continue;
-      rows.push({ host, type, values });
+    for (const [type,vals] of Object.entries(types)) {
+      if (!vals||!vals.length) continue;
+      if (dnsFilter!=='ALL' && type!==dnsFilter) continue;
+      rows.push({host,type,vals});
     }
   }
   document.getElementById('dns-count').textContent = rows.length;
   const tbody = document.getElementById('dns-tbody');
-  if (!rows.length) {
-    tbody.innerHTML = `<tr><td colspan="3"><div class="empty-state">No DNS records match filter</div></td></tr>`;
-    return;
-  }
-  tbody.innerHTML = rows.map(r =>
-    `<tr>
-      <td><code>${r.host}</code></td>
-      <td><span class="tag">${r.type}</span></td>
-      <td style="font-size:10px">${r.values.map(v=>`<code>${v}</code>`).join(' ')}</td>
-    </tr>`
-  ).join('');
+  if (!rows.length) { tbody.innerHTML=`<tr><td colspan="4"><div class="empty-state">No DNS records match filter</div></td></tr>`; return; }
+  tbody.innerHTML = rows.map(r=>`<tr>
+    <td><code style="font-size:11px">${r.host}</code></td>
+    <td><span class="tag">${r.type}</span></td>
+    <td style="font-size:10px">${r.vals.map(v=>`<code style="font-size:10px">${v}</code>`).join(' ')}</td>
+    <td>
+      <div class="row-actions">
+        <button class="ra ra-open" onclick="openHost('${r.host}')" title="Open in browser">↗</button>
+        <button class="ra ra-flag ${flags.dns.has(r.host+':'+r.type)?'on':''}" onclick="toggle('dns',flags.dns,'${escKey(r.host+':'+r.type)}',this)" title="Flag">⚑</button>
+      </div>
+    </td>
+  </tr>`).join('');
 }
 
-// ── Exports ──
-function downloadCSV(rows, headers, filename) {
-  const lines = [headers.join(','), ...rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(','))];
-  const blob = new Blob([lines.join('\n')], { type: 'text/csv' });
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+// ════════════════════════════════════════
+//  EXPORTS
+// ════════════════════════════════════════
+function dl(rows, headers, filename) {
+  const lines = [headers.join(','), ...rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(','))];
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([lines.join('\n')],{type:'text/csv'}));
   a.download = filename; a.click();
 }
-
 function exportNucleiCSV(flaggedOnly) {
-  const data = flaggedOnly
-    ? nucleiData.filter(f => nucleiFlags.has(f['template-id']+'_'+f.host))
-    : nucleiData;
-  downloadCSV(
-    data.map(f => [f.info?.severity||'', f['template-id']||'', f.host||'', f.port||'', f['matched-at']||'', (f['extracted-results']||[]).join('; ')]),
-    ['severity','template','host','port','matched_at','extracted'],
-    flaggedOnly ? 'nuclei_flagged.csv' : 'nuclei_all.csv'
-  );
+  const d = flaggedOnly ? nucleiData.filter(f=>flags.nuclei.has(f['template-id']+'_'+f.host)) : nucleiData;
+  dl(d.map(f=>[f.info?.severity||'',f['template-id']||'',f.host||'',f.port||'',f['matched-at']||'',(f['extracted-results']||[]).join('; ')]),
+    ['severity','template','host','port','matched_at','extracted'], flaggedOnly?'nuclei_flagged.csv':'nuclei_all.csv');
 }
-
 function exportSubTxt() {
-  const txt = Object.keys(subData).join('\n');
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([txt], {type:'text/plain'}));
-  a.download = 'subdomains.txt'; a.click();
+  a.href = URL.createObjectURL(new Blob([Object.keys(subData).join('\n')],{type:'text/plain'}));
+  a.download='subdomains.txt'; a.click();
 }
-
 function exportSubCSV() {
-  downloadCSV(
-    Object.values(subData).map(e => [e.host, e.ips.join('; '), e.all_ports.join('; '), e.all_vulns.length, e.all_tags.join('; ')]),
-    ['host','ips','ports','cve_count','tags'],
-    'subdomains.csv'
-  );
+  dl(Object.values(subData).map(e=>[e.host,e.ips.join('; '),e.all_ports.join('; '),e.all_vulns.length,e.all_tags.join('; ')]),
+    ['host','ips','ports','cve_count','tags'],'subdomains.csv');
+}
+function exportVulnCSV() {
+  dl(vulnData.map(v=>[v.cve,v.ips.join('; '),v.subdomains.join('; '),v.cpes.join('; ')]),
+    ['cve','ips','subdomains','cpes'],'cves.csv');
 }
 
-function exportVulnCSV() {
-  downloadCSV(
-    vulnData.map(v => [v.cve, v.ips.join('; '), v.subdomains.join('; '), v.cpes.join('; ')]),
-    ['cve','ips','subdomains','cpes'],
-    'cves.csv'
-  );
-}
+// ════════════════════════════════════════
+//  ATTACH REMAINING LISTENERS
+// ════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', ()=>{
+  const ts = document.getElementById('triage-search');
+  if (ts) ts.addEventListener('input', renderTriage);
+});
 </script>
 </body>
 </html>
