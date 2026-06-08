@@ -80,7 +80,12 @@ if [[ "$MODE" == "add" ]]; then
     fi
 fi
 
-mkdir -p "$BASE_DIR/keys" "$BASE_DIR/docker" "$BASE_DIR/runs"
+mkdir -p "$BASE_DIR/keys" "$BASE_DIR/docker" "$BASE_DIR/runs" "$BASE_DIR/data"
+
+SHARED_DATA_DIR="$BASE_DIR/data"
+# Ensure the shared directory is world-readable/writable so every container
+# user can read and write files regardless of the host UID mapping.
+chmod 1777 "$SHARED_DATA_DIR"
 
 ACCESS_FILE="$BASE_DIR/access.txt"
 RUN_ACCESS_FILE="$BASE_DIR/runs/access_$(date +%Y%m%d_%H%M%S).txt"
@@ -220,6 +225,11 @@ Passwordless sudo inside each container.
 Memory limit per container:
 $MEM_LIMIT
 
+Shared data folder (all containers):
+$SHARED_DATA_DIR
+Mounted inside each container at ~/data with sticky-bit permissions (1777).
+All users can read and write; only the file owner can delete their own files.
+
 EOF
 }
 
@@ -286,12 +296,16 @@ EOF
         --memory-swap "$MEM_LIMIT" \
         -p "${ssh_port}:22" \
         -p "${service_port}:${service_port}" \
+        -v "${SHARED_DATA_DIR}:/home/$SSH_USER/data" \
         "$IMAGE_NAME" >/dev/null
 
     docker cp "${key}.pub" "$name:/home/$SSH_USER/.ssh/authorized_keys"
     docker exec "$name" chown -R "$SSH_USER:$SSH_USER" "/home/$SSH_USER/.ssh"
     docker exec "$name" chmod 700 "/home/$SSH_USER/.ssh"
     docker exec "$name" chmod 600 "/home/$SSH_USER/.ssh/authorized_keys"
+    # Shared data directory: sticky bit lets all users read/write while
+    # preventing deletion of each other's files (same semantics as /tmp).
+    docker exec "$name" chmod 1777 "/home/$SSH_USER/data"
 
     local block
     block=$(cat <<EOF
@@ -348,6 +362,20 @@ docker restart $name
 docker stop $name
 docker rm -f $name
 
+Shared data folder:
+All containers share the same host directory mounted at:
+
+  ~/data  (inside the container)
+  /data  (on the host)
+
+Files placed here are immediately visible to every other container.
+The directory uses sticky-bit permissions (1777) so any user can
+read and write, but only the owner can delete their own files.
+
+Example:
+  cp myfile.txt ~/data/        # share a file
+  ls ~/data/                   # see what others shared
+
 EOF
 )
 
@@ -362,6 +390,7 @@ $name
   Service:  YOUR_SERVER_IP:$service_port
   Key:      $key
   Sudo:     enabled, passwordless
+  Shared:   ~/data  (host: /data)
 
 EOF
 }
