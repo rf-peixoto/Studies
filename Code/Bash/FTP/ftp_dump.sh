@@ -13,6 +13,16 @@ Options:
 The input file should contain lines in the format:
   ftp://URL username password
 
+Fields (URL, username, password) may be separated by any combination of:
+  spaces, colons (:), semicolons (;), or commas (,)
+  Note: the colon in ftp:// is never treated as a delimiter.
+
+  ftp://host.com user pass
+  ftp://host.com:user:pass
+  ftp://host.com;user;pass
+  ftp://host.com,user,pass
+  ftp://host.com user:pass
+
 Examples:
   $0 -v ftp_list.txt
   $0 -s ftp_list.txt
@@ -81,10 +91,28 @@ while IFS= read -r line || [[ -n "$line" ]]; do
     # Skip empty lines
     [[ -z "$line" ]] && continue
 
-    # Extract fields (URL, username, password)
-    url=$(echo "$line" | awk '{print $1}')
-    user=$(echo "$line" | awk '{print $2}')
-    pass=$(echo "$line" | awk '{print $3}')
+    # Extract fields (URL, username, password).
+    # Supported delimiters between fields: space, colon (:), semicolon (;), comma (,).
+    # The colon inside "ftp://host[:port]" is never treated as a delimiter.
+    #
+    # Strategy: use awk to consume the ftp://host[:port] prefix as one atomic
+    # token, then split the rest of the line on any [ :;,]+ run.
+    read -r url user pass < <(echo "$line" | awk '{
+        s = $0
+        # 1. Pull the ftp://host[:port] token from the front
+        url = ""
+        if (match(s, /^ftp:\/\/[^ \t:;,]+(:[0-9]+)?/)) {
+            url = substr(s, RSTART, RLENGTH)
+            s   = substr(s, RSTART + RLENGTH)
+        }
+        # 2. Strip leading delimiters from the remainder
+        sub(/^[ \t:;,]+/, "", s)
+        # 3. Split remainder on one-or-more delimiters
+        n = split(s, a, /[ \t:;,]+/)
+        user = (n >= 1) ? a[1] : ""
+        pass = (n >= 2) ? a[2] : ""
+        print url, user, pass
+    }')
 
     # Ensure all fields are present
     if [[ -z "$url" || -z "$user" || -z "$pass" ]]; then
