@@ -21,6 +21,7 @@ import os
 import re
 import shutil
 import signal
+import ssl
 import subprocess
 import sys
 import time
@@ -124,11 +125,39 @@ def parse_line(line: str) -> Optional[FTPEntry]:
 # ──────────────────────────────────────────────
 # FTP helpers
 # ──────────────────────────────────────────────
+# SSL context that skips certificate verification (used for FTPS fallback)
+_SSL_CTX = ssl.create_default_context()
+_SSL_CTX.check_hostname = False
+_SSL_CTX.verify_mode = ssl.CERT_NONE
+
+
 def ftp_connect(entry: FTPEntry, timeout: int) -> ftplib.FTP:
-    ftp = ftplib.FTP()
-    ftp.connect(entry.host, entry.port, timeout=timeout)
-    ftp.login(entry.user, entry.password)
-    return ftp
+    """
+    Connect and log in.  Tries plain FTP first; if the server responds
+    with a 522/534 (TLS required) or the connection is immediately
+    upgraded, retries as FTPS with certificate verification disabled.
+    """
+    # ── Plain FTP ────────────────────────────────────────────────────
+    try:
+        ftp = ftplib.FTP()
+        ftp.connect(entry.host, entry.port, timeout=timeout)
+        ftp.login(entry.user, entry.password)
+        return ftp
+    except ftplib.error_perm as e:
+        code = str(e)[:3]
+        if code not in ('522', '534', '530'):
+            raise
+        # Server demands TLS — fall through to FTPS
+    except ssl.SSLError:
+        pass   # Server spoke TLS immediately — fall through
+
+    # ── FTPS (explicit TLS, AUTH TLS) ────────────────────────────────
+    ftp_tls = ftplib.FTP_TLS(context=_SSL_CTX)
+    ftp_tls.connect(entry.host, entry.port, timeout=timeout)
+    ftp_tls.auth()            # send AUTH TLS
+    ftp_tls.login(entry.user, entry.password)
+    ftp_tls.prot_p()          # encrypt data channel too
+    return ftp_tls
 
 
 def ftp_test(entry: FTPEntry, timeout: int, retries: int) -> bool:
@@ -273,6 +302,7 @@ def _lftp_mirror(
         f"set net:max-retries {retries}; "
         f"set net:reconnect-interval-base 2; "
         f"set ftp:passive-mode true; "
+        f"set ssl:verify-certificate false; "
     )
     cmd = (
         f"{settings}"
