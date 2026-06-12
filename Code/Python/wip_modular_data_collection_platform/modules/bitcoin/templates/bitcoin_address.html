@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}{{ a.address }} · Bitcoin Explorer{% endblock %}
+{% block content %}
+<div class="eyebrow"><a href="{{ url_for('.index') }}" class="muted">Bitcoin Explorer</a> / Address</div>
+<h1 class="mono" style="font-size:1.05rem;word-break:break-all">{{ a.address }}</h1>
+
+<div class="grid" style="margin-top:1rem;grid-template-columns:repeat(auto-fill,minmax(200px,1fr))">
+  <div class="card">
+    <div class="muted" style="font-size:.78rem;text-transform:uppercase;letter-spacing:.08em">Balance</div>
+    <div class="mono" style="font-size:1.25rem;color:var(--found);margin-top:.3rem">{{ a.balance_btc }} BTC</div>
+    <div class="muted mono" style="font-size:.78rem">{{ a.balance_sat }} sat</div>
+  </div>
+  <div class="card">
+    <div class="muted" style="font-size:.78rem;text-transform:uppercase;letter-spacing:.08em">Total received</div>
+    <div class="mono" style="font-size:1.05rem;margin-top:.3rem">{{ a.received_btc }} BTC</div>
+  </div>
+  <div class="card">
+    <div class="muted" style="font-size:.78rem;text-transform:uppercase;letter-spacing:.08em">Total sent</div>
+    <div class="mono" style="font-size:1.05rem;margin-top:.3rem">{{ a.sent_btc }} BTC</div>
+  </div>
+  <div class="card">
+    <div class="muted" style="font-size:.78rem;text-transform:uppercase;letter-spacing:.08em">Transactions</div>
+    <div class="mono" style="font-size:1.05rem;margin-top:.3rem">{{ a.tx_count }}</div>
+    {% if a.unconfirmed_count %}<div class="muted mono" style="font-size:.78rem">+{{ a.unconfirmed_count }} in mempool</div>{% endif %}
+  </div>
+</div>
+
+<h2 style="margin-top:1.4rem">Recent transactions
+  <span class="muted mono" style="font-size:.85rem">({{ a.recent|length }})</span></h2>
+{% if a.recent %}
+<div class="readout">
+  {% for tx in a.recent %}
+  <div class="readout-row {{ 'is-found' if tx.confirmed else '' }}">
+    <span class="pill {{ 'found' if tx.confirmed else 'absent' }}">{{ 'confirmed' if tx.confirmed else 'pending' }}</span>
+    <div>
+      <div class="target mono" style="font-size:.82rem;word-break:break-all">
+        <a href="{{ url_for('.tx', txid=tx.txid) }}">{{ tx.txid }}</a>
+      </div>
+      <div class="url">{{ tx.date }}</div>
+    </div>
+    <a class="btn btn-sm" href="{{ url_for('.tx', txid=tx.txid) }}">Open ↗</a>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="card"><p class="muted">No transactions found for this address.</p></div>
+{% endif %}
+{% endblock %}

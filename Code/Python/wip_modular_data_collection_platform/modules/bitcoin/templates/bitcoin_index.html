@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Bitcoin Explorer · OSINT Console{% endblock %}
+{% block content %}
+<div class="eyebrow">Module · {{ settings['network_label'] }}</div>
+<h1>Bitcoin Explorer</h1>
+<p class="muted">Look up an address or a transaction, then click through inputs, outputs and
+spends to walk the chain. Your browser history is the trail you followed.</p>
+
+<div class="card" style="margin-top:1rem">
+  <form method="get" action="{{ url_for('.index') }}" class="row" style="align-items:flex-end">
+    <div style="flex:1;min-width:260px">
+      <label for="q" style="margin-top:0">Address or transaction ID</label>
+      <input type="text" id="q" name="q" value="{{ query or '' }}" autocomplete="off" autofocus
+             placeholder="bc1q… / 1A1zP… / 64-hex txid" class="mono">
+    </div>
+    <button class="btn btn-primary" type="submit">Look up</button>
+  </form>
+  <p class="muted" style="margin:.8rem 0 0;font-size:.85rem">
+    Addresses resolve to balance, totals and recent activity. A 64-character hex
+    string is treated as a transaction ID.
+  </p>
+</div>
+{% endblock %}

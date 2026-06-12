@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Transaction · Bitcoin Explorer{% endblock %}
+{% block content %}
+<div class="eyebrow"><a href="{{ url_for('.index') }}" class="muted">Bitcoin Explorer</a> / Transaction</div>
+<div class="row" style="justify-content:space-between;align-items:flex-start">
+  <h1 class="mono" style="font-size:1rem;word-break:break-all;flex:1">{{ t.txid }}</h1>
+  <span class="pill {{ 'found' if t.confirmed else 'absent' }}" style="margin-left:.6rem">
+    {{ 'confirmed' if t.confirmed else 'unconfirmed' }}</span>
+</div>
+
+<div class="card" style="margin-top:.8rem">
+  <div class="row" style="gap:1.6rem">
+    <div><div class="muted" style="font-size:.72rem;text-transform:uppercase">Time</div>
+      <div class="mono" style="font-size:.85rem">{{ t.date }}</div></div>
+    {% if t.block_height is not none %}<div><div class="muted" style="font-size:.72rem;text-transform:uppercase">Block</div>
+      <div class="mono" style="font-size:.85rem">{{ t.block_height }}</div></div>{% endif %}
+    <div><div class="muted" style="font-size:.72rem;text-transform:uppercase">Fee</div>
+      <div class="mono" style="font-size:.85rem">{{ t.fee_btc }} BTC <span class="muted">({{ t.fee_sat }} sat)</span></div></div>
+    <div><div class="muted" style="font-size:.72rem;text-transform:uppercase">Size</div>
+      <div class="mono" style="font-size:.85rem">{{ t.size }} vB</div></div>
+    <div><div class="muted" style="font-size:.72rem;text-transform:uppercase">Total out</div>
+      <div class="mono" style="font-size:.85rem">{{ t.total_out_btc }} BTC</div></div>
+  </div>
+</div>
+
+<div class="row" style="align-items:flex-start;gap:1rem;margin-top:1.2rem">
+  <!-- Inputs -->
+  <div style="flex:1;min-width:280px">
+    <h2>Inputs <span class="muted mono" style="font-size:.85rem">({{ t.input_count }})</span></h2>
+    {% for inp in t.inputs %}
+    <div class="card" style="margin-bottom:.5rem;padding:.7rem .85rem">
+      {% if inp.coinbase %}
+        <span class="badge">coinbase</span>
+        <div class="muted" style="margin-top:.3rem;font-size:.85rem">Newly generated coins (block reward).</div>
+      {% else %}
+        <div class="mono" style="font-size:.82rem;word-break:break-all">
+          {% if inp.address %}<a href="{{ url_for('.address', address=inp.address) }}">{{ inp.address }}</a>
+          {% else %}<span class="muted">(non-standard script)</span>{% endif %}
+        </div>
+        <div class="row" style="justify-content:space-between;align-items:center;margin-top:.35rem">
+          <span class="mono" style="font-size:.82rem">{{ inp.value_btc }} BTC</span>
+          {% if inp.prev_txid %}
+          <a class="btn btn-sm" href="{{ url_for('.tx', txid=inp.prev_txid) }}"
+             title="Open the transaction that funded this input">← source tx</a>
+          {% endif %}
+        </div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Outputs -->
+  <div style="flex:1;min-width:280px">
+    <h2>Outputs <span class="muted mono" style="font-size:.85rem">({{ t.output_count }})</span></h2>
+    {% for out in t.outputs %}
+    <div class="card" style="margin-bottom:.5rem;padding:.7rem .85rem;
+         border-left:3px solid {{ 'var(--danger)' if out.spent else 'var(--found)' }}">
+      <div class="mono" style="font-size:.82rem;word-break:break-all">
+        {% if out.address %}<a href="{{ url_for('.address', address=out.address) }}">{{ out.address }}</a>
+        {% else %}<span class="muted">{{ out.type or 'non-standard script' }}</span>{% endif %}
+      </div>
+      <div class="row" style="justify-content:space-between;align-items:center;margin-top:.35rem">
+        <span class="mono" style="font-size:.82rem">{{ out.value_btc }} BTC</span>
+        {% if out.spent and out.spent_txid %}
+          <a class="btn btn-sm" href="{{ url_for('.tx', txid=out.spent_txid) }}"
+             title="Open the transaction that spent this output">spent →</a>
+        {% else %}
+          <span class="badge on">unspent (UTXO)</span>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

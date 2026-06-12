@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Bitcoin Explorer config · Admin{% endblock %}
+{% block content %}
+<div class="eyebrow"><a href="{{ url_for('admin.modules') }}" class="muted">Modules</a> / Bitcoin Explorer</div>
+<h1>Bitcoin Explorer — configuration</h1>
+<p class="muted">The explorer is stateless; these settings just point it at an API and tune
+display. The default targets Blockstream's public mainnet API. Swap in a testnet
+URL or your own self-hosted Esplora node to keep lookups private.</p>
+
+<div class="card" style="margin-top:1rem">
+  <form method="post" action="{{ url_for('.save_settings') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="row">
+      <div style="flex:2;min-width:280px">
+        <label style="margin-top:0">API base URL</label>
+        <input type="text" name="api_base_url" value="{{ settings['api_base_url'] }}"
+               placeholder="https://blockstream.info/api" class="mono">
+      </div>
+      <div style="flex:1;min-width:140px">
+        <label style="margin-top:0">Network label</label>
+        <input type="text" name="network_label" value="{{ settings['network_label'] }}" placeholder="mainnet">
+      </div>
+    </div>
+    <div class="row">
+      <div style="min-width:160px">
+        <label>Recent txs to show</label>
+        <input type="number" name="recent_tx_count" min="1" max="50" value="{{ settings['recent_tx_count'] }}">
+      </div>
+      <div style="min-width:160px">
+        <label>Request timeout (s)</label>
+        <input type="number" name="timeout" min="2" max="60" value="{{ settings['timeout'] }}">
+      </div>
+    </div>
+    <div style="margin-top:1rem"><button class="btn btn-primary" type="submit">Save settings</button></div>
+  </form>
+</div>
+
+<div class="card" style="margin-top:1rem">
+  <div class="muted" style="font-size:.85rem">
+    Common endpoints — Blockstream mainnet <span class="mono">https://blockstream.info/api</span>,
+    testnet <span class="mono">https://blockstream.info/testnet/api</span>,
+    or any Esplora instance <span class="mono">http://your-node:3002</span>.
+  </div>
+</div>
+{% endblock %}
