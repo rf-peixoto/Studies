@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>InventoryKeeper</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="wrap">
+        <header class="header">
+            <div>
+                <a href="{{ url_for('index') }}" class="title">InventoryKeeper</a>
+                <div class="subtitle">domain / subdomain inventory</div>
+            </div>
+            <div class="config-box">
+                <div>subfinder timeout: {{ config['SUBFINDER_TIMEOUT'] }}s</div>
+                <div>dns timeout: {{ config['DNS_TIMEOUT'] }}s</div>
+            </div>
+        </header>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <section class="flash-list">
+                    {% for category, message in messages %}
+                        <div class="flash {{ category }}">{{ message }}</div>
+                    {% endfor %}
+                </section>
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </div>
+</body>
+</html>

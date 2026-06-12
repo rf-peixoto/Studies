@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="panel">
+    <div class="panel-row">
+        <div>
+            <div class="panel-title">domain: {{ domain['domain'] }}</div>
+            <div class="muted">status: {{ domain['scan_status'] }} | last scan: {{ domain['last_scan_at']|fmt_ts }}</div>
+        </div>
+        <form method="post" action="{{ url_for('scan_domain', domain_id=domain['id']) }}" class="inline-form compact">
+            <button type="submit">verify now</button>
+        </form>
+    </div>
+</section>
+
+<section class="panel">
+    <div class="panel-title">subdomains</div>
+    {% if normal %}
+    <table>
+        <thead>
+            <tr>
+                <th>hostname</th>
+                <th>flags</th>
+                <th>ipv4</th>
+                <th>ipv6</th>
+                <th>first seen</th>
+                <th>last seen</th>
+                <th>resolved</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in normal %}
+            <tr>
+                <td>{{ row['hostname'] }}</td>
+                <td>
+                    {% if row['is_new_unseen'] %}<span class="tag new">[new]</span>{% endif %}
+                    {% if not row['is_active'] %}<span class="tag stale">[stale]</span>{% endif %}
+                    {% if row['resolution_error'] %}<span class="tag warn">[unresolved]</span>{% endif %}
+                </td>
+                <td>{% if row['ipv4'] %}{{ row['ipv4']|join(', ') }}{% else %}-{% endif %}</td>
+                <td>{% if row['ipv6'] %}{{ row['ipv6']|join(', ') }}{% else %}-{% endif %}</td>
+                <td>{{ row['first_seen_at']|fmt_ts }}</td>
+                <td>{{ row['last_seen_at']|fmt_ts }}</td>
+                <td>
+                    {{ row['last_resolved_at']|fmt_ts }}
+                    {% if row['resolution_error'] %}
+                    <div class="error-inline">{{ row['resolution_error'] }}</div>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="muted">no non-suspicious subdomains stored.</div>
+    {% endif %}
+</section>
+
+<section class="panel">
+    <div class="panel-title">suspicious</div>
+    {% if suspicious %}
+    <table>
+        <thead>
+            <tr>
+                <th>hostname</th>
+                <th>flags</th>
+                <th>ipv4</th>
+                <th>ipv6</th>
+                <th>first seen</th>
+                <th>last seen</th>
+                <th>resolved</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in suspicious %}
+            <tr>
+                <td>{{ row['hostname'] }}</td>
+                <td>
+                    <span class="tag suspicious">[suspicious]</span>
+                    {% if row['is_new_unseen'] %}<span class="tag new">[new]</span>{% endif %}
+                    {% if not row['is_active'] %}<span class="tag stale">[stale]</span>{% endif %}
+                    {% if row['resolution_error'] %}<span class="tag warn">[unresolved]</span>{% endif %}
+                </td>
+                <td>{% if row['ipv4'] %}{{ row['ipv4']|join(', ') }}{% else %}-{% endif %}</td>
+                <td>{% if row['ipv6'] %}{{ row['ipv6']|join(', ') }}{% else %}-{% endif %}</td>
+                <td>{{ row['first_seen_at']|fmt_ts }}</td>
+                <td>{{ row['last_seen_at']|fmt_ts }}</td>
+                <td>
+                    {{ row['last_resolved_at']|fmt_ts }}
+                    {% if row['resolution_error'] %}
+                    <div class="error-inline">{{ row['resolution_error'] }}</div>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="muted">no suspicious subdomains found.</div>
+    {% endif %}
+</section>
+
+<section class="panel">
+    <div class="panel-title">recent scans</div>
+    {% if scans %}
+    <table>
+        <thead>
+            <tr>
+                <th>started</th>
+                <th>finished</th>
+                <th>status</th>
+                <th>raw count</th>
+                <th>new</th>
+                <th>suspicious</th>
+                <th>error</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for scan in scans %}
+            <tr>
+                <td>{{ scan['started_at']|fmt_ts }}</td>
+                <td>{{ scan['finished_at']|fmt_ts }}</td>
+                <td>{{ scan['status'] }}</td>
+                <td>{{ scan['raw_count'] }}</td>
+                <td>{{ scan['new_count'] }}</td>
+                <td>{{ scan['suspicious_count'] }}</td>
+                <td>{{ scan['error_message'] or '-' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="muted">no scans yet.</div>
+    {% endif %}
+</section>
+{% endblock %}
