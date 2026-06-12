@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Registration closed{% endblock %}
+{% block content %}
+<div class="card center-card">
+  <div class="eyebrow">Registration</div>
+  <h1>Registration is closed</h1>
+  <p class="muted">New accounts are not being accepted right now. Contact the
+  platform administrator if you need access.</p>
+  <a class="btn" href="{{ url_for('auth.login') }}">Back to sign in</a>
+</div>
+{% endblock %}

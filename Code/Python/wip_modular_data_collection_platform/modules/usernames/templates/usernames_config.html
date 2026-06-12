@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block title %}Usernames config · Admin{% endblock %}
+{% macro method_options(selected) %}
+  <option value="status" {{ 'selected' if selected=='status' }}>Status code</option>
+  <option value="body_contains" {{ 'selected' if selected=='body_contains' }}>Body contains</option>
+  <option value="body_absent" {{ 'selected' if selected=='body_absent' }}>Body absent</option>
+{% endmacro %}
+{% block content %}
+<div class="eyebrow"><a href="{{ url_for('admin.modules') }}" class="muted">Modules</a> / Usernames</div>
+<h1>Usernames — targets</h1>
+<p class="muted">Each target is a site to check. Use <span class="mono">{}</span> where the
+username goes, or leave it off to append at the end. Detection method decides what counts as a hit.</p>
+
+<h2>Add a target</h2>
+<div class="card">
+  <form method="post" action="{{ url_for('.add') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="row">
+      <div style="flex:1;min-width:160px">
+        <label style="margin-top:0">Name</label>
+        <input type="text" name="name" placeholder="Example">
+      </div>
+      <div style="flex:2;min-width:240px">
+        <label style="margin-top:0">URL template</label>
+        <input type="text" name="url" placeholder="https://example.com/u/{}" required>
+      </div>
+    </div>
+    <div class="row">
+      <div style="min-width:150px">
+        <label>Detection method</label>
+        <select name="method">{{ method_options('status') }}</select>
+      </div>
+      <div style="min-width:140px">
+        <label>Expected status</label>
+        <input type="text" name="expected_status" value="200" placeholder="200, 301">
+      </div>
+      <div style="flex:1;min-width:200px">
+        <label>Match string (for body methods)</label>
+        <input type="text" name="match" placeholder="e.g. user not found">
+      </div>
+    </div>
+    <div style="margin-top:1rem"><button class="btn btn-primary" type="submit">Add target</button></div>
+  </form>
+</div>
+
+<h2>Configured targets <span class="muted mono" style="font-size:.85rem">({{ targets|length }})</span></h2>
+{% if not targets %}
+  <div class="card"><p class="muted">No targets yet. Add one above.</p></div>
+{% endif %}
+{% for t in targets %}
+<div class="card" style="margin-bottom:.8rem">
+  <form id="upd-{{ t.id }}" method="post" action="{{ url_for('.update', target_id=t.id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="row">
+      <div style="flex:1;min-width:140px">
+        <label style="margin-top:0">Name</label>
+        <input type="text" name="name" value="{{ t.name }}">
+      </div>
+      <div style="flex:2;min-width:240px">
+        <label style="margin-top:0">URL template</label>
+        <input type="text" name="url" value="{{ t.url }}">
+      </div>
+    </div>
+    <div class="row">
+      <div style="min-width:150px">
+        <label>Detection method</label>
+        <select name="method">{{ method_options(t.method) }}</select>
+      </div>
+      <div style="min-width:140px">
+        <label>Expected status</label>
+        <input type="text" name="expected_status" value="{{ t.expected_status | join(', ') }}">
+      </div>
+      <div style="flex:1;min-width:200px">
+        <label>Match string</label>
+        <input type="text" name="match" value="{{ t.match }}">
+      </div>
+      <div style="min-width:90px">
+        <label>Enabled</label>
+        <input type="checkbox" name="enabled" {{ 'checked' if t.enabled }} style="width:auto">
+      </div>
+    </div>
+  </form>
+  <div class="row" style="margin-top:1rem">
+    <button class="btn btn-sm btn-primary" type="submit" form="upd-{{ t.id }}">Save</button>
+    <form class="inline-form" method="post" action="{{ url_for('.delete', target_id=t.id) }}"
+          onsubmit="return confirm('Remove this target?');">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="btn btn-sm btn-danger" type="submit">Remove</button>
+    </form>
+  </div>
+</div>
+{% endfor %}
+{% endblock %}

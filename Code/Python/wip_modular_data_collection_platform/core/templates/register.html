@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Create account · OSINT Console{% endblock %}
+{% block content %}
+<div class="card center-card">
+  <div class="eyebrow">New operator</div>
+  <h1>Create account</h1>
+  <form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label for="username">Username</label>
+    {{ form.username(id="username", autocomplete="username") }}
+    <label for="password">Password</label>
+    {{ form.password(id="password", autocomplete="new-password") }}
+    <label for="confirm">Confirm password</label>
+    {{ form.confirm(id="confirm", autocomplete="new-password") }}
+    <p class="muted" style="font-size:.8rem;margin-top:.6rem">
+      Minimum 12 characters with upper, lower, digit and symbol.
+      The characters <span class="mono">" ' \ %</span> are not allowed anywhere.
+    </p>
+    <div class="row" style="margin-top:1rem">
+      <button class="btn btn-primary" type="submit">Create account</button>
+      <a class="muted" href="{{ url_for('auth.login') }}" style="font-size:.85rem">Back to sign in</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Modules · Admin{% endblock %}
+{% block content %}
+<div class="eyebrow"><a href="{{ url_for('admin.index') }}" class="muted">Admin</a> / Modules</div>
+<h1>Modules</h1>
+<p class="muted">Discovered from <span class="mono">modules/</span>. Drop a new folder there and restart to register it.</p>
+
+<div class="grid" style="margin-top:1.25rem">
+  {% for m in modules %}
+  {% set enabled = enabled_states.get(m.id, True) %}
+  <div class="card module-card">
+    <div class="row" style="justify-content:space-between">
+      <h3 style="margin:0">{{ m.name }}</h3>
+      {% if m.import_error %}
+        <span class="pill error">load error</span>
+      {% elif enabled %}
+        <span class="badge on">enabled</span>
+      {% else %}
+        <span class="badge off">disabled</span>
+      {% endif %}
+    </div>
+    <div class="desc" style="margin-top:.4rem">{{ m.description }}</div>
+    {% if m.import_error %}
+      <div class="mono" style="color:var(--danger);font-size:.75rem;margin-top:.5rem">{{ m.import_error }}</div>
+    {% endif %}
+    <div class="meta">id <span class="mono">{{ m.id }}</span> · v{{ m.version }} · {{ m.author }}</div>
+
+    <div class="row" style="margin-top:.9rem">
+      {% if not m.import_error %}
+      <form class="inline-form" method="post" action="{{ url_for('admin.toggle_module', module_id=m.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="btn btn-sm" type="submit">{{ 'Disable' if enabled else 'Enable' }}</button>
+      </form>
+      {% if m.has_config %}
+        <a class="btn btn-sm" href="{{ url_for('modcfg_' ~ m.id ~ '.config') }}">Configure</a>
+      {% endif %}
+      {% endif %}
+      <form class="inline-form" method="post" action="{{ url_for('admin.delete_module', module_id=m.id) }}"
+            onsubmit="return confirm('Delete module {{ m.id }} from disk? This cannot be undone.');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="btn btn-sm btn-danger" type="submit">Delete</button>
+      </form>
+    </div>
+  </div>
+  {% else %}
+  <div class="card"><p class="muted">No modules found in <span class="mono">modules/</span>.</p></div>
+  {% endfor %}
+</div>
+{% endblock %}

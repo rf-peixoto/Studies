@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Sign in · OSINT Console{% endblock %}
+{% block content %}
+<div class="card center-card">
+  <div class="eyebrow">Restricted access</div>
+  <h1>Sign in</h1>
+  <p class="muted" style="font-size:.9rem">Authenticate to reach the module console.</p>
+  <form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label for="username">Username</label>
+    {{ form.username(id="username", autofocus=true, autocomplete="username") }}
+    <label for="password">Password</label>
+    {{ form.password(id="password", autocomplete="current-password") }}
+    <div class="row" style="margin-top:1.1rem">
+      <button class="btn btn-primary" type="submit">Sign in</button>
+      <a class="muted" href="{{ url_for('auth.register') }}" style="font-size:.85rem">Create account</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

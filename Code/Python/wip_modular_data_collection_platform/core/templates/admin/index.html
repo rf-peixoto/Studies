@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Admin · OSINT Console{% endblock %}
+{% block content %}
+<div class="eyebrow">Administration</div>
+<h1>Control panel</h1>
+
+<div class="grid" style="margin-top:1.25rem">
+  <a class="card module-card" href="{{ url_for('admin.users') }}">
+    <h3>Users</h3>
+    <div class="desc">Ban, unban, and review {{ user_count }} registered account(s).</div>
+    <div class="meta">manage →</div>
+  </a>
+  <a class="card module-card" href="{{ url_for('admin.modules') }}">
+    <h3>Modules</h3>
+    <div class="desc">Enable, disable, configure or delete installed modules.</div>
+    <div class="meta">{{ modules|length }} discovered →</div>
+  </a>
+</div>
+
+<h2>Platform settings</h2>
+<div class="card">
+  <form method="post" action="{{ url_for('admin.settings') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="row" style="gap:1.5rem">
+      <label style="display:flex;align-items:center;gap:.5rem;margin:0">
+        <input type="checkbox" name="registration_open" {% if registration_open %}checked{% endif %} style="width:auto">
+        Allow new registrations
+      </label>
+      <label style="display:flex;align-items:center;gap:.5rem;margin:0">
+        <input type="checkbox" name="maintenance_mode" {% if maintenance %}checked{% endif %} style="width:auto">
+        Maintenance mode (admins only)
+      </label>
+    </div>
+    <div style="margin-top:1rem"><button class="btn btn-primary" type="submit">Save settings</button></div>
+  </form>
+</div>
+{% endblock %}

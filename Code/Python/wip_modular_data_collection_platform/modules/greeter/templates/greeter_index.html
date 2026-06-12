@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Greeter{% endblock %}
+{% block content %}
+<div class="eyebrow">Module</div><h1>Greeter</h1>
+<div class="card"><form method="post" class="row" style="align-items:flex-end">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<div style="flex:1"><label style="margin-top:0">Name</label><input type="text" name="name"></div>
+<button class="btn btn-primary" type="submit">Greet</button></form>
+{% if greeting %}<p class="pill found" style="margin-top:1rem">{{ greeting }}</p>{% endif %}</div>
+{% endblock %}

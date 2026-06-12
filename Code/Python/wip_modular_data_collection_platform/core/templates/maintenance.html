@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Maintenance{% endblock %}
+{% block content %}
+<div class="card center-card">
+  <div class="eyebrow">Status</div>
+  <h1>Down for maintenance</h1>
+  <p class="muted">The console is temporarily offline while the administrator
+  performs maintenance. Please check back shortly.</p>
+  <a class="btn" href="{{ url_for('auth.login') }}">Sign in</a>
+</div>
+{% endblock %}

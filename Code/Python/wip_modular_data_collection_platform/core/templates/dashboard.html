@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Dashboard · OSINT Console{% endblock %}
+{% block content %}
+<div class="eyebrow">Console</div>
+<h1>Available modules</h1>
+<p class="muted">Select a module to run it. The set below is controlled by your administrator.</p>
+
+{% if modules %}
+<div class="grid" style="margin-top:1.25rem">
+  {% for m in modules %}
+  <a class="card module-card" href="{{ url_for('mod_' ~ m.id ~ '.index') }}">
+    <h3>{{ m.name }}</h3>
+    <div class="desc">{{ m.description }}</div>
+    <div class="meta">v{{ m.version }} · {{ m.author }}</div>
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+<div class="card" style="margin-top:1.25rem">
+  <p class="muted">No modules are available yet.
+  {% if current_user.is_admin %}Drop a module folder into <span class="mono">modules/</span>, restart, then enable it in <a href="{{ url_for('admin.modules') }}">Admin → Modules</a>.{% endif %}
+  </p>
+</div>
+{% endif %}
+{% endblock %}

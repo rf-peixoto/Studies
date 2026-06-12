@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Users · Admin{% endblock %}
+{% block content %}
+<div class="eyebrow"><a href="{{ url_for('admin.index') }}" class="muted">Admin</a> / Users</div>
+<h1>Users</h1>
+
+<div class="card" style="margin-top:1rem;overflow-x:auto">
+<table>
+  <thead>
+    <tr><th>User</th><th>Role</th><th>Status</th><th>Joined</th><th>Action</th></tr>
+  </thead>
+  <tbody>
+    {% for u in users %}
+    <tr>
+      <td class="mono">{{ u.username }}</td>
+      <td>{% if u.is_admin %}<span class="badge on">admin</span>{% else %}user{% endif %}</td>
+      <td>
+        {% if u.is_banned %}<span class="pill error">{{ u.ban_label }}</span>
+        {% else %}<span class="pill found">Active</span>{% endif %}
+      </td>
+      <td class="mono muted">{{ u.created_at.strftime('%Y-%m-%d') }}</td>
+      <td>
+        {% if u.is_admin %}
+          <span class="muted">—</span>
+        {% elif u.is_banned %}
+          <form class="inline-form" method="post" action="{{ url_for('admin.unban_user', user_id=u.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn btn-sm" type="submit">Unban</button>
+          </form>
+        {% else %}
+          <form class="inline-form row" method="post" action="{{ url_for('admin.ban_user', user_id=u.id) }}" style="gap:.35rem">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <select name="mode" style="width:auto" onchange="this.nextElementSibling.disabled = this.value!=='temporary'">
+              <option value="permanent">Permanent</option>
+              <option value="temporary">For hours</option>
+            </select>
+            <input type="number" name="hours" min="1" value="24" disabled style="width:80px">
+            <button class="btn btn-sm btn-danger" type="submit">Ban</button>
+          </form>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

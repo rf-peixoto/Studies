@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}{{ code }} · OSINT Console{% endblock %}
+{% block content %}
+<div class="card center-card">
+  <div class="eyebrow">Error {{ code }}</div>
+  <h1>Something stopped here</h1>
+  <p class="muted">{{ message }}</p>
+  <a class="btn" href="{{ url_for('dashboard.index') }}">Back to dashboard</a>
+</div>
+{% endblock %}

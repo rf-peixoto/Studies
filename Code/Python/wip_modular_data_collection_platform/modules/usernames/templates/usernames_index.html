@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Usernames · OSINT Console{% endblock %}
+{% block content %}
+<div class="eyebrow">Module</div>
+<h1>Usernames</h1>
+<p class="muted">Enter a username to scan every configured site at once. Hits link straight to the profile.</p>
+
+<div class="card" style="margin-top:1rem">
+  <form method="post" class="row" style="align-items:flex-end">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div style="flex:1;min-width:220px">
+      <label for="username" style="margin-top:0">Username</label>
+      <input type="text" id="username" name="username" value="{{ username }}"
+             placeholder="e.g. johndoe" autocomplete="off" autofocus>
+    </div>
+    <button class="btn btn-primary" type="submit">Run scan</button>
+  </form>
+  {% if error %}<p class="flash error" style="margin-top:.9rem">{{ error }}</p>{% endif %}
+</div>
+
+{% if results %}
+  {% set hits = results | selectattr('status', 'equalto', 'found') | list %}
+  <h2>Results <span class="muted mono" style="font-size:.85rem">— {{ hits|length }} found / {{ results|length }} checked</span></h2>
+  <div class="readout">
+    {% for r in results %}
+    <div class="readout-row {{ 'is-found' if r.status=='found' else ('is-error' if r.status=='error' else '') }}">
+      <span class="pill {{ r.status }}">
+        {{ 'found' if r.status=='found' else ('error' if r.status=='error' else 'not found') }}
+      </span>
+      <div>
+        <div class="target">{{ r.name }}
+          {% if r.code %}<span class="badge">HTTP {{ r.code }}</span>{% endif %}
+          {% if r.note %}<span class="badge off">{{ r.note }}</span>{% endif %}
+        </div>
+        <div class="url">{{ r.url }}</div>
+      </div>
+      {% if r.status == 'found' %}
+        <a class="btn btn-sm" href="{{ r.url }}" target="_blank" rel="noopener noreferrer">Open ↗</a>
+      {% else %}
+        <span></span>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+{% endif %}
+{% endblock %}
