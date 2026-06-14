@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}Flagged coin · Bitcoin Investigation{% endblock %}
+{% macro hop_row(h) %}
+<div class="readout-row {{ 'is-error' if h['spent'] else 'is-found' }}" style="grid-template-columns:auto 1fr auto">
+  <span class="pill {{ 'error' if h['spent'] else 'found' }}">
+    {{ 'spent' if h['spent'] else 'utxo' }}</span>
+  <div>
+    <div class="target mono" style="font-size:.78rem;word-break:break-all">
+      <a href="{{ url_for('.tx', txid=h['txid']) }}">{{ h['txid'] }}</a>{% if h['vout'] is not none %}<span class="muted">:{{ h['vout'] }}</span>{% endif %}
+      {% if h['is_new'] %}<span class="badge on">new</span>{% endif %}
+    </div>
+    <div class="url">
+      {{ (h['value_sat'] / 100000000)|round(8) }} BTC
+      {% if h['address'] %}· <a href="{{ url_for('.address', address=h['address']) }}">{{ h['address'] }}</a>{% endif %}
+      {% if h['taint_share'] is not none %}· <span title="our share of this transaction's inputs">taint {{ (h['taint_share'] * 100)|round(1) }}%</span>{% endif %}
+    </div>
+  </div>
+  <span class="mono muted" style="font-size:.72rem">depth {{ h['depth'] }}</span>
+</div>
+{% endmacro %}
+{% block content %}
+<div class="eyebrow"><a href="{{ url_for('.index') }}" class="muted">Bitcoin Investigation</a> / Flagged coin</div>
+<div class="row" style="justify-content:space-between;align-items:flex-start">
+  <div style="flex:1">
+    <h1 style="margin-bottom:.2rem">{{ c['label'] or 'Flagged coin' }}</h1>
+    <div class="mono muted" style="font-size:.8rem;word-break:break-all">
+      <a href="{{ url_for('.tx', txid=c['txid']) }}">{{ c['txid'] }}</a>:{{ c['vout'] }}</div>
+  </div>
+  <form class="inline-form" method="post" action="{{ url_for('.check_coin_now', coin_id=c['id']) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button class="btn btn-sm btn-primary" type="submit">Re-trace now</button>
+  </form>
+</div>
+
+<div class="card" style="margin-top:.8rem">
+  <div class="row" style="gap:1.6rem">
+    <div><div class="muted" style="font-size:.72rem;text-transform:uppercase">Value</div>
+      <div class="mono" style="font-size:.95rem">{{ (c['value_sat'] / 100000000)|round(8) }} BTC</div></div>
+    <div><div class="muted" style="font-size:.72rem;text-transform:uppercase">Status</div>
+      <div class="mono" style="font-size:.95rem">{% if c['spent'] %}<span style="color:var(--danger)">spent</span>{% else %}<span style="color:var(--found)">at rest</span>{% endif %}</div></div>
+    <div style="flex:1"><div class="muted" style="font-size:.72rem;text-transform:uppercase">Holding address</div>
+      <div class="mono" style="font-size:.82rem;word-break:break-all">
+        {% if c['address'] %}<a href="{{ url_for('.address', address=c['address']) }}">{{ c['address'] }}</a>{% else %}—{% endif %}</div></div>
+  </div>
+  {% if c['truncated'] %}
+  <p class="muted" style="margin:.7rem 0 0;font-size:.82rem;color:var(--accent)">
+    Trace was capped at the configured depth/node limit — raise the limits in module settings to follow further.</p>
+  {% endif %}
+</div>
+
+<!-- Current location(s) -->
+<h2 style="margin-top:1.4rem">Where the coins are now
+  <span class="muted mono" style="font-size:.85rem">({{ resting|length }} resting output{{ '' if resting|length==1 else 's' }})</span></h2>
+{% if resting %}
+<div class="readout">{% for h in resting %}{{ hop_row(h) }}{% endfor %}</div>
+{% else %}
+<div class="card"><p class="muted">No unspent endpoint located yet — re-trace, or the trail may be capped.</p></div>
+{% endif %}
+
+<!-- Forward trail -->
+<h2 style="margin-top:1.4rem">Forward trail — where they went
+  <span class="muted mono" style="font-size:.85rem">({{ descendants|length }} hops)</span></h2>
+{% if descendants %}
+<div class="readout">{% for h in descendants %}{{ hop_row(h) }}{% endfor %}</div>
+<p class="muted" style="margin-top:.6rem;font-size:.8rem">Each hop is an output of a transaction that spent a traced coin. Because transactions
+merge inputs, downstream outputs are candidate destinations; <em>taint %</em> shows our share of that
+transaction's inputs.</p>
+{% else %}
+<div class="card"><p class="muted">The flagged coin has not been spent yet. You'll get a <span class="badge on">new</span>
+tag here the moment it moves.</p></div>
+{% endif %}
+
+<!-- Provenance -->
+<h2 style="margin-top:1.4rem">Provenance — where they came from
+  <span class="muted mono" style="font-size:.85rem">({{ ancestors|length }} ancestors)</span></h2>
+{% if ancestors %}
+<div class="readout">{% for h in ancestors %}{{ hop_row(h) }}{% endfor %}</div>
+{% else %}
+<div class="card"><p class="muted">No prior inputs mapped (the funding transaction may be coinbase, or provenance depth is 0).</p></div>
+{% endif %}
+{% endblock %}

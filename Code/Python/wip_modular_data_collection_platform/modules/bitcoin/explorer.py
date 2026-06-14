@@ -28,6 +28,19 @@ class ExplorerError(Exception):
     """Raised with a human-readable message when a lookup cannot be completed."""
 
 
+def parse_outpoint(value: str):
+    """Parse a 'txid:vout' string into (txid, vout) or return None.
+
+    An outpoint identifies a single coin (a transaction output)."""
+    value = (value or "").strip()
+    if ":" not in value:
+        return None
+    txid, _, vout = value.partition(":")
+    if not is_txid(txid) or not vout.isdigit():
+        return None
+    return txid, int(vout)
+
+
 # --------------------------------------------------------------------------- #
 # Classification / formatting
 # --------------------------------------------------------------------------- #
@@ -47,6 +60,27 @@ def classify_query(value: str) -> str | None:
     if looks_like_address(value):
         return "address"
     return None
+
+
+def address_delta(tx: dict, address: str) -> dict:
+    """How a transaction affects a given address. Returns received/sent/net
+    sats and a direction label ('received' | 'sent' | 'self')."""
+    received = sum(
+        (o.get("value", 0) for o in (tx.get("vout") or [])
+         if o.get("scriptpubkey_address") == address)
+    )
+    sent = sum(
+        ((vin.get("prevout") or {}).get("value", 0) for vin in (tx.get("vin") or [])
+         if (vin.get("prevout") or {}).get("scriptpubkey_address") == address)
+    )
+    net = received - sent
+    if received and sent:
+        direction = "self"
+    elif net >= 0:
+        direction = "received"
+    else:
+        direction = "sent"
+    return {"received": received, "sent": sent, "net": net, "direction": direction}
 
 
 def sats_to_btc(sats: int) -> str:
@@ -102,6 +136,13 @@ class ExplorerClient:
 
     def outspends(self, txid: str) -> list:
         return self._get_json(f"tx/{quote(txid, safe='')}/outspends")
+
+    def tip_height(self) -> int:
+        """Current chain tip height (for computing confirmation counts)."""
+        try:
+            return int(self._get("blocks/tip/height").text.strip())
+        except (ValueError, ExplorerError):
+            return 0
 
 
 # --------------------------------------------------------------------------- #

@@ -1,23 +1,129 @@
 {% extends "base.html" %}
-{% block title %}Bitcoin Explorer · OSINT Console{% endblock %}
+{% block title %}Bitcoin Investigation · OSINT Console{% endblock %}
+{% macro tag_new(n) %}{% if n %}<span class="badge on">{{ n }} new</span>{% endif %}{% endmacro %}
 {% block content %}
 <div class="eyebrow">Module · {{ settings['network_label'] }}</div>
-<h1>Bitcoin Explorer</h1>
-<p class="muted">Look up an address or a transaction, then click through inputs, outputs and
-spends to walk the chain. Your browser history is the trail you followed.</p>
+<div class="row" style="justify-content:space-between;align-items:flex-end">
+  <h1 style="margin-bottom:0">Bitcoin Investigation</h1>
+  <form class="inline-form" method="post" action="{{ url_for('.check_all') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button class="btn btn-sm" type="submit">Check all now</button>
+  </form>
+</div>
 
 <div class="card" style="margin-top:1rem">
   <form method="get" action="{{ url_for('.index') }}" class="row" style="align-items:flex-end">
-    <div style="flex:1;min-width:260px">
-      <label for="q" style="margin-top:0">Address or transaction ID</label>
-      <input type="text" id="q" name="q" value="{{ query or '' }}" autocomplete="off" autofocus
-             placeholder="bc1q… / 1A1zP… / 64-hex txid" class="mono">
+    <div style="flex:1;min-width:240px">
+      <label for="q" style="margin-top:0">Explore an address or transaction</label>
+      <input type="text" id="q" name="q" autocomplete="off" class="mono"
+             placeholder="bc1q… / 1A1z… / 64-hex txid">
     </div>
     <button class="btn btn-primary" type="submit">Look up</button>
   </form>
-  <p class="muted" style="margin:.8rem 0 0;font-size:.85rem">
-    Addresses resolve to balance, totals and recent activity. A 64-character hex
-    string is treated as a transaction ID.
+  <p class="muted" style="margin:.7rem 0 0;font-size:.82rem">
+    From an address or transaction you can add it to a watchlist or flag individual coins to trace.
   </p>
 </div>
+
+<h2 style="margin-top:1.5rem">Flagged coins
+  <span class="muted mono" style="font-size:.85rem">({{ summary.coins.n }}{% if summary.coins.new %}, {{ summary.coins.new }} with movement{% endif %})</span></h2>
+{% if coins %}
+<div class="card" style="padding:.4rem .6rem">
+<table>
+  <thead><tr><th>label</th><th>coin (outpoint)</th><th>value</th><th>status</th><th>trail</th><th></th></tr></thead>
+  <tbody>
+    {% for c in coins %}
+    <tr>
+      <td><a href="{{ url_for('.coin', coin_id=c['id']) }}">{{ c['label'] or '—' }}</a>
+          {% if c['is_new_spend'] %}<span class="badge on">moved</span>{% endif %}</td>
+      <td class="mono" style="font-size:.76rem"><a href="{{ url_for('.tx', txid=c['txid']) }}">{{ c['txid'][:16] }}…</a>:{{ c['vout'] }}</td>
+      <td class="mono">{{ (c['value_sat'] / 100000000)|round(8) }}</td>
+      <td>{% if c['spent'] %}<span class="pill error">spent</span>{% else %}<span class="pill found">at rest</span>{% endif %}
+          {% if c['truncated'] %}<span class="badge off">capped</span>{% endif %}</td>
+      <td class="mono">{{ c['hop_count'] }} hops {{ tag_new(c['new_hops']) }}</td>
+      <td>
+        <form class="inline-form" method="post" action="{{ url_for('.unflag', coin_id=c['id']) }}"
+              onsubmit="return confirm('Remove this coin from the investigation?');">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn btn-sm btn-danger" type="submit">Unflag</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% else %}
+<div class="card"><p class="muted">No coins flagged yet. Open a transaction and use <strong>Flag</strong> on an
+output, or paste an outpoint below.</p>
+  <form method="post" action="{{ url_for('.flag') }}" class="row" style="align-items:flex-end;margin-top:.5rem">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div style="flex:1;min-width:240px"><label style="margin-top:0">Outpoint (txid:vout)</label>
+      <input type="text" name="outpoint" class="mono" placeholder="txid:0"></div>
+    <div style="flex:1;min-width:160px"><label style="margin-top:0">Label</label>
+      <input type="text" name="label" placeholder="e.g. ransom output"></div>
+    <button class="btn btn-primary" type="submit">Flag coin</button>
+  </form>
+</div>
+{% endif %}
+
+<h2 style="margin-top:1.5rem">Watched addresses
+  <span class="muted mono" style="font-size:.85rem">({{ summary.addresses.n }})</span></h2>
+{% if addresses %}
+<div class="card" style="padding:.4rem .6rem">
+<table>
+  <thead><tr><th>label</th><th>address</th><th>balance</th><th>txs</th><th>activity</th><th>last check</th><th></th></tr></thead>
+  <tbody>
+    {% for a in addresses %}
+    <tr>
+      <td>{{ a['label'] or '—' }}</td>
+      <td class="mono" style="font-size:.76rem"><a href="{{ url_for('.address', address=a['address']) }}">{{ a['address'][:18] }}…</a></td>
+      <td class="mono">{{ (a['balance_sat'] / 100000000)|round(8) }}</td>
+      <td class="mono">{{ a['tx_count'] }}</td>
+      <td>{% if a['has_new'] %}<span class="badge on">new activity</span>{% else %}<span class="muted">—</span>{% endif %}</td>
+      <td class="mono muted" style="font-size:.74rem">{{ a['last_checked_at'] or 'pending' }}</td>
+      <td>
+        <form class="inline-form" method="post" action="{{ url_for('.unwatch_address', address_id=a['id']) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn btn-sm btn-danger" type="submit">Remove</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% else %}
+<div class="card"><p class="muted">No addresses watched. Open an address and click <strong>Watch this address</strong>.</p></div>
+{% endif %}
+
+<h2 style="margin-top:1.5rem">Watched transactions
+  <span class="muted mono" style="font-size:.85rem">({{ summary.txs.n }})</span></h2>
+{% if txs %}
+<div class="card" style="padding:.4rem .6rem">
+<table>
+  <thead><tr><th>label</th><th>txid</th><th>status</th><th>confirmations</th><th></th></tr></thead>
+  <tbody>
+    {% for t in txs %}
+    <tr>
+      <td>{{ t['label'] or '—' }}</td>
+      <td class="mono" style="font-size:.76rem"><a href="{{ url_for('.tx', txid=t['txid']) }}">{{ t['txid'][:18] }}…</a></td>
+      <td>{% if t['status']=='confirmed' %}<span class="pill found">confirmed</span>
+          {% else %}<span class="pill absent">unconfirmed</span>{% endif %}
+          {% if t['is_newly_confirmed'] %}<span class="badge on">newly confirmed</span>{% endif %}</td>
+      <td class="mono">{{ t['confirmations'] }}</td>
+      <td>
+        <form class="inline-form" method="post" action="{{ url_for('.unwatch_tx', tx_id=t['id']) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn btn-sm btn-danger" type="submit">Remove</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% else %}
+<div class="card"><p class="muted">No transactions watched. Open a transaction and click <strong>Watch this transaction</strong>.</p></div>
+{% endif %}
 {% endblock %}

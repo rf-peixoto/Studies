@@ -1,11 +1,20 @@
 {% extends "base.html" %}
 {% block title %}Transaction · Bitcoin Explorer{% endblock %}
 {% block content %}
-<div class="eyebrow"><a href="{{ url_for('.index') }}" class="muted">Bitcoin Explorer</a> / Transaction</div>
+<div class="eyebrow"><a href="{{ url_for('.index') }}" class="muted">Bitcoin Investigation</a> / Transaction</div>
 <div class="row" style="justify-content:space-between;align-items:flex-start">
   <h1 class="mono" style="font-size:1rem;word-break:break-all;flex:1">{{ t.txid }}</h1>
-  <span class="pill {{ 'found' if t.confirmed else 'absent' }}" style="margin-left:.6rem">
-    {{ 'confirmed' if t.confirmed else 'unconfirmed' }}</span>
+  <div style="display:flex;gap:.4rem;align-items:center;margin-left:.6rem">
+    <span class="pill {{ 'found' if t.confirmed else 'absent' }}">{{ 'confirmed' if t.confirmed else 'unconfirmed' }}</span>
+    {% if watched %}<span class="badge on">watched</span>
+    {% else %}
+    <form class="inline-form" method="post" action="{{ url_for('.watch_tx') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="txid" value="{{ t.txid }}">
+      <button class="btn btn-sm btn-primary" type="submit">Watch this transaction</button>
+    </form>
+    {% endif %}
+  </div>
 </div>
 
 <div class="card" style="margin-top:.8rem">
@@ -61,12 +70,25 @@
       </div>
       <div class="row" style="justify-content:space-between;align-items:center;margin-top:.35rem">
         <span class="mono" style="font-size:.82rem">{{ out.value_btc }} BTC</span>
-        {% if out.spent and out.spent_txid %}
-          <a class="btn btn-sm" href="{{ url_for('.tx', txid=out.spent_txid) }}"
-             title="Open the transaction that spent this output">spent →</a>
-        {% else %}
-          <span class="badge on">unspent (UTXO)</span>
-        {% endif %}
+        <div style="display:flex;gap:.4rem;align-items:center">
+          {% if out.spent and out.spent_txid %}
+            <a class="btn btn-sm" href="{{ url_for('.tx', txid=out.spent_txid) }}"
+               title="Open the transaction that spent this output">spent →</a>
+          {% else %}
+            <span class="badge on">unspent (UTXO)</span>
+          {% endif %}
+          {% if (t.txid, out.index) in flagged %}
+            <span class="badge off">flagged</span>
+          {% else %}
+          <form class="inline-form" method="post" action="{{ url_for('.flag') }}"
+                title="Flag this coin and trace it">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="txid" value="{{ t.txid }}">
+            <input type="hidden" name="vout" value="{{ out.index }}">
+            <button class="btn btn-sm" type="submit">⚑ Flag</button>
+          </form>
+          {% endif %}
+        </div>
       </div>
     </div>
     {% endfor %}

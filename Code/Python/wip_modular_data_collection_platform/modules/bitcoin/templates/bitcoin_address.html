@@ -1,8 +1,19 @@
 {% extends "base.html" %}
 {% block title %}{{ a.address }} · Bitcoin Explorer{% endblock %}
 {% block content %}
-<div class="eyebrow"><a href="{{ url_for('.index') }}" class="muted">Bitcoin Explorer</a> / Address</div>
-<h1 class="mono" style="font-size:1.05rem;word-break:break-all">{{ a.address }}</h1>
+<div class="eyebrow"><a href="{{ url_for('.index') }}" class="muted">Bitcoin Investigation</a> / Address</div>
+<div class="row" style="justify-content:space-between;align-items:flex-start">
+  <h1 class="mono" style="font-size:1.05rem;word-break:break-all;flex:1">{{ a.address }}</h1>
+  {% if watched %}
+    <span class="badge on" style="margin-left:.6rem">watched</span>
+  {% else %}
+  <form class="inline-form" method="post" action="{{ url_for('.watch_address') }}" style="margin-left:.6rem">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="address" value="{{ a.address }}">
+    <button class="btn btn-sm btn-primary" type="submit">Watch this address</button>
+  </form>
+  {% endif %}
+</div>
 
 <div class="grid" style="margin-top:1rem;grid-template-columns:repeat(auto-fill,minmax(200px,1fr))">
   <div class="card">
@@ -24,6 +35,25 @@
     {% if a.unconfirmed_count %}<div class="muted mono" style="font-size:.78rem">+{{ a.unconfirmed_count }} in mempool</div>{% endif %}
   </div>
 </div>
+
+{% if watched and activity %}
+<h2 style="margin-top:1.4rem">Recorded activity <span class="muted mono" style="font-size:.85rem">(while watched)</span></h2>
+<div class="readout">
+  {% for ev in activity %}
+  <div class="readout-row {{ 'is-found' if ev['direction']=='received' else ('is-error' if ev['direction']=='sent' else '') }}">
+    <span class="pill {{ 'found' if ev['direction']=='received' else ('error' if ev['direction']=='sent' else 'absent') }}">{{ ev['direction'] }}</span>
+    <div>
+      <div class="target mono" style="font-size:.8rem;word-break:break-all">
+        <a href="{{ url_for('.tx', txid=ev['txid']) }}">{{ ev['txid'] }}</a>
+        {% if ev['is_new'] %}<span class="badge on">new</span>{% endif %}
+      </div>
+      <div class="url">{{ (ev['value_sat'] / 100000000)|round(8) }} BTC · {{ ev['status'] }}</div>
+    </div>
+    <a class="btn btn-sm" href="{{ url_for('.tx', txid=ev['txid']) }}">Open ↗</a>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
 
 <h2 style="margin-top:1.4rem">Recent transactions
   <span class="muted mono" style="font-size:.85rem">({{ a.recent|length }})</span></h2>

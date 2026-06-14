@@ -30,7 +30,41 @@ URL or your own self-hosted Esplora node to keep lookups private.</p>
         <label>Request timeout (s)</label>
         <input type="number" name="timeout" min="2" max="60" value="{{ settings['timeout'] }}">
       </div>
+      <div style="min-width:140px">
+        <label>Politeness delay (s)</label>
+        <input type="number" step="0.1" name="request_delay" min="0" max="5" value="{{ settings['request_delay'] }}">
+      </div>
     </div>
+
+    <hr>
+    <div class="eyebrow" style="margin-top:0">Monitoring</div>
+    <div class="row">
+      <div style="min-width:160px">
+        <label style="margin-top:0">Auto-poll</label>
+        <input type="checkbox" name="auto_poll" {{ 'checked' if settings['auto_poll'] }} style="width:auto">
+      </div>
+      <div style="min-width:170px">
+        <label style="margin-top:0">Poll interval (s)</label>
+        <input type="number" name="poll_interval" min="60" max="86400" value="{{ settings['poll_interval'] }}">
+      </div>
+    </div>
+
+    <div class="eyebrow" style="margin-top:1rem">Coin tracing</div>
+    <div class="row">
+      <div style="min-width:150px">
+        <label style="margin-top:0">Provenance depth</label>
+        <input type="number" name="provenance_depth" min="0" max="10" value="{{ settings['provenance_depth'] }}">
+      </div>
+      <div style="min-width:150px">
+        <label style="margin-top:0">Max forward depth</label>
+        <input type="number" name="max_trace_depth" min="1" max="20" value="{{ settings['max_trace_depth'] }}">
+      </div>
+      <div style="min-width:150px">
+        <label style="margin-top:0">Max hops / coin</label>
+        <input type="number" name="max_trace_nodes" min="5" max="500" value="{{ settings['max_trace_nodes'] }}">
+      </div>
+    </div>
+
     <div style="margin-top:1rem"><button class="btn btn-primary" type="submit">Save settings</button></div>
   </form>
 </div>
