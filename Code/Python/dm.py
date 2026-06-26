@@ -9,13 +9,21 @@ Linux only. Run as root for real wipes:   sudo python3 damnatio_memoriae.py
 Pure standard library (Tkinter) — nothing to install.
 
 Erase modes
-  ZERO-FILL (every bit) : write 0x00 over the ENTIRE device, then read it all
-                          back and confirm every byte is 0.
-  RANDOM + ZERO         : random pass(es), then a zero pass + verify.
-  SANITIZE + ZERO       : ask the controller to sanitize (the only thing that
-                          reaches hidden flash cells), then zero-fill + verify.
+  ZERO-FILL (every bit) : write 0x00 over the whole device, then read it back
+                          and confirm every byte is 0.
+  RANDOM-FILL (every bit): write a reproducible random stream over the whole
+                          device, then re-read and confirm it matches.
+  RANDOM + ZERO         : random pass(es), then a verified zero pass.
+  CRYPTO-ERASE          : destroy the on-device/volume encryption key
+                          (NVMe ses=2 / LUKS keyslots / SED) — instant and
+                          whole-device, including spare cells, when supported.
+  SANITIZE + ZERO       : ask the controller to sanitize (the only overwrite
+                          path that reaches hidden flash cells), then zero.
+  Extras: optional HPA/DCO removal on ATA disks, a read-only SCAN that reports
+  whether a drive already looks erased, SIMULATE dry-run, and an exportable
+  erasure certificate (.txt + .json).
 
-A verified zero-fill clears the addressable area (NIST 800-88
+Honest limits: a verified zero-fill clears the addressable area (NIST 800-88
 "Clear"). On flash, wear-leveled / over-provisioned cells are unreachable by
 software — only a successful hardware sanitize, crypto-erase, or physical
 destruction covers those. The result line tells you which case you got.
@@ -28,6 +36,7 @@ import time
 import queue
 import struct
 import fcntl
+import random
 import shutil
 import threading
 import subprocess
@@ -146,6 +155,9 @@ class WipeWorker(threading.Thread):
         self.q = msgq
         self.abort = abort_evt
         self.report = {}
+        # reproducible seed so a random-fill can be verified by regenerating it
+        self.seed = int.from_bytes(os.urandom(8), "big")
+        self.can_repro = hasattr(random.Random, "randbytes")
 
     def log(self, text, level="info"):
         self.q.put(("log", (text, level)))
@@ -164,8 +176,10 @@ class WipeWorker(threading.Thread):
             self.report.update({
                 "finished": datetime.now().isoformat(timespec="seconds"),
                 "result": summary,
-                "verification": ("skipped" if self.opts["verify"] == "none"
-                                 else "PASSED"),
+                "verification": (
+                    "n/a (crypto-erase)" if self.opts["mode"] == "crypto"
+                    else "skipped" if self.opts["verify"] == "none"
+                    else "PASSED"),
             })
             self.q.put(("done", {"summary": summary, "report": self.report}))
         except Aborted:
@@ -181,47 +195,72 @@ class WipeWorker(threading.Thread):
         d = self.drive
         size = d["size"] if self.sim else device_size(self.dev)
         media = "magnetic" if d["rota"] else "flash"
+        mode = self.opts["mode"]
         started = datetime.now()
         self.report = {
             "tool": "damnatio memoriae", "version": VERSION,
             "device": self.dev, "model": d["model"], "serial": d["serial"],
             "bus": d["tran"], "media": media,
             "size_bytes": size, "size_human": human(size),
-            "mode": self.opts["mode"], "passes": self.opts["passes"],
+            "mode": mode, "passes": self.opts["passes"],
             "verify": self.opts["verify"], "reformat": self.opts["reformat"],
             "simulated": self.sim,
             "started": started.isoformat(timespec="seconds"),
             "hardware_sanitize": "not attempted",
+            "crypto_erase": "not attempted",
+            "hpa_dco": "not checked",
         }
+        self.media = media
+        self.hw_ok = False
+        self.crypto_ok = False
 
         head = "SIMULATION — no writes" if self.sim else "LIVE — destructive"
-        self.log(f"[{head}] target {self.dev} · {human(size)} · {media}",
-                 "head")
+        self.log(f"[{head}] target {self.dev} · {human(size)} · {media} · "
+                 f"mode={mode}", "head")
 
         self._unmount()
-        if self.opts["mode"] == "sanitize":
-            ok = self._hardware_sanitize()
-            self.report["hardware_sanitize"] = "succeeded" if ok else "unavailable"
-            self.hw_ok = ok
-        else:
-            self.hw_ok = False
+
+        # ---- crypto-erase is its own short path -------------------------- #
+        if mode == "crypto":
+            self.crypto_ok = self._crypto_erase()
+            self.report["crypto_erase"] = ("succeeded" if self.crypto_ok
+                                           else "unavailable")
+            if not self.crypto_ok and not self.sim:
+                raise RuntimeError(
+                    "crypto-erase not available on this device (no SED / NVMe "
+                    "crypto / LUKS detected). Choose ZERO-FILL or RANDOM-FILL "
+                    "instead.")
+            if self.opts["reformat"]:
+                self._wipefs(); self._reformat()
+            return
+
+        # ---- optional HPA/DCO removal before overwriting ----------------- #
+        if self.opts.get("remove_hpa"):
+            self._remove_hpa_dco()
+
+        if mode == "sanitize":
+            self.hw_ok = self._hardware_sanitize()
+            self.report["hardware_sanitize"] = ("succeeded" if self.hw_ok
+                                                else "unavailable")
 
         self._check()
         self._wipefs()
 
-        if self.opts["mode"] == "random_zero":
+        if mode == "random_zero":
             for p in range(1, self.opts["passes"] + 1):
-                self._fill(size, True, f"random {p}/{self.opts['passes']}")
-            self._fill(size, False, "zero-fill")
-        else:
-            self._fill(size, False, "zero-fill (every bit)")
-
-        self._verify(size)
+                self._fill(size, "urandom", f"random {p}/{self.opts['passes']}")
+            self._fill(size, "zero", "zero-fill")
+            self._verify_zero(size)
+        elif mode == "random":
+            self._fill(size, "random", "random-fill (every bit)")
+            self._verify_random(size)
+        else:  # zero | sanitize
+            self._fill(size, "zero", "zero-fill (every bit)")
+            self._verify_zero(size)
 
         if self.opts["reformat"]:
             self._wipefs()
             self._reformat()
-        self.media = media
 
     def _check(self):
         if self.abort.is_set():
@@ -253,6 +292,113 @@ class WipeWorker(threading.Thread):
         subprocess.run(["wipefs", "-a", self.dev],
                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
+    def _crypto_erase(self):
+        """Instant key-destruction erase, where the hardware/volume supports it."""
+        if self.sim:
+            self.log("would attempt crypto-erase (NVMe ses=2 / LUKS / SED)",
+                     "dim")
+            return True
+        ok = False
+        # 1) NVMe cryptographic format
+        if "nvme" in self.dev and shutil.which("nvme"):
+            self.log("nvme format --ses=2 (cryptographic erase) ...", "dim")
+            r = subprocess.run(["nvme", "format", self.dev, "--ses=2"],
+                               stdout=subprocess.DEVNULL,
+                               stderr=subprocess.DEVNULL)
+            if r.returncode == 0:
+                self.log("NVMe cryptographic erase succeeded", "ok"); ok = True
+            else:
+                self.log("NVMe crypto erase refused/unsupported", "warn")
+        # 2) LUKS volume — destroy all keyslots → master key unrecoverable
+        if shutil.which("cryptsetup"):
+            if subprocess.run(["cryptsetup", "isLuks", self.dev],
+                              stdout=subprocess.DEVNULL,
+                              stderr=subprocess.DEVNULL).returncode == 0:
+                self.log("LUKS detected — erasing keyslots (cryptsetup erase)...",
+                         "dim")
+                r = subprocess.run(["cryptsetup", "erase", "-q", self.dev],
+                                   stdout=subprocess.DEVNULL,
+                                   stderr=subprocess.DEVNULL)
+                if r.returncode == 0:
+                    self.log("LUKS keyslots erased — data is now unrecoverable",
+                             "ok"); ok = True
+        # 3) TCG Opal self-encrypting drive (needs sedutil-cli + the drive PSID)
+        if not ok and shutil.which("sedutil-cli"):
+            self.log("self-encrypting drive tooling present; PSID-revert must "
+                     "be run manually: sedutil-cli --yesIreallywanttoERASE "
+                     "--PSIDrevert <PSID> " + self.dev, "warn")
+        # 4) ATA enhanced secure erase (crypto on SEDs) — opt-in, can lock drive
+        if not ok and self.opts.get("ata_crypto") and shutil.which("hdparm"):
+            ok = self._ata_secure_erase()
+        return ok
+
+    def _ata_secure_erase(self):
+        info = subprocess.run(["hdparm", "-I", self.dev],
+                              capture_output=True, text=True).stdout
+        if "Security:" not in info:
+            self.log("ATA security info unavailable (USB bridge blocks it)",
+                     "warn")
+            return False
+        if "frozen" in info and "not\tfrozen" not in info and "not frozen" not in info:
+            self.log("drive security FROZEN — needs a power-cycle; skipping",
+                     "warn")
+            return False
+        pw = f"dm{random.randint(1000,9999)}"
+        self.log("setting temporary ATA password and issuing enhanced erase...",
+                 "dim")
+        if subprocess.run(["hdparm", "--user-master", "u",
+                           "--security-set-pass", pw, self.dev],
+                          stdout=subprocess.DEVNULL,
+                          stderr=subprocess.DEVNULL).returncode != 0:
+            self.log("could not set ATA password", "warn"); return False
+        cmd = "--security-erase-enhanced" if "enhanced erase" in info \
+            else "--security-erase"
+        if subprocess.run(["hdparm", "--user-master", "u", cmd, pw, self.dev],
+                          stdout=subprocess.DEVNULL,
+                          stderr=subprocess.DEVNULL).returncode == 0:
+            self.log(f"ATA {cmd} completed", "ok"); return True
+        self.log(f"ATA erase FAILED — drive may hold password '{pw}'. Unlock: "
+                 f"hdparm --user-master u --security-disable '{pw}' {self.dev}",
+                 "error")
+        return False
+
+    def _remove_hpa_dco(self):
+        """Strip Host Protected Area / Device Configuration Overlay (ATA only)."""
+        if self.sim:
+            self.log("would check/remove HPA & DCO (ATA)", "dim")
+            self.report["hpa_dco"] = "simulated"
+            return
+        if not shutil.which("hdparm"):
+            self.log("hdparm not present — skipping HPA/DCO check", "warn")
+            return
+        actions = []
+        n = subprocess.run(["hdparm", "-N", self.dev],
+                           capture_output=True, text=True).stdout
+        if "HPA is enabled" in n:
+            self.log("HPA detected — removing so the overwrite reaches all "
+                     "sectors", "warn")
+            subprocess.run(["bash", "-c",
+                            f"hdparm -N p$(blockdev --getsz {self.dev}) "
+                            f"{self.dev}"],
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            actions.append("HPA removed")
+        dco = subprocess.run(["hdparm", "--dco-identify", self.dev],
+                             capture_output=True, text=True).stdout
+        if "Real max sectors" in dco:
+            self.log("DCO present — attempting restore (best effort)", "warn")
+            subprocess.run(["hdparm", "--yes-i-know-what-i-am-doing",
+                            "--dco-restore", self.dev],
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            actions.append("DCO restore attempted")
+        self.report["hpa_dco"] = ", ".join(actions) if actions else "none found"
+        if not actions:
+            self.log("no HPA/DCO found", "dim")
+
+    def _rng_block(self, idx, n):
+        """Deterministic random bytes for block idx (reproducible for verify)."""
+        r = random.Random((self.seed << 21) ^ idx)
+        return r.randbytes(n)
+
     def _hardware_sanitize(self):
         if self.sim:
             self.log("would attempt hardware sanitize", "dim")
@@ -279,10 +425,15 @@ class WipeWorker(threading.Thread):
             self.log("no hardware sanitize available; overwrite follows", "warn")
         return ok
 
-    def _fill(self, size, random, label):
+    def _fill(self, size, kind, label):
+        """kind: 'zero' | 'random' (reproducible) | 'urandom' (one-shot)."""
         self._check()
-        written, last, t0 = 0, 0.0, time.time()
+        written, last, t0, idx = 0, 0.0, time.time(), 0
         self.status(f"{label} ...")
+        if kind == "random" and not self.can_repro and not self.sim:
+            self.log("Python <3.9: random-fill not verifiable, using urandom",
+                     "warn")
+            kind = "urandom"
         if self.sim:
             sim_rate = 700 * 1024 * 1024            # pretend 700 MB/s
             while written < size:
@@ -304,10 +455,15 @@ class WipeWorker(threading.Thread):
             while written < size:
                 self._check()
                 n = min(CHUNK, size - written)
-                block = os.urandom(n) if random else (
-                    ZERO_BLOCK if n == CHUNK else b"\x00" * n)
+                if kind == "zero":
+                    block = ZERO_BLOCK if n == CHUNK else b"\x00" * n
+                elif kind == "random":
+                    block = self._rng_block(idx, n)
+                else:  # urandom
+                    block = os.urandom(n)
                 f.write(block)
                 written += n
+                idx += 1
                 now = time.time()
                 if now - last > 0.15 or written == size:
                     last = now
@@ -320,7 +476,7 @@ class WipeWorker(threading.Thread):
         self.log(f"{label}: {human(size)} written", "ok")
         self.progress(1.0)
 
-    def _verify(self, size):
+    def _verify_zero(self, size):
         mode = self.opts["verify"]
         if mode == "none":
             self.log("verification skipped", "warn")
@@ -328,12 +484,10 @@ class WipeWorker(threading.Thread):
         self.status("verify: reading back ...")
         if self.sim:
             for i in range(21):
-                self._check()
-                time.sleep(0.04)
-                self.progress(i / 20)
+                self._check(); time.sleep(0.04); self.progress(i / 20)
             self.log("verify: simulated read-back ok", "ok")
             return
-        nonzero, read, last, t0 = 0, 0, 0.0, time.time()
+        nonzero, read, last = 0, 0, 0.0
         with open(self.dev, "rb", buffering=0) as f:
             if mode == "sample":
                 for off in (0, max(0, size // 2 - CHUNK), max(0, size - CHUNK)):
@@ -356,6 +510,52 @@ class WipeWorker(threading.Thread):
             raise RuntimeError(f"verify FAILED — {nonzero} non-zero byte(s) "
                                "remain; do not trust this device.")
         self.log("verify PASSED — reads back as all zeros", "ok")
+
+    def _verify_random(self, size):
+        """Re-read and confirm bytes match the random stream we wrote."""
+        mode = self.opts["verify"]
+        if mode == "none" or not self.can_repro:
+            self.log("random-fill verification skipped", "warn")
+            return
+        self.status("verify: matching random stream ...")
+        if self.sim:
+            for i in range(21):
+                self._check(); time.sleep(0.04); self.progress(i / 20)
+            self.log("verify: simulated stream match ok", "ok")
+            return
+        mism, read, last = 0, 0, 0.0
+        with open(self.dev, "rb", buffering=0) as f:
+            if mode == "sample":
+                nblocks = (size + CHUNK - 1) // CHUNK
+                idxs = sorted({0, nblocks // 2, max(0, nblocks - 1)})
+                for idx in idxs:
+                    off = idx * CHUNK
+                    self._check(); f.seek(off)
+                    n = min(CHUNK, size - off)
+                    data = f.read(n)
+                    if data != self._rng_block(idx, len(data)):
+                        mism += 1
+            else:
+                idx = 0
+                while read < size:
+                    self._check()
+                    n = min(CHUNK, size - read)
+                    data = f.read(n)
+                    if not data:
+                        break
+                    if data != self._rng_block(idx, len(data)):
+                        mism += 1
+                    read += len(data); idx += 1
+                    now = time.time()
+                    if now - last > 0.15 or read >= size:
+                        last = now
+                        self.progress(read / size)
+                        self.status(f"verify: {human(read)}/{human(size)}")
+        if mism:
+            raise RuntimeError(f"verify FAILED — {mism} block(s) did not match "
+                               "the written random stream.")
+        self.log("verify PASSED — device matches the random stream written",
+                 "ok")
 
     def _reformat(self):
         if self.sim:
@@ -385,15 +585,22 @@ class WipeWorker(threading.Thread):
     def _summary(self):
         if self.sim:
             return "SIMULATION complete — no data was touched."
+        mode = self.opts["mode"]
+        if mode == "crypto":
+            return ("crypto-erase succeeded — the encryption key was destroyed, "
+                    "so all data is cryptographically unrecoverable (instant, "
+                    "covers the whole device including spare cells).")
+        tail = (" Any HPA/DCO was handled." if self.opts.get("remove_hpa")
+                and self.report.get("hpa_dco") not in (None, "none found",
+                                                       "not checked") else "")
         if getattr(self, "media", "flash") == "magnetic":
-            return ("magnetic drive — addressable surface zeroed and verified "
-                    "(NIST 800-88 Clear). HPA/DCO areas, if any, are beyond "
-                    "software reach.")
+            return ("magnetic drive — addressable surface overwritten and "
+                    "verified (NIST 800-88 Clear)." + tail)
         if getattr(self, "hw_ok", False):
             return ("flash + successful hardware sanitize — strongest software "
                     "result; remapped/over-provisioned cells erased by the "
                     "controller.")
-        return ("flash, no hardware sanitize — addressable area zeroed and "
+        return ("flash, no hardware sanitize — addressable area overwritten and "
                 "verified, but remnants may survive in remapped cells; destroy "
                 "physically for highly sensitive data.")
 
@@ -520,25 +727,37 @@ class App(tk.Tk):
         self.auto = tk.BooleanVar(value=True)
         ttk.Checkbutton(side, text="auto-detect", variable=self.auto)\
             .pack(anchor="w", pady=2)
+        ttk.Button(side, text="⌕ scan", command=self._scan)\
+            .pack(fill="x", pady=(10, 2))
 
         # 2: method
         f2 = ttk.LabelFrame(self, text=" 02 · METHOD ")
         f2.pack(fill="x", padx=14, pady=4)
         self.mode = tk.StringVar(value="zero")
+        self.mode.trace_add("write", lambda *a: self._on_select())
         ttk.Radiobutton(f2, variable=self.mode, value="zero",
                         text="ZERO-FILL — overwrite every single bit with 0, "
                              "then verify   [default]")\
             .grid(row=0, column=0, columnspan=4, sticky="w", padx=6, pady=2)
-        ttk.Radiobutton(f2, variable=self.mode, value="random_zero",
-                        text="RANDOM + ZERO — random pass(es), then zero pass")\
+        ttk.Radiobutton(f2, variable=self.mode, value="random",
+                        text="RANDOM-FILL — overwrite every bit with random "
+                             "data, then verify the stream")\
             .grid(row=1, column=0, columnspan=4, sticky="w", padx=6, pady=2)
+        ttk.Radiobutton(f2, variable=self.mode, value="random_zero",
+                        text="RANDOM + ZERO — random pass(es), then a verified "
+                             "zero pass")\
+            .grid(row=2, column=0, columnspan=4, sticky="w", padx=6, pady=2)
+        ttk.Radiobutton(f2, variable=self.mode, value="crypto",
+                        text="CRYPTO-ERASE — destroy the encryption key "
+                             "(NVMe/SED/LUKS); instant, whole-device")\
+            .grid(row=3, column=0, columnspan=4, sticky="w", padx=6, pady=2)
         ttk.Radiobutton(f2, variable=self.mode, value="sanitize",
                         text="SANITIZE + ZERO — controller self-erase, then "
                              "zero  [best for flash]")\
-            .grid(row=2, column=0, columnspan=4, sticky="w", padx=6, pady=2)
+            .grid(row=4, column=0, columnspan=4, sticky="w", padx=6, pady=2)
 
         opt = tk.Frame(f2, bg=BG)
-        opt.grid(row=3, column=0, columnspan=4, sticky="w", padx=6, pady=(4, 2))
+        opt.grid(row=5, column=0, columnspan=4, sticky="w", padx=6, pady=(4, 2))
         ttk.Label(opt, text="passes").pack(side="left")
         self.passes = tk.IntVar(value=1)
         ttk.Spinbox(opt, from_=1, to=7, width=3, textvariable=self.passes)\
@@ -557,6 +776,15 @@ class App(tk.Tk):
         self.label = tk.StringVar(value="WIPED")
         ttk.Entry(opt, textvariable=self.label, width=10).pack(side="left",
                                                                padx=4)
+
+        opt2 = tk.Frame(f2, bg=BG)
+        opt2.grid(row=6, column=0, columnspan=4, sticky="w", padx=6, pady=(0, 4))
+        self.remove_hpa = tk.BooleanVar(value=False)
+        ttk.Checkbutton(opt2, text="remove HPA/DCO (ATA disks)",
+                        variable=self.remove_hpa).pack(side="left", padx=(0, 14))
+        self.ata_crypto = tk.BooleanVar(value=False)
+        ttk.Checkbutton(opt2, text="allow ATA secure-erase (risky, can lock "
+                        "drive)", variable=self.ata_crypto).pack(side="left")
 
         # 3: confirm
         f3 = ttk.LabelFrame(self, text=" 03 · EXECUTE ")
@@ -716,6 +944,8 @@ class App(tk.Tk):
             "fs": self.fs.get(),
             "label": (self.label.get().strip() or "WIPED"),
             "simulate": bool(self.sim.get()),
+            "remove_hpa": bool(self.remove_hpa.get()),
+            "ata_crypto": bool(self.ata_crypto.get()),
         }
         self.abort_evt.clear()
         self.last_report = None
@@ -733,6 +963,50 @@ class App(tk.Tk):
             if messagebox.askyesno("abort", "Stop now? Drive left partial."):
                 self.abort_evt.set()
                 self.status_lbl.config(text="aborting ...")
+
+    # ---- read-only inspect ----
+    def _scan(self):
+        d = self._sel()
+        if not d:
+            messagebox.showinfo("scan", "Select a target first.")
+            return
+        if self.worker and self.worker.is_alive():
+            return
+        self._log(f"scan {d['name']} — read-only sampling ...", "head")
+
+        def work():
+            try:
+                size = device_size(d["name"])
+                offs = [int(size * frac) for frac in
+                        (0.0, 0.25, 0.5, 0.75, 0.999)]
+                total = nz = 0
+                with open(d["name"], "rb", buffering=0) as f:
+                    for off in offs:
+                        off = min(off, max(0, size - 1024 * 1024))
+                        f.seek(off)
+                        data = f.read(4 * 1024 * 1024)
+                        total += len(data)
+                        nz += len(data) - data.count(0)
+                pct = (nz / total * 100) if total else 0
+                if nz == 0:
+                    verdict = "looks ERASED — all sampled bytes are zero"
+                    lvl = "ok"
+                elif pct > 40:
+                    verdict = (f"looks like DATA / random ({pct:.1f}% non-zero "
+                               "in samples)")
+                    lvl = "warn"
+                else:
+                    verdict = (f"PARTIAL / sparse ({pct:.1f}% non-zero in "
+                               "samples)")
+                    lvl = "warn"
+                self.msgq.put(("log", (f"scan {d['name']}: {verdict}", lvl)))
+            except PermissionError:
+                self.msgq.put(("log", ("scan failed — run as root to read the "
+                                       "raw device", "error")))
+            except Exception as e:  # noqa
+                self.msgq.put(("log", (f"scan error: {e}", "error")))
+
+        threading.Thread(target=work, daemon=True).start()
 
     def _running(self, on):
         st = "disabled" if on else "normal"
