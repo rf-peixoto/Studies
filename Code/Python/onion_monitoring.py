@@ -14,6 +14,17 @@ from bs4 import BeautifulSoup
 
 STATE_FILE = "onion_monitor_state.json"
 
+# ANSI color codes
+COLOR_RESET = "\033[0m"
+COLOR_RED = "\033[91m"
+COLOR_GREEN = "\033[92m"
+COLOR_YELLOW = "\033[93m"
+COLOR_BOLD = "\033[1m"
+
+def color(text, code):
+    """Wrap text with ANSI color code and reset."""
+    return f"{code}{text}{COLOR_RESET}"
+
 
 def now():
     return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
@@ -72,12 +83,10 @@ def html_to_text(html):
 
 def find_matches(text, keywords):
     matches = []
-
     lowered_text = text.lower()
 
     for keyword in keywords:
         keyword_lower = keyword.lower()
-
         if keyword_lower in lowered_text:
             matches.append(keyword)
 
@@ -86,14 +95,12 @@ def find_matches(text, keywords):
 
 def alert(url, matches):
     print("\n" + "=" * 80)
-    print(f"[!] KEYWORD MATCH DETECTED")
-    print(f"[+] Time: {now()}")
-    print(f"[+] URL:  {url}")
-    print(f"[+] Matches:")
-
+    print(color("[!] KEYWORD MATCH DETECTED", COLOR_BOLD + COLOR_RED))
+    print(color(f"[+] Time: {now()}", COLOR_GREEN))
+    print(color(f"[+] URL:  {url}", COLOR_GREEN))
+    print("[+] Matches:")
     for match in matches:
-        print(f"    - {match}")
-
+        print(color(f"    - {match}", COLOR_YELLOW))
     print("=" * 80 + "\n")
 
 
@@ -139,11 +146,11 @@ def main():
     keywords = load_keywords(args.keywords)
     state = load_state()
 
-    print(f"[+] Onion keyword monitor started")
-    print(f"[+] Target: {args.url}")
-    print(f"[+] Keywords loaded: {len(keywords)}")
-    print(f"[+] Interval: {args.interval}s")
-    print(f"[+] Started at: {now()}")
+    print(color("[+] Onion keyword monitor started", COLOR_GREEN))
+    print(color(f"[+] Target: {args.url}", COLOR_GREEN))
+    print(color(f"[+] Keywords loaded: {len(keywords)}", COLOR_GREEN))
+    print(color(f"[+] Interval: {args.interval}s", COLOR_GREEN))
+    print(color(f"[+] Started at: {now()}", COLOR_GREEN))
 
     while True:
         try:
@@ -176,10 +183,10 @@ def main():
             save_state(state)
 
         except requests.exceptions.RequestException as e:
-            print(f"[{now()}] Request error: {e}", file=sys.stderr)
+            print(color(f"[{now()}] Request error: {e}", COLOR_RED), file=sys.stderr)
 
         except Exception as e:
-            print(f"[{now()}] Error: {e}", file=sys.stderr)
+            print(color(f"[{now()}] Error: {e}", COLOR_RED), file=sys.stderr)
 
         if args.once:
             break
