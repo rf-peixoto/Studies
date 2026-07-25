@@ -1,0 +1,9 @@
+# Every one of these ships a binary wheel. No system packages, no ffmpeg
+# install, no Ghostscript. `pip install -r requirements.txt` is the whole setup.
+
+Flask>=3.0            # web layer
+av>=13.0              # FFmpeg libraries, bundled in the wheel (x264/x265/SVT-AV1/VP9/Opus/LAME)
+pikepdf>=9.0          # QPDF bindings, bundled: PDF structure, compression, AES-256
+Pillow>=10.3          # images, and the JPEG re-encoder used inside PDFs
+pillow-heif>=0.16     # HEIC/HEIF, i.e. what iPhones actually save
+numpy>=1.24           # frame rotation, and required by PyAV's ndarray bridge
