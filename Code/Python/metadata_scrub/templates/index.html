@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>scrub — strip metadata, compress, protect</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="brand">scrub<span class="caret" aria-hidden="true">█</span></div>
+    <p class="tagline">Removes what is hiding inside your files, then makes them
+      smaller. Everything runs on this machine.</p>
+    <p class="sysline" id="sysline">reading capabilities…</p>
+  </header>
+
+  <section class="step" aria-labelledby="s1">
+    <h2 class="stephead" id="s1"><b>01</b> add files</h2>
+
+    <div class="drop" id="drop" tabindex="0" role="button"
+         aria-describedby="drophint">
+      <span class="dropmark" aria-hidden="true">+</span>
+      <span class="droptext">Drop files here, or press to choose</span>
+      <span class="drophint" id="drophint">images · audio · video · pdf</span>
+      <input type="file" id="picker" multiple hidden
+             accept="image/*,audio/*,video/*,.pdf,.heic,.heif,.mkv,.webm,.opus,.flac">
+    </div>
+
+    <ul class="staged" id="staged"></ul>
+    <p class="note" id="stagednote" hidden></p>
+  </section>
+
+  <section class="step" id="settings-step" aria-labelledby="s2" hidden>
+    <h2 class="stephead" id="s2"><b>02</b> settings</h2>
+
+    <div class="presets" role="group" aria-label="Quality presets">
+      <button type="button" class="preset" data-preset="archive">archive</button>
+      <button type="button" class="preset is-on" data-preset="balanced">balanced</button>
+      <button type="button" class="preset" data-preset="small">smallest</button>
+      <span class="presetnote">Sets every slider below. Adjust any of them afterwards.</span>
+    </div>
+
+    <!-- IMAGES -->
+    <fieldset class="group" id="g-image" hidden>
+      <legend>image</legend>
+      <div class="row">
+        <label for="img-q">quality</label>
+        <input type="range" id="img-q" min="30" max="100" value="82">
+        <output for="img-q" id="img-q-out">82</output>
+      </div>
+      <div class="row">
+        <label for="img-fmt">format</label>
+        <select id="img-fmt">
+          <option value="keep">keep original</option>
+          <option value="jpeg">JPEG</option>
+          <option value="webp">WebP — ~30% smaller than JPEG</option>
+          <option value="avif">AVIF — smallest, newer viewers</option>
+          <option value="png">PNG — lossless</option>
+        </select>
+      </div>
+      <div class="row">
+        <label for="img-edge">max edge</label>
+        <input type="range" id="img-edge" min="0" max="6000" step="200" value="0">
+        <output for="img-edge" id="img-edge-out">no limit</output>
+      </div>
+    </fieldset>
+
+    <!-- VIDEO -->
+    <fieldset class="group" id="g-video" hidden>
+      <legend>video</legend>
+      <div class="row">
+        <label for="vid-codec">codec</label>
+        <select id="vid-codec"></select>
+      </div>
+      <div class="row">
+        <label for="vid-q">quality</label>
+        <input type="range" id="vid-q" min="20" max="100" value="70">
+        <output for="vid-q" id="vid-q-out">70 · crf 23</output>
+      </div>
+      <div class="row">
+        <label for="vid-preset">effort</label>
+        <select id="vid-preset">
+          <option value="veryfast">very fast — largest file</option>
+          <option value="fast">fast</option>
+          <option value="medium" selected>medium</option>
+          <option value="slow">slow — smallest file</option>
+        </select>
+      </div>
+      <div class="row">
+        <label for="vid-height">max height</label>
+        <select id="vid-height">
+          <option value="0">keep original</option>
+          <option value="2160">2160p</option>
+          <option value="1080">1080p</option>
+          <option value="720">720p</option>
+          <option value="480">480p</option>
+        </select>
+      </div>
+      <div class="row">
+        <label for="vid-abr">audio</label>
+        <input type="range" id="vid-abr" min="48" max="320" step="16" value="128">
+        <output for="vid-abr" id="vid-abr-out">128 kbps</output>
+      </div>
+    </fieldset>
+
+    <!-- AUDIO -->
+    <fieldset class="group" id="g-audio" hidden>
+      <legend>audio</legend>
+      <div class="row">
+        <label for="aud-codec">codec</label>
+        <select id="aud-codec"></select>
+      </div>
+      <div class="row">
+        <label for="aud-kbps">bitrate</label>
+        <input type="range" id="aud-kbps" min="32" max="320" step="16" value="128">
+        <output for="aud-kbps" id="aud-kbps-out">128 kbps</output>
+      </div>
+    </fieldset>
+
+    <!-- PDF -->
+    <fieldset class="group" id="g-pdf" hidden>
+      <legend>pdf</legend>
+      <div class="row check">
+        <input type="checkbox" id="pdf-imgs" checked>
+        <label for="pdf-imgs">recompress embedded images</label>
+      </div>
+      <div class="row" id="pdf-q-row">
+        <label for="pdf-q">image quality</label>
+        <input type="range" id="pdf-q" min="30" max="100" value="78">
+        <output for="pdf-q" id="pdf-q-out">78</output>
+      </div>
+      <div class="row" id="pdf-edge-row">
+        <label for="pdf-edge">max image edge</label>
+        <input type="range" id="pdf-edge" min="0" max="4000" step="200" value="2000">
+        <output for="pdf-edge" id="pdf-edge-out">2000 px</output>
+      </div>
+      <div class="row check">
+        <input type="checkbox" id="pdf-active" checked>
+        <label for="pdf-active">remove JavaScript, attachments and auto-actions</label>
+      </div>
+      <div class="row">
+        <label for="pdf-open">source password</label>
+        <input type="password" id="pdf-open" placeholder="only if the file is already locked"
+               autocomplete="off">
+      </div>
+
+      <div class="row check">
+        <input type="checkbox" id="pdf-lock">
+        <label for="pdf-lock">protect the result with a password</label>
+      </div>
+
+      <div class="lockbox" id="lockbox" hidden>
+        <div class="row">
+          <label for="pdf-pw">password</label>
+          <input type="text" id="pdf-pw" spellcheck="false" autocomplete="off"
+                 placeholder="type one, or generate below">
+          <button type="button" class="mini" id="pdf-copy">copy</button>
+        </div>
+        <div class="row">
+          <label for="pdf-len">generate</label>
+          <input type="range" id="pdf-len" min="12" max="64" value="24">
+          <output for="pdf-len" id="pdf-len-out">24 chars</output>
+          <button type="button" class="mini" id="pdf-gen">make one</button>
+        </div>
+        <p class="entropy" id="entropy">Nothing generated yet.</p>
+        <p class="warn">The password is shown here and nowhere else. Save it before
+          you close this page — an AES-256 PDF cannot be recovered without it.</p>
+        <div class="perms">
+          <span class="permslabel">still allowed once locked</span>
+          <label><input type="checkbox" id="p-print" checked> printing</label>
+          <label><input type="checkbox" id="p-extract"> copying text</label>
+          <label><input type="checkbox" id="p-modify"> editing</label>
+          <label><input type="checkbox" id="p-annotate"> annotating</label>
+          <label><input type="checkbox" id="p-forms"> filling forms</label>
+        </div>
+      </div>
+    </fieldset>
+  </section>
+
+  <section class="step" id="run-step" aria-labelledby="s3" hidden>
+    <h2 class="stephead" id="s3"><b>03</b> run</h2>
+    <button type="button" class="go" id="go">clean <span id="gocount"></span></button>
+    <div class="overall" id="overall" hidden>
+      <div id="upwrap"></div>
+      <div id="totwrap"></div>
+    </div>
+    <p class="err" id="err" hidden></p>
+  </section>
+
+  <section class="step" id="out-step" aria-labelledby="s4" hidden>
+    <h2 class="stephead" id="s4"><b>04</b> results</h2>
+    <div id="results" aria-live="polite"></div>
+    <div class="outfoot" id="outfoot" hidden>
+      <a class="mini" id="zip" href="#" download>download all as zip</a>
+      <button type="button" class="mini danger" id="forget">delete from server now</button>
+      <span class="ttl" id="ttl"></span>
+    </div>
+  </section>
+
+  <footer class="colophon">
+    <p><b>What gets removed.</b> Images: EXIF, GPS, XMP, IPTC, embedded thumbnails,
+      colour profiles and PNG text chunks — the pixel buffer is rebuilt so nothing
+      rides along. Audio and video: container tags, stream tags, cover art and the
+      encoder banner that x264 and x265 write inside the bitstream. PDF: DocInfo,
+      XMP at document and page level, editor scratch data, JavaScript, auto-run
+      actions and file attachments.</p>
+    <p><b>What is kept on purpose.</b> Photo orientation and video rotation are
+      applied to the pixels before the metadata that described them is deleted,
+      so nothing ends up sideways. Colour profiles are converted to sRGB first,
+      so colours do not shift.</p>
+  </footer>
+</div>
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
