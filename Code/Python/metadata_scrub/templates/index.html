@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="referrer" content="no-referrer">
-<title>scrub — strip metadata, compress, protect</title>
+<title>scrub — inspect, strip, compress, protect</title>
 <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
@@ -12,44 +12,60 @@
 
   <header class="masthead">
     <div class="brand">scrub<span class="caret" aria-hidden="true">█</span></div>
-    <p class="tagline">Removes what is hiding inside your files, then makes them
-      smaller. Everything runs on this machine.</p>
+    <p class="tagline">Shows you what is hiding inside your files, removes it,
+      then makes them smaller. Everything runs on this machine.</p>
     <p class="sysline" id="sysline">reading capabilities…</p>
   </header>
 
   <section class="step" aria-labelledby="s1">
     <h2 class="stephead" id="s1"><b>01</b> add files</h2>
-
-    <div class="drop" id="drop" tabindex="0" role="button"
-         aria-describedby="drophint">
+    <div class="drop" id="drop" tabindex="0" role="button" aria-describedby="drophint">
       <span class="dropmark" aria-hidden="true">+</span>
       <span class="droptext">Drop files here, or press to choose</span>
       <span class="drophint" id="drophint">images · audio · video · pdf</span>
       <input type="file" id="picker" multiple hidden
              accept="image/*,audio/*,video/*,.pdf,.heic,.heif,.mkv,.webm,.opus,.flac">
     </div>
-
     <ul class="staged" id="staged"></ul>
     <p class="note" id="stagednote" hidden></p>
   </section>
 
-  <section class="step" id="settings-step" aria-labelledby="s2" hidden>
-    <h2 class="stephead" id="s2"><b>02</b> settings</h2>
+  <section class="step" id="inspect-step" aria-labelledby="s2" hidden>
+    <h2 class="stephead" id="s2"><b>02</b> inspect</h2>
+    <p class="lede">Nothing is modified by this. Your files are read, and what
+      is found in them is listed below.</p>
+    <button type="button" class="go" id="inspect">inspect <span id="inspectcount"></span></button>
+    <div id="upwrap" class="barwrap" hidden></div>
+    <div class="verdict" id="verdict" hidden></div>
+    <div id="findings" aria-live="polite"></div>
+    <p class="err" id="err0" hidden></p>
+  </section>
+
+  <section class="step" id="settings-step" aria-labelledby="s3" hidden>
+    <h2 class="stephead" id="s3"><b>03</b> settings</h2>
 
     <div class="presets" role="group" aria-label="Quality presets">
       <button type="button" class="preset" data-preset="archive">archive</button>
       <button type="button" class="preset is-on" data-preset="balanced">balanced</button>
       <button type="button" class="preset" data-preset="small">smallest</button>
-      <span class="presetnote">Sets every slider below. Adjust any of them afterwards.</span>
+      <span class="presetnote">Sets every slider below. Adjust any afterwards.</span>
     </div>
 
-    <!-- IMAGES -->
     <fieldset class="group" id="g-image" hidden>
       <legend>image</legend>
-      <div class="row">
+      <div class="modes" role="group" aria-label="Image compression mode">
+        <button type="button" class="mode is-on" data-mode="image" data-v="quality">by quality</button>
+        <button type="button" class="mode" data-mode="image" data-v="size">to a size</button>
+      </div>
+      <div class="row" data-when="image-quality">
         <label for="img-q">quality</label>
         <input type="range" id="img-q" min="30" max="100" value="82">
         <output for="img-q" id="img-q-out">82</output>
+      </div>
+      <div class="row" data-when="image-size" hidden>
+        <label for="img-mb">target size</label>
+        <input type="number" id="img-mb" min="0.01" step="0.1" value="1">
+        <span class="unit">MB each</span>
       </div>
       <div class="row">
         <label for="img-fmt">format</label>
@@ -61,24 +77,34 @@
           <option value="png">PNG — lossless</option>
         </select>
       </div>
-      <div class="row">
+      <div class="row" data-when="image-quality">
         <label for="img-edge">max edge</label>
         <input type="range" id="img-edge" min="0" max="6000" step="200" value="0">
         <output for="img-edge" id="img-edge-out">no limit</output>
       </div>
     </fieldset>
 
-    <!-- VIDEO -->
     <fieldset class="group" id="g-video" hidden>
       <legend>video</legend>
+      <div class="modes" role="group" aria-label="Video compression mode">
+        <button type="button" class="mode is-on" data-mode="video" data-v="quality">by quality</button>
+        <button type="button" class="mode" data-mode="video" data-v="size">to a size</button>
+      </div>
       <div class="row">
         <label for="vid-codec">codec</label>
         <select id="vid-codec"></select>
       </div>
-      <div class="row">
+      <div class="row" data-when="video-quality">
         <label for="vid-q">quality</label>
         <input type="range" id="vid-q" min="20" max="100" value="70">
         <output for="vid-q" id="vid-q-out">70 · crf 23</output>
+      </div>
+      <div class="row" data-when="video-size" hidden>
+        <label for="vid-mb">target size</label>
+        <input type="number" id="vid-mb" min="0.1" step="1" value="25">
+        <span class="unit">MB each</span>
+        <button type="button" class="mini" data-fill="vid-mb" data-mb="8">8 · chat</button>
+        <button type="button" class="mini" data-fill="vid-mb" data-mb="25">25 · mail</button>
       </div>
       <div class="row">
         <label for="vid-preset">effort</label>
@@ -106,36 +132,52 @@
       </div>
     </fieldset>
 
-    <!-- AUDIO -->
     <fieldset class="group" id="g-audio" hidden>
       <legend>audio</legend>
+      <div class="modes" role="group" aria-label="Audio compression mode">
+        <button type="button" class="mode is-on" data-mode="audio" data-v="quality">by bitrate</button>
+        <button type="button" class="mode" data-mode="audio" data-v="size">to a size</button>
+      </div>
       <div class="row">
         <label for="aud-codec">codec</label>
         <select id="aud-codec"></select>
       </div>
-      <div class="row">
+      <div class="row" data-when="audio-quality">
         <label for="aud-kbps">bitrate</label>
         <input type="range" id="aud-kbps" min="32" max="320" step="16" value="128">
         <output for="aud-kbps" id="aud-kbps-out">128 kbps</output>
       </div>
+      <div class="row" data-when="audio-size" hidden>
+        <label for="aud-mb">target size</label>
+        <input type="number" id="aud-mb" min="0.05" step="0.5" value="5">
+        <span class="unit">MB each</span>
+      </div>
     </fieldset>
 
-    <!-- PDF -->
     <fieldset class="group" id="g-pdf" hidden>
       <legend>pdf</legend>
+      <div class="modes" role="group" aria-label="PDF compression mode">
+        <button type="button" class="mode is-on" data-mode="pdf" data-v="quality">by quality</button>
+        <button type="button" class="mode" data-mode="pdf" data-v="size">to a size</button>
+      </div>
       <div class="row check">
         <input type="checkbox" id="pdf-imgs" checked>
         <label for="pdf-imgs">recompress embedded images</label>
       </div>
-      <div class="row" id="pdf-q-row">
+      <div class="row" data-when="pdf-quality" id="pdf-q-row">
         <label for="pdf-q">image quality</label>
         <input type="range" id="pdf-q" min="30" max="100" value="78">
         <output for="pdf-q" id="pdf-q-out">78</output>
       </div>
-      <div class="row" id="pdf-edge-row">
+      <div class="row" data-when="pdf-quality" id="pdf-edge-row">
         <label for="pdf-edge">max image edge</label>
         <input type="range" id="pdf-edge" min="0" max="4000" step="200" value="2000">
         <output for="pdf-edge" id="pdf-edge-out">2000 px</output>
+      </div>
+      <div class="row" data-when="pdf-size" hidden>
+        <label for="pdf-mb">target size</label>
+        <input type="number" id="pdf-mb" min="0.05" step="0.5" value="5">
+        <span class="unit">MB each</span>
       </div>
       <div class="row check">
         <input type="checkbox" id="pdf-active" checked>
@@ -143,10 +185,9 @@
       </div>
       <div class="row">
         <label for="pdf-open">source password</label>
-        <input type="password" id="pdf-open" placeholder="only if the file is already locked"
-               autocomplete="off">
+        <input type="password" id="pdf-open" autocomplete="off"
+               placeholder="only if the file is already locked">
       </div>
-
       <div class="row check">
         <input type="checkbox" id="pdf-lock">
         <label for="pdf-lock">protect the result with a password</label>
@@ -166,8 +207,9 @@
           <button type="button" class="mini" id="pdf-gen">make one</button>
         </div>
         <p class="entropy" id="entropy">Nothing generated yet.</p>
-        <p class="warn">The password is shown here and nowhere else. Save it before
-          you close this page — an AES-256 PDF cannot be recovered without it.</p>
+        <p class="warn">Shown here and nowhere else, and cleared from this page
+          after five minutes. Save it before you close the tab — an AES-256 PDF
+          cannot be recovered without it.</p>
         <div class="perms">
           <span class="permslabel">still allowed once locked</span>
           <label><input type="checkbox" id="p-print" checked> printing</label>
@@ -180,18 +222,15 @@
     </fieldset>
   </section>
 
-  <section class="step" id="run-step" aria-labelledby="s3" hidden>
-    <h2 class="stephead" id="s3"><b>03</b> run</h2>
-    <button type="button" class="go" id="go">clean <span id="gocount"></span></button>
-    <div class="overall" id="overall" hidden>
-      <div id="upwrap"></div>
-      <div id="totwrap"></div>
-    </div>
+  <section class="step" id="run-step" aria-labelledby="s4" hidden>
+    <h2 class="stephead" id="s4"><b>04</b> clean</h2>
+    <button type="button" class="go" id="go">strip and compress</button>
+    <div class="barwrap" id="totwrap" hidden></div>
     <p class="err" id="err" hidden></p>
   </section>
 
-  <section class="step" id="out-step" aria-labelledby="s4" hidden>
-    <h2 class="stephead" id="s4"><b>04</b> results</h2>
+  <section class="step" id="out-step" aria-labelledby="s5" hidden>
+    <h2 class="stephead" id="s5"><b>05</b> results</h2>
     <div id="results" aria-live="polite"></div>
     <div class="outfoot" id="outfoot" hidden>
       <a class="mini" id="zip" href="#" download>download all as zip</a>
@@ -201,16 +240,17 @@
   </section>
 
   <footer class="colophon">
-    <p><b>What gets removed.</b> Images: EXIF, GPS, XMP, IPTC, embedded thumbnails,
-      colour profiles and PNG text chunks — the pixel buffer is rebuilt so nothing
-      rides along. Audio and video: container tags, stream tags, cover art and the
-      encoder banner that x264 and x265 write inside the bitstream. PDF: DocInfo,
-      XMP at document and page level, editor scratch data, JavaScript, auto-run
-      actions and file attachments.</p>
+    <p><b>What gets removed.</b> Images: EXIF, GPS, XMP, IPTC, embedded
+      thumbnails, colour profiles and PNG text chunks — the pixel buffer is
+      rebuilt so nothing rides along. Audio and video: container tags, stream
+      tags, cover art and the encoder banner that x264 and x265 write inside the
+      bitstream. PDF: DocInfo, XMP at document and page level, editor scratch
+      data, JavaScript, auto-run actions and file attachments.</p>
     <p><b>What is kept on purpose.</b> Photo orientation and video rotation are
-      applied to the pixels before the metadata that described them is deleted,
-      so nothing ends up sideways. Colour profiles are converted to sRGB first,
-      so colours do not shift.</p>
+      applied to the pixels before the metadata describing them is deleted, so
+      nothing ends up sideways. Colour profiles are converted to sRGB first, so
+      colours do not shift. Indexed palettes are carried across, because a
+      palette is the picture rather than a note about it.</p>
   </footer>
 </div>
 <script src="{{ url_for('static', filename='app.js') }}"></script>

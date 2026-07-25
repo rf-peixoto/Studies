@@ -1,7 +1,13 @@
 # scrub
 
-A local web app that strips metadata from images, audio, video and PDFs, then
-recompresses them. PDFs can also be locked with a generated password.
+A local web app that **shows you** what is hiding inside your images, audio,
+video and PDFs, strips it, and recompresses them. PDFs can also be locked with a
+generated password.
+
+Work happens in two phases. Uploading only *inspects*: every file is read and
+what is found in it is listed — GPS coordinates as real latitude and longitude,
+device model, author name, embedded JavaScript. Nothing is modified until you
+look at that and press the button.
 
 Everything runs on the machine you start it on. No CDN, no web fonts, no
 analytics, no network calls during processing. The app binds to `127.0.0.1` by
@@ -11,11 +17,34 @@ page.
 ## Setup
 
 ```bash
+./run.sh
+```
+
+That creates a virtual environment, installs everything and starts the server on
+<http://127.0.0.1:5000>. If the script will not execute, its permission bit was
+lost in transit — use `bash run.sh`, or `chmod +x run.sh` once.
+
+Doing it by hand works too:
+
+```bash
+python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 python app.py
 ```
 
-Then open <http://127.0.0.1:5000>.
+### Two questions on startup
+
+Before the server binds, it asks:
+
+```
+  Maximum upload size, in MB? [2048]
+  Keep uploaded files for how many minutes? [30]
+```
+
+Answer `0` to the second and nothing is ever deleted automatically — files stay
+until you press **delete from server now** or remove the temp directory. The
+prompts are skipped when there is no terminal attached (a service manager, a
+pipe, `--no-prompt`), in which case `SCRUB_MAX_MB` and `SCRUB_TTL` decide.
 
 There is nothing else to install. **No ffmpeg, no Ghostscript, no exiftool.**
 Every dependency ships a binary wheel:
@@ -37,10 +66,72 @@ All optional, all environment variables:
 | --- | --- | --- |
 | `SCRUB_HOST` | `127.0.0.1` | Set to `0.0.0.0` to expose on the network — read the warning below first |
 | `SCRUB_PORT` | `5000` | |
-| `SCRUB_MAX_MB` | `2048` | Rejected above this, per upload |
+| `SCRUB_MAX_MB` | `2048` | Rejected above this, per upload. Overridden by the startup prompt |
 | `SCRUB_MAX_FILES` | `40` | Files per run |
-| `SCRUB_WORKERS` | `2` | Parallel encodes. Roughly one per spare core |
-| `SCRUB_TTL` | `1800` | Seconds before results are deleted from disk |
+| `SCRUB_MAX_JOBS` | `8` | Live jobs before new uploads get a 429 |
+| `SCRUB_WORKERS` | `2` | Parallel encodes. Encoder threads are divided between them |
+| `SCRUB_TTL` | `1800` | Seconds before results are deleted. `0` means never. Overridden by the startup prompt |
+| `SCRUB_PDF_MAX_PAGES` | `5000` | Pages scanned for images. Metadata removal always covers every page |
+
+## Inspecting
+
+The report is grouped by what the data reveals rather than by how technically
+interesting it is:
+
+| | |
+| --- | --- |
+| **high** | identifies a person or a place — GPS, names, serial numbers, comments |
+| **active** | executes or carries a payload — JavaScript, auto-run actions, attachments |
+| **medium** | identifies equipment or timing — device model, software, timestamps |
+| **low** | technical residue with no personal content — density, profiles, handler names |
+
+GPS is decoded out of the EXIF rationals into decimal degrees you can paste
+into a map, because "GPSInfo: 6 fields" tells you nothing and
+`-23.55, -46.633333` tells you everything.
+
+## Never larger than it started
+
+Re-encoding is how you make a file smaller, but it is not the only way to make
+one clean, and sometimes it is the wrong one. A PNG already squeezed by a better
+compressor, or a JPEG already below the quality being asked for, comes back
+*bigger* from a re-encode — and for a lossy format, worse as well.
+
+So when the output format matches the input and the pixels were not resized,
+both routes are run and the smaller one wins:
+
+- **re-encode** — full strip, new compression settings
+- **lossless strip** — the container is rebuilt from its critical chunks only
+  and the pixel data is copied byte for byte. PNG keeps `IHDR`/`PLTE`/`tRNS`/
+  `IDAT` and the APNG animation chunks; JPEG keeps everything but `APP1`–`APP15`
+  and `COM`; GIF drops comment and application blocks but keeps graphic control,
+  so animation timing survives.
+
+The lossless route can only ever delete, so it cannot grow a file. Indexed
+images keep their palette *and* their transparent index, because both are the
+picture rather than a note about it.
+
+The one case where a flat 0% is accurate but useless is a photograph stored as
+PNG. That gets called out in the log with what a format change would actually
+save, rather than being reported as a job well done.
+
+## Targeting a size
+
+Every media type can be driven by a size instead of a quality number, because
+people think in "under 25 MB for email", not in "CRF 23".
+
+- **Images** bisect the quality scale for the highest setting that fits. If even
+  the floor overshoots, the image is progressively downscaled — past a point,
+  fewer pixels looks better than quality 5 does.
+- **Video** computes a bitrate from the duration and encodes, then measures and
+  re-encodes up to three times. If audio alone would eat the budget it is
+  reduced first, and said so in the log.
+- **Audio** derives a bitrate from the duration, then does one corrective pass,
+  since Opus and AAC treat a nominal bitrate as a request rather than a promise.
+- **PDFs** walk a ladder of quality and image-resolution steps, dropping
+  precision before dropping pixels, and stop at the first one that fits.
+
+When a target cannot be reached, the log says so and explains what the floor
+actually is rather than silently returning something too big.
 
 ## What gets removed
 
@@ -136,11 +227,15 @@ cannot be recovered without it.
   would be theatre. If that matters, run this on an encrypted volume.
 - **Images inside nested PDF form XObjects** are not reached by the compression
   pass. Metadata removal is unaffected; only the size saving is.
+- **Multichannel audio survives into Opus, AAC and FLAC**, but MP3 cannot carry
+  it, so a 5.1 track folds to stereo. The log says when that happens rather than
+  doing it quietly.
 - **The development server is what `python app.py` starts.** For anything
   beyond localhost use a real WSGI server, put it behind TLS, and think hard
   about whether you want other people's files on your disk.
-- **PNG output is often larger than the JPEG input.** That is lossless
-  compression doing its job, not a bug. The result panel reports it honestly.
+- **Converting to PNG from a lossy source will usually be larger.** That is
+  lossless compression doing its job. It only happens when you ask for PNG
+  explicitly; keeping the original format never grows a file.
 
 ## Layout
 
@@ -148,7 +243,9 @@ cannot be recovered without it.
 app.py              Flask routes, config, security headers
 jobs.py             job registry, thread pool, progress, temp file lifecycle
 scrub/detect.py     content-based file classification
+scrub/inspector.py  read-only metadata reporting
 scrub/images.py     Pillow: strip and recompress
+scrub/lossless.py   container rewriting that never touches pixel data
 scrub/media.py      PyAV: transcode, strip, SEI removal
 scrub/pdfs.py       pikepdf: strip, compress, encrypt, generate passwords
 templates/, static/ the page
@@ -160,4 +257,8 @@ state stays trivial to share.
 
 Each job owns one directory under a single temp root. Nothing is written
 elsewhere, no path is built from user input, and a reaper thread deletes each
-job directory once it passes its TTL.
+job directory once it passes its TTL. Encoder threads are divided by the worker
+count, so two workers do not each try to claim every core and then fight over
+them. The results archive is built on disk rather than in memory, because
+holding a batch of finished video in RAM to zip it is how a local tool runs a
+machine out of memory.

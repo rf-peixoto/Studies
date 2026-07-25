@@ -32,6 +32,8 @@ _SIGNATURES = [
     (b"GIF87a", "image"),
     (b"GIF89a", "image"),
     (b"BM", "image"),
+    (b"II\x2a\x00", "image"),      # little-endian TIFF
+    (b"MM\x00\x2a", "image"),      # big-endian TIFF
 ]
 
 

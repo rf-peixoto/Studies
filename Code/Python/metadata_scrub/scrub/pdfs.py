@@ -145,14 +145,20 @@ def _strip_page_metadata(pdf: pikepdf.Pdf, log) -> None:
     log(f"page-level metadata entries removed: {n}")
 
 
+MAX_PAGES = int(os.environ.get("SCRUB_PDF_MAX_PAGES", "5000"))
+
+
 def _recompress_images(pdf: pikepdf.Pdf, quality: int, max_edge: int,
                        log, progress, lo: int, hi: int) -> None:
     seen: set[tuple[int, int]] = set()
     saved = 0
     touched = 0
-    pages = len(pdf.pages)
+    pages = min(len(pdf.pages), MAX_PAGES)
+    if len(pdf.pages) > MAX_PAGES:
+        log(f"only the first {MAX_PAGES} pages are scanned for images "
+            f"(of {len(pdf.pages)}); metadata removal still covers all of them")
 
-    for idx, page in enumerate(pdf.pages):
+    for idx, page in enumerate(pdf.pages[:pages]):
         try:
             images = dict(page.images)
         except Exception:
@@ -162,6 +168,20 @@ def _recompress_images(pdf: pikepdf.Pdf, quality: int, max_edge: int,
             if key in seen:
                 continue
             seen.add(key)
+            # Screen on the dictionary first. Decoding a JPEG only to discover
+            # it was already small is the expensive way to learn nothing.
+            try:
+                width = int(raw.get("/Width", 0))
+                height = int(raw.get("/Height", 0))
+                bpc = int(raw.get("/BitsPerComponent", 8))
+            except Exception:
+                width = height = 0
+                bpc = 8
+            if bpc == 1:
+                continue          # bilevel scan: CCITT/JBIG2, leave it alone
+            if width and height and not (max_edge and max(width, height) > max_edge):
+                if width * height < 90_000:
+                    continue      # under ~0.1 MP, recompression buys nothing
             try:
                 before = len(raw.read_raw_bytes())
             except Exception:
@@ -210,31 +230,70 @@ def _recompress_images(pdf: pikepdf.Pdf, quality: int, max_edge: int,
 
 
 def process(src: str, out_dir: str, opts: dict, log, progress) -> str:
-    quality = int(opts.get("pdf_quality", 75))
-    max_edge = int(opts.get("pdf_max_edge", 2000) or 0)
+    """Clean a PDF. In size-target mode, walk a ladder until it fits."""
+    dst = os.path.join(out_dir, "out.pdf")
+    by_size = opts.get("pdf_mode") == "size"
+
+    if not by_size:
+        _produce(src, dst, opts,
+                 int(opts.get("pdf_quality", 75)),
+                 int(opts.get("pdf_max_edge", 2000) or 0),
+                 log, progress, 5, 95)
+        return dst
+
+    target = int(float(opts.get("pdf_target_mb", 5) or 5) * 1024 * 1024)
+    log(f"target {target // 1024} KB")
+    # Quality first, resolution only when quality alone will not get there --
+    # dropping pixels is more visible than dropping precision.
+    ladder = [(88, 0), (78, 2400), (68, 1800), (55, 1400), (42, 1100), (30, 800)]
+    quiet = lambda _m: None
+    for step, (quality, edge) in enumerate(ladder):
+        lo = 5 + int(88 * step / len(ladder))
+        hi = 5 + int(88 * (step + 1) / len(ladder))
+        _produce(src, dst, opts, quality, edge,
+                 log if step == 0 else quiet, progress, lo, hi)
+        size = os.path.getsize(dst)
+        log(f"quality {quality}"
+            + (f", images capped at {edge} px" if edge else "")
+            + f" -> {size // 1024} KB")
+        if size <= target:
+            log(f"target met: {size // 1024} KB of {target // 1024} KB")
+            progress(98)
+            return dst
+    log(f"could not reach {target // 1024} KB; smallest is "
+        f"{os.path.getsize(dst) // 1024} KB -- the text and structure are the "
+        f"floor here, not the images")
+    progress(98)
+    return dst
+
+
+def _produce(src: str, dst: str, opts: dict, quality: int, max_edge: int,
+             log, progress, lo: int, hi: int) -> None:
     compress_images = bool(opts.get("pdf_compress_images", True))
     strip_active = bool(opts.get("pdf_strip_active", True))
     open_password = opts.get("pdf_open_password") or ""
     user_pw = opts.get("pdf_password") or ""
     perms = opts.get("pdf_permissions") or {}
 
-    progress(5)
+    progress(lo)
     pdf = pikepdf.open(src, password=open_password, allow_overwriting_input=False)
     if pdf.is_encrypted:
         log("source was encrypted; opened with supplied password")
     log(f"{len(pdf.pages)} page(s), PDF {pdf.pdf_version}")
 
+    span = hi - lo
     _strip_document_metadata(pdf, log)
     _strip_page_metadata(pdf, log)
-    progress(20)
+    progress(lo + span // 6)
     if strip_active:
         _strip_active_content(pdf, log)
-    progress(30)
+    progress(lo + span // 4)
 
     if compress_images:
-        _recompress_images(pdf, quality, max_edge, log, progress, 30, 80)
+        _recompress_images(pdf, quality, max_edge, log, progress,
+                           lo + span // 4, lo + int(span * 0.85))
     else:
-        progress(80)
+        progress(lo + int(span * 0.85))
 
     try:
         pdf.remove_unreferenced_resources()
@@ -271,7 +330,6 @@ def process(src: str, out_dir: str, opts: dict, log, progress) -> str:
         save_kwargs["deterministic_id"] = True
         save_kwargs["linearize"] = True
 
-    dst = os.path.join(out_dir, "out.pdf")
     pdf.save(dst, **save_kwargs)
     pdf.close()
 
@@ -291,5 +349,4 @@ def process(src: str, out_dir: str, opts: dict, log, progress) -> str:
         except Exception:
             pass
 
-    progress(98)
-    return dst
+    progress(hi)
