@@ -22,6 +22,9 @@ import secrets
 import pikepdf
 from PIL import Image
 
+from scrub import images as _images
+from scrub.similarity import floor_for
+
 AMBIGUOUS = "Il1O0S5B8|`'\","
 
 
@@ -148,11 +151,16 @@ def _strip_page_metadata(pdf: pikepdf.Pdf, log) -> None:
 MAX_PAGES = int(os.environ.get("SCRUB_PDF_MAX_PAGES", "5000"))
 
 
-def _recompress_images(pdf: pikepdf.Pdf, quality: int, max_edge: int,
+# Below this, searching costs more than it saves; a fixed high setting is used.
+SEARCH_MIN_PIXELS = 300_000
+
+
+def _recompress_images(pdf: pikepdf.Pdf, floor: float | None, max_edge: int,
                        log, progress, lo: int, hi: int) -> None:
     seen: set[tuple[int, int]] = set()
     saved = 0
     touched = 0
+    searched = 0
     pages = min(len(pdf.pages), MAX_PAGES)
     if len(pdf.pages) > MAX_PAGES:
         log(f"only the first {MAX_PAGES} pages are scanned for images "
@@ -203,10 +211,18 @@ def _recompress_images(pdf: pikepdf.Pdf, quality: int, max_edge: int,
             if max_edge and max(pil.size) > max_edge:
                 pil.thumbnail((max_edge, max_edge), Image.LANCZOS)
 
-            buf = io.BytesIO()
-            pil.save(buf, format="JPEG", quality=quality, optimize=True,
-                     progressive=True, subsampling=0 if quality >= 88 else 2)
-            data = buf.getvalue()
+            if floor is None:
+                continue     # lossless: the images are the picture, leave them
+            if pil.width * pil.height >= SEARCH_MIN_PIXELS:
+                # Same perceptual search the standalone image path uses, so a
+                # scanned page and a photo get judged the same way.
+                data = _images.search_encode(pil, "JPEG", floor, lambda _m: None)
+                searched += 1
+            else:
+                buf = io.BytesIO()
+                pil.save(buf, format="JPEG", quality=88, optimize=True,
+                         progressive=True, subsampling=2)
+                data = buf.getvalue()
             if len(data) >= before:
                 continue  # already smaller than we can do; leave it alone
 
@@ -224,50 +240,22 @@ def _recompress_images(pdf: pikepdf.Pdf, quality: int, max_edge: int,
         progress(lo + int((hi - lo) * (idx + 1) / max(pages, 1)))
 
     if touched:
-        log(f"recompressed {touched} image(s), {saved // 1024} KB removed")
+        note = f", {searched} chosen by perceptual search" if searched else ""
+        log(f"recompressed {touched} image(s){note}, {saved // 1024} KB removed")
     else:
         log("no images worth recompressing")
 
 
 def process(src: str, out_dir: str, opts: dict, log, progress) -> str:
-    """Clean a PDF. In size-target mode, walk a ladder until it fits."""
+    """Clean a PDF at the requested quality level."""
     dst = os.path.join(out_dir, "out.pdf")
-    by_size = opts.get("pdf_mode") == "size"
-
-    if not by_size:
-        _produce(src, dst, opts,
-                 int(opts.get("pdf_quality", 75)),
-                 int(opts.get("pdf_max_edge", 2000) or 0),
-                 log, progress, 5, 95)
-        return dst
-
-    target = int(float(opts.get("pdf_target_mb", 5) or 5) * 1024 * 1024)
-    log(f"target {target // 1024} KB")
-    # Quality first, resolution only when quality alone will not get there --
-    # dropping pixels is more visible than dropping precision.
-    ladder = [(88, 0), (78, 2400), (68, 1800), (55, 1400), (42, 1100), (30, 800)]
-    quiet = lambda _m: None
-    for step, (quality, edge) in enumerate(ladder):
-        lo = 5 + int(88 * step / len(ladder))
-        hi = 5 + int(88 * (step + 1) / len(ladder))
-        _produce(src, dst, opts, quality, edge,
-                 log if step == 0 else quiet, progress, lo, hi)
-        size = os.path.getsize(dst)
-        log(f"quality {quality}"
-            + (f", images capped at {edge} px" if edge else "")
-            + f" -> {size // 1024} KB")
-        if size <= target:
-            log(f"target met: {size // 1024} KB of {target // 1024} KB")
-            progress(98)
-            return dst
-    log(f"could not reach {target // 1024} KB; smallest is "
-        f"{os.path.getsize(dst) // 1024} KB -- the text and structure are the "
-        f"floor here, not the images")
+    _produce(src, dst, opts, floor_for(opts.get("level", "balanced")),
+             int(opts.get("pdf_max_edge", 2000) or 0), log, progress, 5, 95)
     progress(98)
     return dst
 
 
-def _produce(src: str, dst: str, opts: dict, quality: int, max_edge: int,
+def _produce(src: str, dst: str, opts: dict, floor: float | None, max_edge: int,
              log, progress, lo: int, hi: int) -> None:
     compress_images = bool(opts.get("pdf_compress_images", True))
     strip_active = bool(opts.get("pdf_strip_active", True))
@@ -290,7 +278,7 @@ def _produce(src: str, dst: str, opts: dict, quality: int, max_edge: int,
     progress(lo + span // 4)
 
     if compress_images:
-        _recompress_images(pdf, quality, max_edge, log, progress,
+        _recompress_images(pdf, floor, max_edge, log, progress,
                            lo + span // 4, lo + int(span * 0.85))
     else:
         progress(lo + int(span * 0.85))

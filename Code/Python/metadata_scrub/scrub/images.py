@@ -22,6 +22,7 @@ import os
 from PIL import Image, ImageCms, ImageOps, ImageSequence
 
 from scrub import lossless
+from scrub.similarity import floor_for, ssim
 
 try:  # HEIC/HEIF is what iPhones actually produce.
     import pillow_heif
@@ -38,8 +39,25 @@ _SRGB = ImageCms.createProfile("sRGB")
 _EXT = {"JPEG": ".jpg", "PNG": ".png", "WEBP": ".webp", "AVIF": ".avif",
         "GIF": ".gif"}
 
-# Formats whose quality parameter we can search over to hit a size target.
-_TUNABLE = {"JPEG", "WEBP", "AVIF"}
+# Search ladders, ordered from most compressed to least. Each entry is
+# (quality, subsampling); subsampling is ignored by formats that have no chroma
+# setting. The 4:2:0 -> 4:4:4 step sits near the top so the whole ladder is
+# non-decreasing in perceived quality, which is what lets the search bisect it.
+LADDERS = {
+    "JPEG": [(25, 2), (32, 2), (38, 2), (44, 2), (50, 2), (56, 2), (62, 2),
+             (68, 2), (73, 2), (78, 2), (82, 2), (85, 2), (88, 2), (90, 2),
+             (92, 2), (90, 0), (93, 0), (95, 0), (97, 0), (99, 0)],
+    "WEBP": [(20, 0), (26, 0), (32, 0), (38, 0), (44, 0), (50, 0), (56, 0),
+             (62, 0), (68, 0), (73, 0), (78, 0), (83, 0), (87, 0), (91, 0),
+             (94, 0), (97, 0), (99, 0)],
+    "AVIF": [(20, 0), (26, 0), (32, 0), (38, 0), (44, 0), (50, 0), (56, 0),
+             (62, 0), (68, 0), (73, 0), (78, 0), (83, 0), (87, 0), (91, 0),
+             (94, 0), (97, 0), (99, 0)],
+}
+_TUNABLE = set(LADDERS)
+
+# Formats whose pixels already went through a lossy encoder once.
+LOSSY_SOURCES = {"JPEG", "MPO", "WEBP", "AVIF", "HEIF", "HEIC"}
 
 
 def _strip(im: Image.Image) -> Image.Image:
@@ -87,7 +105,8 @@ def _fit(im: Image.Image, max_edge: int, log) -> Image.Image:
     return im
 
 
-def _save_params(fmt: str, quality: int, im: Image.Image) -> dict:
+def _save_params(fmt: str, quality: int, im: Image.Image,
+                 subsampling: int = 2) -> dict:
     """Encoder settings. These are where the actual compression wins live."""
     if fmt == "JPEG":
         return {
@@ -95,9 +114,9 @@ def _save_params(fmt: str, quality: int, im: Image.Image) -> dict:
             "quality": quality,
             "optimize": True,          # second Huffman pass, ~2-5% smaller, free
             "progressive": True,       # smaller above ~10KB and renders sooner
-            # 4:4:4 keeps chroma detail when quality is high; 4:2:0 halves chroma
-            # data when it is not, which is where most of the saving comes from.
-            "subsampling": 0 if quality >= 88 else 2,
+            # 4:2:0 halves the chroma data, which is most of the saving. The
+            # search decides when a picture cannot afford it.
+            "subsampling": subsampling,
             "exif": b"",
             "icc_profile": None,
         }
@@ -105,10 +124,15 @@ def _save_params(fmt: str, quality: int, im: Image.Image) -> dict:
         return {"format": "WEBP", "quality": quality, "method": 6,
                 "lossless": quality >= 100, "exif": b"", "icc_profile": None,
                 "xmp": b""}
+    if fmt == "WEBP_LOSSLESS":
+        return {"format": "WEBP", "lossless": True, "quality": 100, "method": 6,
+                "exif": b"", "icc_profile": None, "xmp": b""}
     if fmt == "AVIF":
         return {"format": "AVIF", "quality": quality, "speed": 5,
                 "exif": b"", "icc_profile": None, "xmp": b""}
-    if fmt == "PNG":
+    if fmt in ("PNG", "GIF"):
+        if fmt == "GIF":
+            return {"format": "GIF", "optimize": True}
         params = {"format": "PNG", "optimize": True, "compress_level": 9,
                   "pnginfo": None, "icc_profile": None}
         if im.mode in ("P", "PA") and "transparency" in im.info:
@@ -143,63 +167,70 @@ def _has_alpha(im: Image.Image) -> bool:
     return im.mode in ("RGBA", "LA", "PA") or "transparency" in im.info
 
 
-def _encode(im: Image.Image, fmt: str, quality: int) -> bytes:
+def _encode(im: Image.Image, fmt: str, quality: int, subsampling: int = 2) -> bytes:
     buf = io.BytesIO()
-    im.save(buf, **_save_params(fmt, quality, im))
+    im.save(buf, **_save_params(fmt, quality, im, subsampling))
     return buf.getvalue()
 
 
-def _encode_to_target(im: Image.Image, fmt: str, target: int, log) -> bytes:
-    """Search for the highest quality that still fits inside `target` bytes.
+def _decode(data: bytes) -> Image.Image:
+    im = Image.open(io.BytesIO(data))
+    im.load()
+    return im
 
-    Bisection over the quality scale, then progressive downscaling if even the
-    lowest quality overshoots -- past a point, fewer pixels is the only lever
-    left, and it looks better than quality 5 does.
+
+def search_encode(im: Image.Image, fmt: str, floor: float, log) -> bytes:
+    """Find the most compressed setting that still looks as good as asked.
+
+    The ladder runs from heavily compressed to barely compressed and is
+    non-decreasing in similarity, so this is a plain bisection for the leftmost
+    entry that clears the floor -- four or five encodes rather than fourteen.
     """
-    if fmt not in _TUNABLE:
-        data = _encode(im, fmt, 90)
-        log(f"{fmt} has no quality scale to search; wrote {len(data) // 1024} KB")
+    ladder = LADDERS[fmt]
+    lo, hi = 0, len(ladder) - 1
+    best: tuple[bytes, float, tuple[int, int]] | None = None
+    tried = 0
+
+    while lo <= hi:
+        mid = (lo + hi) // 2
+        quality, sub = ladder[mid]
+        data = _encode(im, fmt, quality, sub)
+        tried += 1
+        try:
+            score = ssim(im, _decode(data))
+        except Exception:
+            score = 1.0
+        if score >= floor:
+            best = (data, score, ladder[mid])
+            hi = mid - 1
+        else:
+            lo = mid + 1
+
+    if best is None:
+        quality, sub = ladder[-1]
+        data = _encode(im, fmt, quality, sub)
+        try:
+            score = ssim(im, _decode(data))
+        except Exception:
+            score = 0.0
+        log(f"even the highest setting only reaches {score:.4f} similarity; "
+            f"used it anyway")
         return data
 
-    work = im
-    for attempt in range(5):
-        lo, hi, best, best_q = 5, 98, None, None
-        while lo <= hi:
-            mid = (lo + hi) // 2
-            data = _encode(work, fmt, mid)
-            if len(data) <= target:
-                best, best_q, lo = data, mid, mid + 1
-            else:
-                hi = mid - 1
-        if best is not None:
-            log(f"target met at quality {best_q}"
-                + (f", {work.size[0]}x{work.size[1]}" if work is not im else "")
-                + f" -- {len(best) // 1024} KB of {target // 1024} KB")
-            return best
-        if attempt == 4:
-            break
-        new = work.copy()
-        new.thumbnail((int(work.size[0] * 0.75), int(work.size[1] * 0.75)),
-                      Image.LANCZOS)
-        if min(new.size) < 32:
-            break
-        log(f"quality floor still over target; scaling to "
-            f"{new.size[0]}x{new.size[1]}")
-        work = new
-
-    data = _encode(work, fmt, 5)
-    log(f"could not reach {target // 1024} KB; smallest possible is "
-        f"{len(data) // 1024} KB")
+    data, score, (quality, sub) = best
+    chroma = "4:4:4" if sub == 0 else "4:2:0"
+    detail = f"quality {quality}" + (f", {chroma}" if fmt == "JPEG" else "")
+    log(f"searched {tried} settings; {detail} gives {score:.4f} similarity "
+        f"against a floor of {floor:.3f} -- {len(data) // 1024} KB")
     return data
 
 
 def process(src: str, out_dir: str, opts: dict, log, progress) -> str:
     """Scrub and recompress one image. Returns the output path."""
-    quality = int(opts.get("quality", 80))
+    level = opts.get("level", "balanced")
+    floor = floor_for(level)
     max_edge = int(opts.get("max_edge", 0) or 0)
     choice = opts.get("image_format", "keep")
-    by_size = opts.get("image_mode") == "size"
-    target = int(float(opts.get("image_target_mb", 1) or 1) * 1024 * 1024)
 
     progress(5)
     im = Image.open(src)
@@ -214,7 +245,7 @@ def process(src: str, out_dir: str, opts: dict, log, progress) -> str:
     progress(15)
 
     if animated and choice == "keep":
-        return _process_animated(im, out_dir, quality, max_edge, log, progress)
+        return _process_animated(im, out_dir, level, max_edge, log, progress)
 
     before_size = im.size
     im = ImageOps.exif_transpose(im) or im   # bake rotation before we lose it
@@ -242,16 +273,42 @@ def process(src: str, out_dir: str, opts: dict, log, progress) -> str:
     log("pixel buffer rebuilt; all ancillary chunks discarded")
     progress(60)
 
-    dst = os.path.join(out_dir, "out" + _EXT.get(fmt, ".bin"))
-    if by_size:
-        data = _encode_to_target(clean, fmt, target, log)
+    if floor is None and fmt in _TUNABLE:
+        if (src_format or "").upper() in LOSSY_SOURCES and choice == "keep":
+            # The pixels are already the result of lossy compression. Re-encoding
+            # them "losslessly" into PNG preserves the compression artefacts at
+            # enormous cost -- the honest lossless answer is to leave the image
+            # data alone and clean only the container.
+            dst = os.path.join(out_dir, "out" + _EXT.get(fmt, ".bin"))
+            data, removed = lossless.strip(src)
+            if data is not None:
+                with open(dst, "wb") as fh:
+                    fh.write(data)
+                log("lossless: image data left untouched, "
+                    + (f"removed {', '.join(sorted(set(removed)))}" if removed
+                       else "no metadata blocks were present"))
+                progress(95)
+                return dst
+            log("lossless requested but this container cannot be edited in "
+                "place; re-encoding at the highest setting")
+            quality, sub = LADDERS[fmt][-1]
+            with open(dst, "wb") as fh:
+                fh.write(_encode(clean, fmt, quality, sub))
+            progress(95)
+            return dst
+        fmt = "WEBP_LOSSLESS" if fmt in ("WEBP", "AVIF") else "PNG"
+        log(f"lossless requested -- writing {fmt.split('_')[0]} instead")
+
+    dst = os.path.join(out_dir, "out" + _EXT.get(fmt.split("_")[0], ".bin"))
+    if fmt in _TUNABLE:
+        data = search_encode(clean, fmt, floor, log)
         with open(dst, "wb") as fh:
             fh.write(data)
     else:
-        clean.save(dst, **_save_params(fmt, quality, clean))
-        log(f"encoded {fmt} at quality {quality}")
+        clean.save(dst, **_save_params(fmt, 100, clean))
+        log(f"{fmt.split('_')[0]} is lossless; nothing to trade away")
 
-    _keep_the_smaller(src, dst, src_format, fmt, resized, log)
+    _keep_the_smaller(src, dst, src_format, fmt.split("_")[0], resized, log)
     _suggest_format(clean, fmt, os.path.getsize(dst), log)
     progress(95)
     return dst
@@ -311,7 +368,7 @@ def _keep_the_smaller(src: str, dst: str, src_format: str, out_format: str,
            else "no metadata blocks were present"))
 
 
-def _process_animated(im, out_dir, quality, max_edge, log, progress) -> str:
+def _process_animated(im, out_dir, level, max_edge, log, progress) -> str:
     """Keep the animation, drop everything around it."""
     fmt = im.format or "GIF"
     log(f"animated: {getattr(im, 'n_frames', '?')} frames, preserving sequence")

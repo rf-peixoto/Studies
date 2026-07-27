@@ -44,155 +44,60 @@
   <section class="step" id="settings-step" aria-labelledby="s3" hidden>
     <h2 class="stephead" id="s3"><b>03</b> settings</h2>
 
-    <div class="presets" role="group" aria-label="Quality presets">
-      <button type="button" class="preset" data-preset="archive">archive</button>
-      <button type="button" class="preset is-on" data-preset="balanced">balanced</button>
-      <button type="button" class="preset" data-preset="small">smallest</button>
-      <span class="presetnote">Sets every slider below. Adjust any afterwards.</span>
-    </div>
+    <fieldset class="levels">
+      <legend class="levlegend">How good should the result look?</legend>
+      <p class="lede">Images and PDFs are compared against the original and
+        compressed as hard as the level allows — the encoder setting is searched
+        for, not guessed, because the same number means different things to a
+        photograph and a screenshot. Video and audio use constant-quality
+        encoding at the matching level.</p>
 
-    <fieldset class="group" id="g-image" hidden>
-      <legend>image</legend>
-      <div class="modes" role="group" aria-label="Image compression mode">
-        <button type="button" class="mode is-on" data-mode="image" data-v="quality">by quality</button>
-        <button type="button" class="mode" data-mode="image" data-v="size">to a size</button>
-      </div>
-      <div class="row" data-when="image-quality">
-        <label for="img-q">quality</label>
-        <input type="range" id="img-q" min="30" max="100" value="82">
-        <output for="img-q" id="img-q-out">82</output>
-      </div>
-      <div class="row" data-when="image-size" hidden>
-        <label for="img-mb">target size</label>
-        <input type="number" id="img-mb" min="0.01" step="0.1" value="1">
-        <span class="unit">MB each</span>
-      </div>
-      <div class="row">
-        <label for="img-fmt">format</label>
-        <select id="img-fmt">
-          <option value="keep">keep original</option>
-          <option value="jpeg">JPEG</option>
-          <option value="webp">WebP — ~30% smaller than JPEG</option>
-          <option value="avif">AVIF — smallest, newer viewers</option>
-          <option value="png">PNG — lossless</option>
-        </select>
-      </div>
-      <div class="row" data-when="image-quality">
-        <label for="img-edge">max edge</label>
-        <input type="range" id="img-edge" min="0" max="6000" step="200" value="0">
-        <output for="img-edge" id="img-edge-out">no limit</output>
-      </div>
+      <label class="level">
+        <input type="radio" name="level" value="lossless">
+        <span class="lname">lossless</span>
+        <span class="ldesc">Nothing is re-encoded. Metadata comes off; the
+          picture and sound stay byte for byte what they were.</span>
+      </label>
+      <label class="level">
+        <input type="radio" name="level" value="imperceptible">
+        <span class="lname">imperceptible</span>
+        <span class="ldesc">Compressed to just before the point you could tell.
+          A modest saving on photographs, often a large one on documents.</span>
+      </label>
+      <label class="level">
+        <input type="radio" name="level" value="high">
+        <span class="lname">high</span>
+        <span class="ldesc">A difference exists, but you would have to go
+          looking for it side by side.</span>
+      </label>
+      <label class="level">
+        <input type="radio" name="level" value="balanced" checked>
+        <span class="lname">balanced</span>
+        <span class="ldesc">Clearly smaller, still good to look at. A sensible
+          default for sharing and uploading.</span>
+      </label>
+      <label class="level">
+        <input type="radio" name="level" value="small">
+        <span class="lname">small</span>
+        <span class="ldesc">Visible softening on detailed images. Worth it when
+          size matters more than fidelity.</span>
+      </label>
+      <label class="level">
+        <input type="radio" name="level" value="tiny">
+        <span class="lname">tiny</span>
+        <span class="ldesc">Plainly degraded. For when it simply has to
+          fit.</span>
+      </label>
+      <p class="note dim" id="levelnote">Searching costs a second or two per
+        image. Larger batches take proportionally longer.</p>
     </fieldset>
 
-    <fieldset class="group" id="g-video" hidden>
-      <legend>video</legend>
-      <div class="modes" role="group" aria-label="Video compression mode">
-        <button type="button" class="mode is-on" data-mode="video" data-v="quality">by quality</button>
-        <button type="button" class="mode" data-mode="video" data-v="size">to a size</button>
-      </div>
-      <div class="row">
-        <label for="vid-codec">codec</label>
-        <select id="vid-codec"></select>
-      </div>
-      <div class="row" data-when="video-quality">
-        <label for="vid-q">quality</label>
-        <input type="range" id="vid-q" min="20" max="100" value="70">
-        <output for="vid-q" id="vid-q-out">70 · crf 23</output>
-      </div>
-      <div class="row" data-when="video-size" hidden>
-        <label for="vid-mb">target size</label>
-        <input type="number" id="vid-mb" min="0.1" step="1" value="25">
-        <span class="unit">MB each</span>
-        <button type="button" class="mini" data-fill="vid-mb" data-mb="8">8 · chat</button>
-        <button type="button" class="mini" data-fill="vid-mb" data-mb="25">25 · mail</button>
-      </div>
-      <div class="row">
-        <label for="vid-preset">effort</label>
-        <select id="vid-preset">
-          <option value="veryfast">very fast — largest file</option>
-          <option value="fast">fast</option>
-          <option value="medium" selected>medium</option>
-          <option value="slow">slow — smallest file</option>
-        </select>
-      </div>
-      <div class="row">
-        <label for="vid-height">max height</label>
-        <select id="vid-height">
-          <option value="0">keep original</option>
-          <option value="2160">2160p</option>
-          <option value="1080">1080p</option>
-          <option value="720">720p</option>
-          <option value="480">480p</option>
-        </select>
-      </div>
-      <div class="row">
-        <label for="vid-abr">audio</label>
-        <input type="range" id="vid-abr" min="48" max="320" step="16" value="128">
-        <output for="vid-abr" id="vid-abr-out">128 kbps</output>
-      </div>
-    </fieldset>
-
-    <fieldset class="group" id="g-audio" hidden>
-      <legend>audio</legend>
-      <div class="modes" role="group" aria-label="Audio compression mode">
-        <button type="button" class="mode is-on" data-mode="audio" data-v="quality">by bitrate</button>
-        <button type="button" class="mode" data-mode="audio" data-v="size">to a size</button>
-      </div>
-      <div class="row">
-        <label for="aud-codec">codec</label>
-        <select id="aud-codec"></select>
-      </div>
-      <div class="row" data-when="audio-quality">
-        <label for="aud-kbps">bitrate</label>
-        <input type="range" id="aud-kbps" min="32" max="320" step="16" value="128">
-        <output for="aud-kbps" id="aud-kbps-out">128 kbps</output>
-      </div>
-      <div class="row" data-when="audio-size" hidden>
-        <label for="aud-mb">target size</label>
-        <input type="number" id="aud-mb" min="0.05" step="0.5" value="5">
-        <span class="unit">MB each</span>
-      </div>
-    </fieldset>
-
-    <fieldset class="group" id="g-pdf" hidden>
-      <legend>pdf</legend>
-      <div class="modes" role="group" aria-label="PDF compression mode">
-        <button type="button" class="mode is-on" data-mode="pdf" data-v="quality">by quality</button>
-        <button type="button" class="mode" data-mode="pdf" data-v="size">to a size</button>
-      </div>
-      <div class="row check">
-        <input type="checkbox" id="pdf-imgs" checked>
-        <label for="pdf-imgs">recompress embedded images</label>
-      </div>
-      <div class="row" data-when="pdf-quality" id="pdf-q-row">
-        <label for="pdf-q">image quality</label>
-        <input type="range" id="pdf-q" min="30" max="100" value="78">
-        <output for="pdf-q" id="pdf-q-out">78</output>
-      </div>
-      <div class="row" data-when="pdf-quality" id="pdf-edge-row">
-        <label for="pdf-edge">max image edge</label>
-        <input type="range" id="pdf-edge" min="0" max="4000" step="200" value="2000">
-        <output for="pdf-edge" id="pdf-edge-out">2000 px</output>
-      </div>
-      <div class="row" data-when="pdf-size" hidden>
-        <label for="pdf-mb">target size</label>
-        <input type="number" id="pdf-mb" min="0.05" step="0.5" value="5">
-        <span class="unit">MB each</span>
-      </div>
-      <div class="row check">
-        <input type="checkbox" id="pdf-active" checked>
-        <label for="pdf-active">remove JavaScript, attachments and auto-actions</label>
-      </div>
-      <div class="row">
-        <label for="pdf-open">source password</label>
-        <input type="password" id="pdf-open" autocomplete="off"
-               placeholder="only if the file is already locked">
-      </div>
+    <fieldset class="group" id="g-protect" hidden>
+      <legend>protect the pdf</legend>
       <div class="row check">
         <input type="checkbox" id="pdf-lock">
-        <label for="pdf-lock">protect the result with a password</label>
+        <label for="pdf-lock">lock the result with a password</label>
       </div>
-
       <div class="lockbox" id="lockbox" hidden>
         <div class="row">
           <label for="pdf-pw">password</label>
@@ -220,6 +125,86 @@
         </div>
       </div>
     </fieldset>
+
+    <details class="advanced" id="advanced">
+      <summary>advanced — formats, codecs and size limits</summary>
+
+      <fieldset class="group" id="g-image" hidden>
+        <legend>image</legend>
+        <div class="row">
+          <label for="img-fmt">output format</label>
+          <select id="img-fmt">
+            <option value="keep">keep original</option>
+            <option value="jpeg">JPEG</option>
+            <option value="webp">WebP — ~30% smaller than JPEG</option>
+            <option value="avif">AVIF — smallest, newer viewers</option>
+            <option value="png">PNG — lossless</option>
+          </select>
+        </div>
+        <div class="row">
+          <label for="img-edge">max edge</label>
+          <input type="range" id="img-edge" min="0" max="6000" step="200" value="0">
+          <output for="img-edge" id="img-edge-out">no limit</output>
+        </div>
+      </fieldset>
+
+      <fieldset class="group" id="g-video" hidden>
+        <legend>video</legend>
+        <div class="row">
+          <label for="vid-codec">codec</label>
+          <select id="vid-codec"></select>
+        </div>
+        <div class="row">
+          <label for="vid-preset">effort</label>
+          <select id="vid-preset">
+            <option value="veryfast">very fast — largest file</option>
+            <option value="fast">fast</option>
+            <option value="medium" selected>medium</option>
+            <option value="slow">slow — smallest file</option>
+          </select>
+        </div>
+        <div class="row">
+          <label for="vid-height">max height</label>
+          <select id="vid-height">
+            <option value="0">keep original</option>
+            <option value="2160">2160p</option>
+            <option value="1080">1080p</option>
+            <option value="720">720p</option>
+            <option value="480">480p</option>
+          </select>
+        </div>
+      </fieldset>
+
+      <fieldset class="group" id="g-audio" hidden>
+        <legend>audio</legend>
+        <div class="row">
+          <label for="aud-codec">codec</label>
+          <select id="aud-codec"></select>
+        </div>
+      </fieldset>
+
+      <fieldset class="group" id="g-pdf" hidden>
+        <legend>pdf</legend>
+        <div class="row check">
+          <input type="checkbox" id="pdf-imgs" checked>
+          <label for="pdf-imgs">recompress embedded images</label>
+        </div>
+        <div class="row">
+          <label for="pdf-edge">max image edge</label>
+          <input type="range" id="pdf-edge" min="0" max="4000" step="200" value="2000">
+          <output for="pdf-edge" id="pdf-edge-out">2000 px</output>
+        </div>
+        <div class="row check">
+          <input type="checkbox" id="pdf-active" checked>
+          <label for="pdf-active">remove JavaScript, attachments and auto-actions</label>
+        </div>
+        <div class="row">
+          <label for="pdf-open">source password</label>
+          <input type="password" id="pdf-open" autocomplete="off"
+                 placeholder="only if the file is already locked">
+        </div>
+      </fieldset>
+    </details>
   </section>
 
   <section class="step" id="run-step" aria-labelledby="s4" hidden>

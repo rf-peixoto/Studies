@@ -110,28 +110,70 @@ The lossless route can only ever delete, so it cannot grow a file. Indexed
 images keep their palette *and* their transparent index, because both are the
 picture rather than a note about it.
 
+Audio and video reach the same guarantee a different way: the streams are copied
+verbatim into a fresh container with no metadata, with the in-band encoder
+banner filtered out on the way through. That is what `lossless` means for them -
+decoding an encoded bitstream only to encode it again cannot improve on it, it
+can only cost quality, time and usually size. It is also the fallback whenever a
+re-encode comes back larger than the input, which happens when a file was
+already encoded more efficiently than the level being asked for.
+
 The one case where a flat 0% is accurate but useless is a photograph stored as
 PNG. That gets called out in the log with what a format change would actually
 save, rather than being reported as a job well done.
 
-## Targeting a size
+## Quality levels
 
-Every media type can be driven by a size instead of a quality number, because
-people think in "under 25 MB for email", not in "CRF 23".
+There is one decision: how good the result should look. Everything else follows
+from it.
 
-- **Images** bisect the quality scale for the highest setting that fits. If even
-  the floor overshoots, the image is progressively downscaled — past a point,
-  fewer pixels looks better than quality 5 does.
-- **Video** computes a bitrate from the duration and encodes, then measures and
-  re-encodes up to three times. If audio alone would eat the budget it is
-  reduced first, and said so in the log.
-- **Audio** derives a bitrate from the duration, then does one corrective pass,
-  since Opus and AAC treat a nominal bitrate as a request rather than a promise.
-- **PDFs** walk a ladder of quality and image-resolution steps, dropping
-  precision before dropping pixels, and stop at the first one that fits.
+| level | what it means |
+| --- | --- |
+| `lossless` | Nothing is re-encoded. Metadata comes off; pixels and samples stay byte for byte what they were. |
+| `imperceptible` | Compressed to just before the point you could tell. |
+| `high` | A difference exists, but you would have to look for it side by side. |
+| `balanced` | Clearly smaller, still good to look at. The default. |
+| `small` | Visible softening on detailed images. |
+| `tiny` | Plainly degraded. For when it simply has to fit. |
 
-When a target cannot be reached, the log says so and explains what the floor
-actually is rather than silently returning something too big.
+### Why not just a quality slider
+
+Because an encoder quality number does not mean the same thing twice. Measured
+against the originals, JPEG quality 82 produces:
+
+| content | structural similarity at q82 |
+| --- | --- |
+| photograph | **0.75** - visibly damaged |
+| screenshot | 0.996 - almost perfect |
+| icon | 0.973 |
+
+One number, three completely different outcomes. So the number is not passed
+through to the encoder. The level sets a similarity floor instead, and the
+encoder setting is *searched for*: candidates are encoded, compared against the
+original with SSIM, and the search bisects a ladder running from heavily
+compressed to barely compressed for the leftmost setting that still clears the
+floor. Four or five encodes, and the answer is the most compression that
+particular picture can take at that quality.
+
+The ladder puts the 4:2:0 to 4:4:4 chroma step near the top on purpose, so
+similarity never decreases along it and the bisection stays valid. A noisy
+photograph that cannot afford chroma subsampling gets found out and given 4:4:4;
+a screenshot that can afford it does not.
+
+Video and audio work differently because they already have the right mechanism.
+CRF *is* a perceptual quality target - it holds quality steady and lets the
+bitrate move, which is exactly the goal. Levels map to the equivalent CRF per
+encoder, tuned so a level looks the same whether x264, x265, VP9 or AV1 produces
+it. Audio bitrates are per-codec for the same reason: Opus reaches transparency
+far lower than MP3 does, and one shared number would either waste space or
+damage the sound depending on which codec was picked.
+
+### Analysis is not downsampled
+
+Comparison runs at up to 2 megapixels, and that is the slow part - roughly a
+second or two per image. Halving it was tried: at 1 MP the search chose a 35 KB
+file where the honest answer was 273 KB, because downsampling smooths away
+exactly the artefacts the measurement exists to catch. Accuracy won.
 
 ## What gets removed
 
@@ -246,6 +288,7 @@ scrub/detect.py     content-based file classification
 scrub/inspector.py  read-only metadata reporting
 scrub/images.py     Pillow: strip and recompress
 scrub/lossless.py   container rewriting that never touches pixel data
+scrub/similarity.py SSIM, used to decide how hard a file can be compressed
 scrub/media.py      PyAV: transcode, strip, SEI removal
 scrub/pdfs.py       pikepdf: strip, compress, encrypt, generate passwords
 templates/, static/ the page

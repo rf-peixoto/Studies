@@ -85,7 +85,6 @@
 
   /* ---------------- settings ---------------- */
 
-  const CRF = { h264: [40,24], h265: [44,26], vp9: [50,26], av1: [55,30] };
   const CODEC_LABEL = {
     h264: "H.264 — plays everywhere",
     h265: "H.265 — ~40% smaller, needs a recent player",
@@ -98,68 +97,35 @@
     mp3:  "MP3 — maximum compatibility",
     flac: "FLAC — lossless, larger"
   };
-  const modes = { image: "quality", video: "quality", audio: "quality", pdf: "quality" };
 
   function bindRange(id, fmt) {
     const el = $(id), out = $(id + "-out");
     const upd = () => { out.textContent = fmt(parseInt(el.value, 10)); };
     el.addEventListener("input", upd); upd();
   }
-  bindRange("img-q", String);
   bindRange("img-edge", (v) => v === 0 ? "no limit" : v + " px");
-  bindRange("vid-abr", (v) => v + " kbps");
-  bindRange("aud-kbps", (v) => v + " kbps");
-  bindRange("pdf-q", String);
   bindRange("pdf-edge", (v) => v === 0 ? "no limit" : v + " px");
   bindRange("pdf-len", (v) => v + " chars");
 
-  function updVideoQ() {
-    const q = parseInt($("vid-q").value, 10);
-    const [floor, span] = CRF[$("vid-codec").value] || CRF.h264;
-    $("vid-q-out").textContent = `${q} · crf ${Math.round(floor - (q / 100) * span)}`;
+  const level = () =>
+    (document.querySelector('input[name="level"]:checked') || {}).value || "balanced";
+
+  // Lossless leaves image data alone, so the knobs that would re-encode it
+  // stop being meaningful. Say so rather than letting them look active.
+  function syncLevel() {
+    const lossless = level() === "lossless";
+    $("levelnote").textContent = lossless
+      ? "Nothing is re-encoded at this level, so format and size limits below are ignored."
+      : "Searching costs a second or two per image. Larger batches take proportionally longer.";
+    ["img-fmt", "img-edge", "pdf-edge", "pdf-imgs"].forEach((id) => {
+      const el = $(id);
+      if (el) el.disabled = lossless;
+    });
   }
-  $("vid-q").addEventListener("input", updVideoQ);
-  $("vid-codec").addEventListener("change", updVideoQ);
+  document.querySelectorAll('input[name="level"]').forEach((r) =>
+    r.addEventListener("change", syncLevel));
+  syncLevel();
 
-  document.querySelectorAll(".mode").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const group = btn.dataset.mode, value = btn.dataset.v;
-      modes[group] = value;
-      document.querySelectorAll(`.mode[data-mode="${group}"]`)
-        .forEach((b) => b.classList.toggle("is-on", b === btn));
-      document.querySelectorAll(`[data-when^="${group}-"]`).forEach((row) => {
-        row.hidden = row.dataset.when !== `${group}-${value}`;
-      });
-    });
-  });
-
-  document.querySelectorAll("[data-fill]").forEach((b) =>
-    b.addEventListener("click", () => { $(b.dataset.fill).value = b.dataset.mb; }));
-
-  const PRESETS = {
-    archive:  { imgQ:95, vidQ:90, audKbps:256, vidAbr:192, pdfQ:92, pdfEdge:0,  imgEdge:0,    vidH:"0" },
-    balanced: { imgQ:82, vidQ:70, audKbps:128, vidAbr:128, pdfQ:78, pdfEdge:2000, imgEdge:0,  vidH:"1080" },
-    small:    { imgQ:62, vidQ:45, audKbps:64,  vidAbr:96,  pdfQ:58, pdfEdge:1200, imgEdge:2000, vidH:"720" }
-  };
-  document.querySelectorAll(".preset").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      document.querySelectorAll(".preset").forEach((b) => b.classList.remove("is-on"));
-      btn.classList.add("is-on");
-      const p = PRESETS[btn.dataset.preset];
-      $("img-q").value = p.imgQ; $("img-edge").value = p.imgEdge;
-      $("vid-q").value = p.vidQ; $("vid-abr").value = p.vidAbr;
-      $("vid-height").value = p.vidH; $("aud-kbps").value = p.audKbps;
-      $("pdf-q").value = p.pdfQ; $("pdf-edge").value = p.pdfEdge;
-      ["img-q","img-edge","vid-abr","aud-kbps","pdf-q","pdf-edge"]
-        .forEach((id) => $(id).dispatchEvent(new Event("input")));
-      updVideoQ();
-    });
-  });
-
-  $("pdf-imgs").addEventListener("change", () => {
-    const on = $("pdf-imgs").checked && modes.pdf === "quality";
-    $("pdf-q-row").hidden = !on; $("pdf-edge-row").hidden = !on;
-  });
   $("pdf-lock").addEventListener("change", () => {
     $("lockbox").hidden = !$("pdf-lock").checked;
   });
@@ -306,28 +272,18 @@
 
   function options() {
     return {
-      image_mode: modes.image,
-      image_target_mb: parseFloat($("img-mb").value) || 1,
-      quality: parseInt($("img-q").value, 10),
+      level: level(),
+
       image_format: $("img-fmt").value,
       max_edge: parseInt($("img-edge").value, 10),
 
-      video_mode: modes.video,
-      video_target_mb: parseFloat($("vid-mb").value) || 25,
       video_codec: $("vid-codec").value || "h264",
       preset: $("vid-preset").value,
       max_height: parseInt($("vid-height").value, 10),
-      video_audio_kbps: parseInt($("vid-abr").value, 10),
 
-      audio_mode: modes.audio,
-      audio_target_mb: parseFloat($("aud-mb").value) || 5,
       audio_codec: $("aud-codec").value || "opus",
-      audio_kbps: parseInt($("aud-kbps").value, 10),
 
-      pdf_mode: modes.pdf,
-      pdf_target_mb: parseFloat($("pdf-mb").value) || 5,
       pdf_compress_images: $("pdf-imgs").checked,
-      pdf_quality: parseInt($("pdf-q").value, 10),
       pdf_max_edge: parseInt($("pdf-edge").value, 10),
       pdf_strip_active: $("pdf-active").checked,
       pdf_open_password: $("pdf-open").value,
@@ -400,6 +356,9 @@
         $("g-video").hidden = !kinds.has("video");
         $("g-audio").hidden = !kinds.has("audio");
         $("g-pdf").hidden = !kinds.has("pdf");
+        $("g-protect").hidden = !kinds.has("pdf");
+        // Only open advanced when there is something in it worth seeing.
+        $("advanced").hidden = kinds.size === 0;
         $("settings-step").hidden = false;
         $("run-step").hidden = false;
       }
@@ -477,7 +436,6 @@
         `<option value="${k}"${k === "h264" ? " selected" : ""}>${esc(CODEC_LABEL[k] || k)}</option>`).join("");
       $("aud-codec").innerHTML = c.audio_codecs.map((k) =>
         `<option value="${k}"${k === "opus" ? " selected" : ""}>${esc(ACODEC_LABEL[k] || k)}</option>`).join("");
-      updVideoQ();
       const retention = c.keeps_forever
         ? "kept until you delete them"
         : `deleted after <b>${c.ttl_minutes} min</b>`;

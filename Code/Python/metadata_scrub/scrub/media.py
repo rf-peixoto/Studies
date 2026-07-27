@@ -33,11 +33,11 @@ import av.stream
 TIMEBASE = Fraction(1, 90000)
 
 VIDEO_ENCODERS = {
-    # name:      (encoder, container, audio codec, crf floor, crf span)
-    "h264": ("libx264", "mp4", "aac", 40, 24),
-    "h265": ("libx265", "mp4", "aac", 44, 26),
-    "vp9": ("libvpx-vp9", "webm", "libopus", 50, 26),
-    "av1": ("libsvtav1", "mp4", "aac", 55, 30),
+    # name:      (encoder, container, audio codec)
+    "h264": ("libx264", "mp4", "aac"),
+    "h265": ("libx265", "mp4", "aac"),
+    "vp9": ("libvpx-vp9", "webm", "libopus"),
+    "av1": ("libsvtav1", "mp4", "aac"),
 }
 
 AUDIO_ENCODERS = {
@@ -65,6 +65,38 @@ MUX_OPTIONS = {
 
 # Layouts we will try to preserve rather than folding down to stereo.
 SURROUND = {3: "3.0", 4: "quad", 5: "5.0", 6: "5.1", 7: "6.1", 8: "7.1"}
+
+# CRF is already a perceptual quality target: it holds quality steady and lets
+# the bitrate move, which is exactly "compress as hard as this quality allows".
+# These are the equivalent settings per encoder, tuned so a level looks the same
+# whichever codec produces it.
+VIDEO_CRF = {
+    "libx264":    {"lossless": 14, "imperceptible": 18, "high": 21,
+                   "balanced": 24, "small": 28, "tiny": 33},
+    "libx265":    {"lossless": 16, "imperceptible": 20, "high": 24,
+                   "balanced": 27, "small": 31, "tiny": 36},
+    "libvpx-vp9": {"lossless": 20, "imperceptible": 26, "high": 30,
+                   "balanced": 33, "small": 37, "tiny": 42},
+    "libsvtav1":  {"lossless": 20, "imperceptible": 26, "high": 30,
+                   "balanced": 35, "small": 40, "tiny": 46},
+}
+
+# Bitrates per level, per codec. Opus reaches transparency far lower than MP3
+# does, so one shared number would either waste space or damage the audio
+# depending on which codec was chosen.
+AUDIO_KBPS = {
+    # "lossless" cannot mean FLAC inside an MP4, so it means the highest
+    # bitrate the codec is worth giving -- otherwise it would fall through to
+    # the balanced setting and come out smaller than the level below it.
+    "libopus":    {"lossless": 256, "imperceptible": 160, "high": 128,
+                   "balanced": 96, "small": 64, "tiny": 48},
+    "aac":        {"lossless": 320, "imperceptible": 256, "high": 192,
+                   "balanced": 144, "small": 96, "tiny": 64},
+    "libmp3lame": {"lossless": 320, "imperceptible": 320, "high": 256,
+                   "balanced": 192, "small": 128, "tiny": 96},
+    "flac":       {"lossless": 0, "imperceptible": 0, "high": 0,
+                   "balanced": 0, "small": 0, "tiny": 0},
+}
 
 
 def available_video_encoders() -> list[str]:
@@ -104,9 +136,14 @@ def encoder_threads() -> int:
     return max(1, cores // workers)
 
 
-def _crf(quality: int, floor: int, span: int) -> int:
-    """Quality 0-100 -> CRF. Higher quality means a lower CRF number."""
-    return int(round(floor - (max(0, min(100, quality)) / 100.0) * span))
+def crf_for(encoder: str, level: str) -> int:
+    table = VIDEO_CRF.get(encoder, VIDEO_CRF["libx264"])
+    return table.get(level, table["balanced"])
+
+
+def kbps_for(encoder: str, level: str) -> int:
+    table = AUDIO_KBPS.get(encoder, AUDIO_KBPS["libopus"])
+    return table.get(level, table["balanced"])
 
 
 def _annexb_nals(buf: bytes):
@@ -204,6 +241,102 @@ def _build_graph(in_stream, degrees: int, out_w: int, out_h: int):
     return graph
 
 
+# Demuxer names are comma-joined lists; muxer names are not. Map what we can
+# and fall back to re-encoding when a container has no clean output equivalent.
+REMUX_FORMAT = {
+    "mov,mp4,m4a,3gp,3g2,mj2": "mp4", "matroska,webm": "matroska",
+    "mp3": "mp3", "flac": "flac", "wav": "wav", "ogg": "ogg", "aac": "adts",
+}
+
+
+def remux(src: str, out_dir: str, log, progress) -> str | None:
+    """Copy the streams untouched into a container with no metadata.
+
+    This is what "lossless" has to mean for audio and video: the encoded
+    bitstream is already the result of someone's choices, and decoding it only
+    to encode it again cannot improve on it -- it can only cost quality, time,
+    and usually size as well. The packets are copied verbatim; only the
+    container is rebuilt, and the in-band encoder banner is filtered out on the
+    way through, so the strip guarantee still holds.
+    """
+    inp = av.open(src)
+    fmt = REMUX_FORMAT.get(inp.format.name)
+    if fmt is None:
+        inp.close()
+        return None
+
+    keep = [st for st in inp.streams
+            if st.type in ("video", "audio")
+            and not (st.type == "video"
+                     and st.disposition & av.stream.Disposition.attached_pic)]
+    if not keep:
+        inp.close()
+        return None
+
+    ext = {"mp4": "mp4", "matroska": "mkv", "mp3": "mp3", "flac": "flac",
+           "wav": "wav", "ogg": "ogg", "adts": "aac"}[fmt]
+    # Deliberately not "out.<ext>": the encode path may already have written
+    # that name, and this can be called to replace it.
+    dst = os.path.join(out_dir, "copy." + ext)
+    out = av.open(dst, "w", format=fmt,
+                  options=MUX_OPTIONS.get(fmt, {"fflags": "+bitexact"}))
+
+    mapping = {}
+    filters = {}
+    for st in keep:
+        ost = out.add_stream_from_template(st)
+        try:
+            ost.metadata.clear()
+        except Exception:
+            pass
+        ost.metadata["handler_name"] = " "
+        mapping[st.index] = ost
+        name = st.codec_context.name
+        bsf_name = {"h264": SEI_FILTER["libx264"],
+                    "hevc": SEI_FILTER["libx265"]}.get(name)
+        if bsf_name:
+            try:
+                filters[st.index] = av.BitStreamFilterContext(bsf_name, in_stream=st)
+            except Exception:
+                pass
+
+    total = float(inp.duration / av.time_base) if inp.duration else 0.0
+    try:
+        for packet in inp.demux(keep):
+            if packet.dts is None:
+                continue
+            ost = mapping[packet.stream.index]
+            bsf = filters.get(packet.stream.index)
+            packet.stream = ost
+            if bsf is None:
+                out.mux(packet)
+            else:
+                for filtered in (bsf.filter(packet) or []):
+                    out.mux(filtered)
+            if total and packet.pts is not None and packet.time_base:
+                progress(5 + int(90 * min(float(packet.pts * packet.time_base)
+                                          / total, 1.0)))
+        for st_index, bsf in filters.items():
+            for filtered in (bsf.flush() or []):
+                out.mux(filtered)
+    except Exception as exc:
+        out.close()
+        inp.close()
+        log(f"remux failed ({type(exc).__name__}: {exc})")
+        return None
+    finally:
+        try:
+            out.close()
+            inp.close()
+        except Exception:
+            pass
+
+    log("streams copied verbatim into a clean container; "
+        "nothing was decoded or re-encoded")
+    progress(96)
+    return dst
+
+
 def _pick_streams(container):
     video = None
     audio = None
@@ -230,17 +363,15 @@ def _mux(out, bsf, packet):
 # --------------------------------------------------------------------------
 
 def process_video(src: str, out_dir: str, opts: dict, log, progress) -> str:
-    quality = int(opts.get("quality", 70))
+    level = opts.get("level", "balanced")
     codec_key = opts.get("video_codec", "h264")
     preset = opts.get("preset", "medium")
     max_height = int(opts.get("max_height", 0) or 0)
-    audio_kbps = int(opts.get("video_audio_kbps", 128))
-    by_size = opts.get("video_mode") == "size"
-    target = int(float(opts.get("video_target_mb", 25) or 25) * 1024 * 1024)
 
     if codec_key not in VIDEO_ENCODERS:
         codec_key = "h264"
-    enc_name, ext, aenc_name, floor, span = VIDEO_ENCODERS[codec_key]
+    enc_name, ext, aenc_name = VIDEO_ENCODERS[codec_key][:3]
+    audio_kbps = kbps_for(aenc_name, level)
 
     # ---- probe once, encode possibly more than once -----------------------
     probe = av.open(src)
@@ -461,59 +592,36 @@ def process_video(src: str, out_dir: str, opts: dict, log, progress) -> str:
         return done
 
     # ---- drive it ---------------------------------------------------------
-    if not by_size:
-        crf = _crf(quality, floor, span)
-        log(f"video: {enc_name} crf {crf} preset {preset} ({threads} thread(s))")
-        if has_audio:
-            log(f"audio: {aenc_name} {audio_kbps}k "
-                f"{_layout_for(channels, aenc_name)}")
-        done = encode(crf, None, 5, 95)
-        log(f"{done} frames re-encoded from scratch")
-        progress(98)
-        return dst
+    if level == "lossless" and not max_height and opts.get("video_codec_forced") is not True:
+        copied = remux(src, out_dir, log, progress)
+        if copied is not None:
+            return copied
+        log("this container cannot be rebuilt by copy; re-encoding instead")
 
-    if duration <= 0:
-        log("duration unknown; falling back to quality mode")
-        done = encode(_crf(quality, floor, span), None, 5, 95)
-        progress(98)
-        return dst
-
-    budget_bits = target * 8
-    audio_bits = (audio_kbps * 1000 * duration) if has_audio else 0
-    if has_audio and audio_bits > budget_bits * 0.35:
-        # Audio eating the whole budget leaves nothing for pictures. Give it a
-        # third at most, and say so rather than silently missing the target.
-        audio_kbps = max(24, int(budget_bits * 0.35 / duration / 1000))
-        audio_bits = audio_kbps * 1000 * duration
-        log(f"audio would not fit alongside the video; reduced to {audio_kbps} kbps")
-
-    # Aim under the line rather than at it: overshooting is the failure mode.
-    bitrate = int(max(40_000, (budget_bits - audio_bits) * 0.93 / duration))
-    log(f"target {target // 1024} KB over {duration:.1f}s "
-        f"-> {bitrate // 1000} kbps video ({threads} thread(s))")
-
-    for attempt in range(3):
-        lo, hi = 5 + attempt * 30, 5 + (attempt + 1) * 30
-        done = encode(None, bitrate, lo, min(hi, 95))
-        actual = os.path.getsize(dst)
-        ratio = actual / target
-        log(f"pass {attempt + 1}: {actual // 1024} KB "
-            f"({ratio * 100:.0f}% of target)")
-        if ratio <= 1.0:
-            break
-        if attempt == 2:
-            log(f"still {(ratio - 1) * 100:.0f}% over after three passes -- "
-                f"try a smaller resolution or a more efficient codec")
-            break
-        scaled = int(bitrate * (target / actual) * 0.93)
-        if scaled < 40_000:
-            log("the bitrate floor is already reached; "
-                "reduce the resolution to go smaller")
-            break
-        bitrate = scaled
-        log(f"retrying at {bitrate // 1000} kbps")
-
+    crf = crf_for(enc_name, level)
+    log(f"video: {enc_name} crf {crf} preset {preset} ({threads} thread(s)) "
+        f"-- constant quality, bitrate follows the picture")
+    if has_audio:
+        log(f"audio: {aenc_name} {audio_kbps}k "
+            f"{_layout_for(channels, aenc_name)}")
+    done = encode(crf, None, 5, 95)
     log(f"{done} frames re-encoded from scratch")
+
+    # An already efficiently-encoded file can come back larger at a high
+    # quality level. Copying the streams instead is both smaller and lossless,
+    # so there is no reason to hand back the worse of the two.
+    if os.path.getsize(dst) > os.path.getsize(src) and not max_height:
+        log(f"re-encoding grew this file "
+            f"({os.path.getsize(src) // 1024} KB -> "
+            f"{os.path.getsize(dst) // 1024} KB); copying the original streams "
+            f"instead")
+        copied = remux(src, out_dir, log, progress)
+        if copied is not None and copied != dst:
+            try:
+                os.remove(dst)
+            except OSError:
+                pass
+            return copied
     progress(98)
     return dst
 
@@ -523,13 +631,18 @@ def process_video(src: str, out_dir: str, opts: dict, log, progress) -> str:
 # --------------------------------------------------------------------------
 
 def process_audio(src: str, out_dir: str, opts: dict, log, progress) -> str:
+    level = opts.get("level", "balanced")
     codec_key = opts.get("audio_codec", "opus")
-    kbps = int(opts.get("audio_kbps", 128))
-    by_size = opts.get("audio_mode") == "size"
-    target = int(float(opts.get("audio_target_mb", 5) or 5) * 1024 * 1024)
+    if level == "lossless":
+        copied = remux(src, out_dir, log, progress)
+        if copied is not None:
+            return copied
+        log("this container cannot be rebuilt by copy; encoding FLAC instead")
+        codec_key = "flac"
     if codec_key not in AUDIO_ENCODERS:
         codec_key = "opus"
     enc_name, ext, fmt = AUDIO_ENCODERS[codec_key]
+    kbps = kbps_for(enc_name, level)
 
     inp = av.open(src)
     ia = next((s for s in inp.streams if s.type == "audio"), None)
@@ -556,16 +669,6 @@ def process_audio(src: str, out_dir: str, opts: dict, log, progress) -> str:
     rate = 48000 if enc_name == "libopus" else min(src_rate, 48000)
 
     duration = float(inp.duration / av.time_base) if inp.duration else 0.0
-    if by_size and enc_name != "flac":
-        if duration > 0:
-            # Opus and AAC are variable-rate, so the nominal bitrate is a
-            # request rather than a promise. Aim below the line.
-            kbps = max(16, min(320, int((target * 8 * 0.88) / duration / 1000)))
-            log(f"target {target // 1024} KB over {duration:.1f}s -> {kbps} kbps")
-        else:
-            log("duration unknown; using the bitrate setting instead")
-    elif by_size:
-        log("FLAC is lossless; a size target cannot be met without changing codec")
 
     dst = os.path.join(out_dir, "out" + ext)
     out = av.open(dst, "w", format=fmt,
@@ -602,45 +705,14 @@ def process_audio(src: str, out_dir: str, opts: dict, log, progress) -> str:
 
     log("re-encoded from decoded samples; no tag block written")
 
-    if by_size and enc_name != "flac" and duration > 0:
-        actual = os.path.getsize(dst)
-        if actual > target:
-            kbps = max(16, int(kbps * (target / actual) * 0.92))
-            log(f"{actual // 1024} KB is over the {target // 1024} KB target; "
-                f"re-encoding at {kbps} kbps")
-            _encode_audio_once(src, dst, enc_name, fmt, layout, rate, kbps,
-                               duration, log, progress, 60, 95)
-        log(f"final: {os.path.getsize(dst) // 1024} KB of "
-            f"{target // 1024} KB target")
-
+    if os.path.getsize(dst) > os.path.getsize(src):
+        log("re-encoding grew this file; copying the original stream instead")
+        copied = remux(src, out_dir, log, progress)
+        if copied is not None and copied != dst:
+            try:
+                os.remove(dst)
+            except OSError:
+                pass
+            return copied
     progress(98)
     return dst
-
-
-def _encode_audio_once(src, dst, enc_name, fmt, layout, rate, kbps, duration,
-                       log, progress, lo, hi) -> None:
-    """A second corrective pass at a lower bitrate. Same strip guarantees."""
-    inp = av.open(src)
-    ia = next(s for s in inp.streams if s.type == "audio")
-    out = av.open(dst, "w", format=fmt,
-                  options=MUX_OPTIONS.get(fmt, {"fflags": "+bitexact"}))
-    oa = out.add_stream(enc_name, rate=rate)
-    oa.layout = layout
-    oa.bit_rate = kbps * 1000
-    oa.metadata["handler_name"] = " "
-    resampler = av.AudioResampler(format="s16", layout=layout, rate=rate)
-    try:
-        for frame in inp.decode(ia):
-            for rframe in resampler.resample(frame):
-                for pkt in oa.encode(rframe):
-                    out.mux(pkt)
-            if duration and frame.time is not None:
-                progress(lo + int((hi - lo) * min(frame.time / duration, 1.0)))
-        for rframe in (resampler.resample(None) or []):
-            for pkt in oa.encode(rframe):
-                out.mux(pkt)
-        for pkt in oa.encode():
-            out.mux(pkt)
-    finally:
-        out.close()
-        inp.close()
