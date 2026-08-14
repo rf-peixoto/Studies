@@ -1,0 +1,451 @@
+:root {
+    --bg: #000;
+    --panel: #050505;
+    --fg: #e6e6e6;
+    --muted: #777;
+    --line: #303030;
+    --accent: #ffffff;
+    --green: #8cff66;
+    --red: #ff5555;
+    --blue: #6fb7ff;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: "Courier New", Courier, monospace;
+}
+
+body { overflow: hidden; }
+
+button, input, textarea {
+    font: inherit;
+    color: var(--fg);
+}
+
+.topbar {
+    height: 42px;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 14px;
+    font-size: 12px;
+    letter-spacing: .08em;
+}
+
+.brand { font-weight: bold; }
+.status { color: var(--muted); }
+
+.layout {
+    height: calc(100vh - 42px);
+    display: grid;
+    grid-template-columns: 390px 1fr;
+}
+
+.panel {
+    overflow-y: auto;
+    border-right: 1px solid var(--line);
+    background: var(--panel);
+}
+
+.panel section {
+    padding: 14px;
+    border-bottom: 1px solid var(--line);
+}
+
+.section-title {
+    color: var(--muted);
+    font-size: 11px;
+    letter-spacing: .15em;
+    margin-bottom: 12px;
+}
+
+label {
+    display: block;
+    font-size: 11px;
+    color: #aaa;
+    margin: 10px 0 5px;
+}
+
+input[type="text"], textarea {
+    width: 100%;
+    background: #000;
+    border: 1px solid var(--line);
+    border-radius: 0;
+    outline: none;
+    padding: 9px;
+    resize: vertical;
+}
+
+input[type="text"]:focus, textarea:focus {
+    border-color: #888;
+}
+
+.color-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+input[type="color"] {
+    width: 42px;
+    height: 30px;
+    padding: 0;
+    border: 1px solid var(--line);
+    border-radius: 0;
+    background: #000;
+}
+
+button {
+    width: 100%;
+    margin-top: 12px;
+    padding: 9px;
+    background: #fff;
+    color: #000;
+    border: 1px solid #fff;
+    border-radius: 0;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 12px;
+}
+
+button:hover { background: #ccc; }
+
+button.secondary {
+    background: #000;
+    color: #fff;
+    border-color: #777;
+}
+
+button.danger {
+    background: #000;
+    color: var(--red);
+    border-color: #542020;
+}
+
+.checkline {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #ddd;
+}
+
+.checkline input {
+    accent-color: #fff;
+}
+
+.muted { color: var(--muted); }
+
+.dataset-count {
+    color: var(--green);
+    font-size: 12px;
+    margin-bottom: 10px;
+}
+
+.entry {
+    border-top: 1px solid #1b1b1b;
+    padding: 10px 0;
+}
+
+.entry-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+}
+
+.dot {
+    width: 8px;
+    height: 8px;
+    display: inline-block;
+    border: 1px solid #777;
+}
+
+.entry-head form {
+    margin-left: auto;
+}
+
+.delete {
+    width: auto;
+    margin: 0;
+    padding: 0 5px;
+    background: transparent;
+    color: #777;
+    border: 0;
+    font-size: 18px;
+}
+
+.delete:hover {
+    color: var(--red);
+    background: transparent;
+}
+
+.entry-address {
+    color: #ddd;
+    margin-top: 6px;
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.entry-resolved {
+    color: #666;
+    margin-top: 5px;
+    font-size: 10px;
+    line-height: 1.4;
+}
+
+.empty, .message {
+    font-size: 11px;
+    line-height: 1.5;
+}
+
+.message {
+    padding: 8px;
+    border-left: 2px solid #777;
+    margin-top: 8px;
+}
+
+.message.ok {
+    color: var(--green);
+    border-color: var(--green);
+}
+
+.message.error {
+    color: var(--red);
+    border-color: var(--red);
+}
+
+.map-panel {
+    position: relative;
+    min-width: 0;
+    background: #080808;
+}
+
+#map {
+    width: 100%;
+    height: 100%;
+}
+
+/* Grayscale ONLY the map tiles. Markers, correlation lines/regions and
+   labels live in other panes and keep their full color. This is the fix
+   for washed-out marker colors. */
+.leaflet-tile-pane {
+    filter: grayscale(100%) brightness(.72) contrast(1.15);
+}
+
+.map-hud {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 1000;
+    background: #000;
+    border: 1px solid #444;
+    padding: 7px 9px;
+    font-size: 10px;
+    color: #888;
+}
+
+.map-hud b { color: #fff; }
+
+.terminal-marker-wrapper {
+    background: transparent;
+    border: 0;
+}
+
+.terminal-marker {
+    width: 14px;
+    height: 14px;
+    background: var(--marker-color);
+    border: 2px solid #000;
+    outline: 1px solid #fff;
+    box-shadow: 0 0 8px var(--marker-color);
+}
+
+.terminal-label {
+    background: #000 !important;
+    color: #fff !important;
+    border: 1px solid #555 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    font: 11px "Courier New", monospace !important;
+    padding: 3px 5px !important;
+}
+
+.terminal-label::before {
+    border-right-color: #555 !important;
+}
+
+.leaflet-control-zoom a,
+.leaflet-control-attribution {
+    background: #000 !important;
+    color: #aaa !important;
+    border-color: #444 !important;
+    border-radius: 0 !important;
+}
+
+.leaflet-control-zoom a:hover {
+    color: #fff !important;
+}
+
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+    background: #000 !important;
+    color: #fff !important;
+    border: 1px solid #555;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+}
+
+.leaflet-popup-content {
+    font: 11px "Courier New", monospace;
+    line-height: 1.5;
+}
+
+.leaflet-popup-close-button {
+    color: #fff !important;
+}
+
+.popup hr {
+    border: 0;
+    border-top: 1px solid #333;
+}
+
+@media (max-width: 900px) {
+    body { overflow: auto; }
+    .layout {
+        height: auto;
+        min-height: calc(100vh - 42px);
+        grid-template-columns: 1fr;
+    }
+    .panel {
+        max-height: 55vh;
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+    }
+    .map-panel { height: 60vh; }
+}
+
+/* ----- new controls: tag, upload, manual coords, correlation ----- */
+
+select {
+    width: 100%;
+    background: #000;
+    color: var(--fg);
+    border: 1px solid var(--line);
+    border-radius: 0;
+    padding: 8px;
+    margin-top: 4px;
+    font: inherit;
+    outline: none;
+}
+select:focus { border-color: #888; }
+
+input[type="file"] {
+    width: 100%;
+    color: #bbb;
+    font-size: 11px;
+    border: 1px dashed var(--line);
+    padding: 8px;
+    background: #000;
+}
+input[type="file"]::file-selector-button {
+    font: inherit;
+    background: #111;
+    color: #fff;
+    border: 1px solid var(--line);
+    padding: 4px 8px;
+    margin-right: 8px;
+    cursor: pointer;
+}
+
+.tiny { font-size: 10px; line-height: 1.5; }
+.fmt { margin: 8px 0; }
+.fmt code, .entry-tag code, .pop-tag {
+    color: var(--green);
+}
+code {
+    color: #cfc;
+    font-size: 11px;
+}
+
+.manual {
+    margin-top: 12px;
+    border: 1px solid var(--line);
+    padding: 8px;
+}
+.manual summary {
+    cursor: pointer;
+    color: var(--muted);
+    font-size: 10px;
+    letter-spacing: .08em;
+}
+.coord-row {
+    display: flex;
+    gap: 8px;
+    margin: 8px 0 4px;
+}
+.coord-row input {
+    width: 50%;
+    background: #000;
+    border: 1px solid var(--line);
+    padding: 8px;
+    outline: none;
+}
+.coord-row input:focus { border-color: #888; }
+
+.entry-tag {
+    color: var(--green);
+    font-size: 11px;
+    margin-top: 5px;
+}
+
+.prec {
+    display: inline-block;
+    font-size: 9px;
+    padding: 1px 4px;
+    border: 1px solid #444;
+    color: #999;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+}
+.prec-exact { color: var(--green); border-color: #2c5a20; }
+.prec-street { color: var(--blue); border-color: #24506e; }
+.prec-neighborhood, .prec-city { color: var(--red); border-color: #5a2020; }
+.prec-manual { color: #d9a2ff; border-color: #4a2c66; }
+
+/* correlation legend */
+.legend { margin-top: 12px; }
+.legend-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    padding: 3px 0;
+    border-top: 1px solid #161616;
+}
+.legend-dot {
+    width: 10px;
+    height: 10px;
+    flex: 0 0 auto;
+    border: 1px solid #000;
+    outline: 1px solid #444;
+}
+.legend-key {
+    flex: 1 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: #ddd;
+}
+.legend-count {
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+}
+
+.pop-tag { font-size: 11px; }

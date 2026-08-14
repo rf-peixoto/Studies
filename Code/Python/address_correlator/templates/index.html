@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ADDRESS CORRELATOR</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<header class="topbar">
+    <div class="brand">[ ADDRESS_CORRELATOR ]</div>
+    <div class="status">LOCAL / GEOLOCATION / CORRELATION</div>
+</header>
+
+<main class="layout">
+    <aside class="panel">
+        <section>
+            <div class="section-title">INPUT</div>
+            <form method="post" action="{{ url_for('add_address') }}">
+                <label for="address">ADDRESS</label>
+                <textarea id="address" name="address" rows="3"
+                    placeholder="Street, number, neighborhood, city, state"></textarea>
+
+                <label for="name">MARKER NAME <span class="muted">[OPTIONAL]</span></label>
+                <input id="name" name="name" type="text" maxlength="160"
+                    placeholder="e.g. TARGET_01">
+
+                <label for="tag">TAG / GROUP <span class="muted">[OPTIONAL]</span></label>
+                <input id="tag" name="tag" type="text" maxlength="160"
+                    placeholder="e.g. SHARED_PHONE">
+
+                <label for="color">MARKER COLOR</label>
+                <div class="color-row">
+                    <input id="color" name="color" type="color" value="#8cff66">
+                    <code id="color-value">#8CFF66</code>
+                </div>
+
+                <details class="manual">
+                    <summary>MANUAL COORDINATES [IF ADDRESS WON'T RESOLVE]</summary>
+                    <div class="coord-row">
+                        <input name="lat" type="text" inputmode="decimal" placeholder="lat e.g. -23.55">
+                        <input name="lon" type="text" inputmode="decimal" placeholder="lon e.g. -46.63">
+                    </div>
+                    <div class="muted tiny">Fill both to skip geocoding and place the pin directly.</div>
+                </details>
+
+                <button type="submit">+ ADD / RESOLVE</button>
+            </form>
+        </section>
+
+        <section>
+            <div class="section-title">BULK UPLOAD [.TXT]</div>
+            <form method="post" action="{{ url_for('upload_file') }}" enctype="multipart/form-data">
+                <input type="file" name="file" accept=".txt,text/plain">
+                <div class="muted tiny fmt">
+                    one entry per line:<br>
+                    <code>address;tag or color</code><br>
+                    &middot; <code>#rrggbb</code> is read as a color<br>
+                    &middot; anything else is a tag (auto-colored)<br>
+                    &middot; 3-field form: <code>address;name;tag_or_color</code>
+                </div>
+                <button class="secondary" type="submit">UPLOAD &amp; RESOLVE</button>
+                <div class="muted tiny">Large files geocode ~1/sec &mdash; may take a moment.</div>
+            </form>
+        </section>
+
+        <section class="controls">
+            <div class="section-title">VIEW</div>
+            <label class="checkline">
+                <input id="showNames" type="checkbox" checked>
+                <span>SHOW MARKER NAMES</span>
+            </label>
+            <button class="secondary" id="fitMap" type="button">FIT ALL MARKERS</button>
+        </section>
+
+        <section class="controls">
+            <div class="section-title">CORRELATION</div>
+            <label for="groupBy">GROUP MARKERS BY</label>
+            <select id="groupBy">
+                <option value="none">NONE</option>
+                <option value="tag" selected>TAG</option>
+                <option value="color">COLOR</option>
+            </select>
+
+            <label for="linkStyle">LINK STYLE</label>
+            <select id="linkStyle">
+                <option value="lines" selected>LINES (connect group)</option>
+                <option value="hull">REGION (convex hull)</option>
+                <option value="both">LINES + REGION</option>
+            </select>
+
+            <div id="legend" class="legend"></div>
+        </section>
+
+        <section>
+            <div class="section-title">DATASET</div>
+            <div id="count" class="dataset-count">{{ addresses|length }} MARKER(S)</div>
+            <div class="entries">
+            {% for item in addresses %}
+                <article class="entry">
+                    <div class="entry-head">
+                        <span class="dot" style="background: {{ item.color }}"></span>
+                        <strong>{{ item.name if item.name else '[NO NAME]' }}</strong>
+                        <form method="post" action="{{ url_for('delete_address', address_id=item.id) }}">
+                            <button class="delete" title="Delete">&times;</button>
+                        </form>
+                    </div>
+                    {% if item.tag %}<div class="entry-tag">#{{ item.tag }}</div>{% endif %}
+                    <div class="entry-address">{{ item.address }}</div>
+                    <div class="entry-resolved">
+                        {% if item.precision %}<span class="prec prec-{{ item.precision }}">{{ item.precision }}</span> {% endif %}
+                        {{ item.resolved_address }}
+                    </div>
+                </article>
+            {% else %}
+                <div class="empty">NO MARKERS</div>
+            {% endfor %}
+            </div>
+            <form method="post" action="{{ url_for('clear_all') }}"
+                  onsubmit="return confirm('Clear every marker?');">
+                <button class="danger" type="submit">CLEAR DATASET</button>
+            </form>
+        </section>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            <section class="messages">
+                {% for category, message in messages %}
+                    <div class="message {{ category }}">{{ message }}</div>
+                {% endfor %}
+            </section>
+            {% endif %}
+        {% endwith %}
+    </aside>
+
+    <section class="map-panel">
+        <div id="map"></div>
+        <div class="map-hud">
+            <span>MARKERS: <b id="hudCount">{{ addresses|length }}</b></span>
+            <span>GROUPS: <b id="hudGroups">0</b></span>
+            <span>LABELS: <b id="hudLabels">ON</b></span>
+        </div>
+    </section>
+</main>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const addresses = {{ addresses|tojson }};
+
+const map = L.map("map", { zoomControl: false, attributionControl: true })
+    .setView([-14.2350, -51.9253], 4);
+L.control.zoom({ position: "bottomright" }).addTo(map);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19, attribution: '&copy; OpenStreetMap contributors'
+}).addTo(map);
+
+// dedicated pane for correlation overlays, kept under the markers
+map.createPane("correlation");
+map.getPane("correlation").style.zIndex = 350;
+
+function escapeHtml(v) {
+    return String(v).replace(/[&<>"']/g, c => ({
+        "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
+    }[c]));
+}
+
+function markerIcon(color) {
+    return L.divIcon({
+        className: "terminal-marker-wrapper",
+        html: `<div class="terminal-marker" style="--marker-color:${escapeHtml(color)}"></div>`,
+        iconSize: [18, 18], iconAnchor: [9, 9]
+    });
+}
+
+// deterministic fallback color for a group key (used when grouping by tag
+// and the group's markers don't share one color)
+function hashColor(key) {
+    let h = 0;
+    for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) & 0xffffffff;
+    const hue = Math.abs(h) % 360;
+    return `hsl(${hue}, 85%, 62%)`;
+}
+
+// ---- markers -------------------------------------------------------------
+const markers = [];
+addresses.forEach(item => {
+    const marker = L.marker([item.lat, item.lon], { icon: markerIcon(item.color) }).addTo(map);
+    if (item.name) {
+        marker.bindTooltip(escapeHtml(item.name), {
+            permanent: true, direction: "right", offset: [10, 0], className: "terminal-label"
+        });
+    }
+    marker.bindPopup(`
+        <div class="popup">
+            <b>${escapeHtml(item.name || "[NO NAME]")}</b>
+            ${item.tag ? `<br><span class="pop-tag">#${escapeHtml(item.tag)}</span>` : ""}
+            <br>${escapeHtml(item.address)}
+            <hr>${escapeHtml(item.resolved_address)}
+            <br><span>${Number(item.lat).toFixed(6)}, ${Number(item.lon).toFixed(6)}</span>
+        </div>
+    `);
+    markers.push(marker);
+});
+
+function fitMarkers() {
+    if (!markers.length) return;
+    map.fitBounds(L.featureGroup(markers).getBounds().pad(0.15), { maxZoom: 16 });
+}
+fitMarkers();
+requestAnimationFrame(() => map.invalidateSize());
+window.addEventListener("resize", () => map.invalidateSize());
+
+// ---- convex hull (Andrew's monotone chain) -------------------------------
+function convexHull(points) {
+    const pts = points.slice().sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+    if (pts.length < 3) return pts;
+    const cross = (o, a, b) =>
+        (a[0]-o[0])*(b[1]-o[1]) - (a[1]-o[1])*(b[0]-o[0]);
+    const lower = [];
+    for (const p of pts) {
+        while (lower.length >= 2 && cross(lower[lower.length-2], lower[lower.length-1], p) <= 0) lower.pop();
+        lower.push(p);
+    }
+    const upper = [];
+    for (let i = pts.length - 1; i >= 0; i--) {
+        const p = pts[i];
+        while (upper.length >= 2 && cross(upper[upper.length-2], upper[upper.length-1], p) <= 0) upper.pop();
+        upper.push(p);
+    }
+    lower.pop(); upper.pop();
+    return lower.concat(upper);
+}
+
+// ---- correlation rendering -----------------------------------------------
+let overlays = [];
+const legendEl = document.getElementById("legend");
+const hudGroups = document.getElementById("hudGroups");
+
+function clearOverlays() {
+    overlays.forEach(o => map.removeLayer(o));
+    overlays = [];
+}
+
+function buildGroups(mode) {
+    const groups = new Map();  // key -> {items:[], colors:Set}
+    addresses.forEach(item => {
+        let key = null;
+        if (mode === "tag") key = item.tag ? item.tag.trim() : null;
+        else if (mode === "color") key = item.color.toLowerCase();
+        if (!key) return;
+        if (!groups.has(key)) groups.set(key, { items: [], colors: new Set() });
+        const g = groups.get(key);
+        g.items.push(item);
+        g.colors.add(item.color.toLowerCase());
+    });
+    return groups;
+}
+
+function groupColor(mode, key, g) {
+    if (mode === "color") return key;                    // key IS the color
+    if (g.colors.size === 1) return [...g.colors][0];    // tag with one color
+    return hashColor(key);                               // mixed-color tag
+}
+
+function renderCorrelations() {
+    clearOverlays();
+    legendEl.innerHTML = "";
+
+    const mode = document.getElementById("groupBy").value;
+    const style = document.getElementById("linkStyle").value;
+
+    if (mode === "none") { hudGroups.textContent = "0"; return; }
+
+    const groups = buildGroups(mode);
+    let drawn = 0;
+
+    groups.forEach((g, key) => {
+        const pts = g.items.map(i => [i.lat, i.lon]);
+        const color = groupColor(mode, key, g);
+
+        // legend row (show every group, even single-point ones)
+        const row = document.createElement("div");
+        row.className = "legend-row";
+        row.innerHTML = `<span class="legend-dot" style="background:${escapeHtml(color)}"></span>
+            <span class="legend-key">${escapeHtml(mode === "color" ? key.toUpperCase() : key)}</span>
+            <span class="legend-count">${g.items.length}</span>`;
+        legendEl.appendChild(row);
+
+        if (pts.length < 2) return;  // nothing to link
+
+        if (style === "hull" || style === "both") {
+            const hull = convexHull(pts);
+            if (hull.length >= 3) {
+                overlays.push(L.polygon(hull, {
+                    pane: "correlation", color, weight: 1.5,
+                    fillColor: color, fillOpacity: 0.12, opacity: 0.7
+                }).addTo(map));
+            }
+        }
+        if (style === "lines" || style === "both") {
+            // connect every point to the group centroid = clear "these belong together"
+            const cx = pts.reduce((s, p) => s + p[0], 0) / pts.length;
+            const cy = pts.reduce((s, p) => s + p[1], 0) / pts.length;
+            pts.forEach(p => {
+                overlays.push(L.polyline([[cx, cy], p], {
+                    pane: "correlation", color, weight: 1.5,
+                    opacity: 0.65, dashArray: "5 5"
+                }).addTo(map));
+            });
+        }
+        drawn++;
+    });
+
+    hudGroups.textContent = String(drawn);
+}
+
+document.getElementById("groupBy").addEventListener("change", renderCorrelations);
+document.getElementById("linkStyle").addEventListener("change", renderCorrelations);
+renderCorrelations();
+
+// ---- labels toggle -------------------------------------------------------
+const showNames = document.getElementById("showNames");
+const hudLabels = document.getElementById("hudLabels");
+showNames.addEventListener("change", () => {
+    markers.forEach(m => {
+        if (!m.getTooltip()) return;
+        showNames.checked ? m.openTooltip() : m.closeTooltip();
+    });
+    hudLabels.textContent = showNames.checked ? "ON" : "OFF";
+});
+
+document.getElementById("fitMap").addEventListener("click", fitMarkers);
+
+const color = document.getElementById("color");
+const colorValue = document.getElementById("color-value");
+color.addEventListener("input", () => colorValue.textContent = color.value.toUpperCase());
+</script>
+</body>
+</html>
