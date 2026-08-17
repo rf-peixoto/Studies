@@ -1,0 +1,14 @@
+{
+    "Main": {
+        "keywords": ["a", "b"],
+        "email": ""
+    },
+    "Ping": {
+        "keywords": ["secret-ping-string"],
+        "email": ""
+    },
+    "Personal": {
+        "keywords": ["a", "b"],
+        "email": ""
+    }
+}
