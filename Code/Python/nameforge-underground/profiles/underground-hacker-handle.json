@@ -1,0 +1,331 @@
+{
+  "id": "underground-hacker-handle",
+  "description": "Fictional Internet aliases inspired by BBS, IRC, warez, phreak, cypherpunk and underground computing cultures. The system favors specificity, wordplay, understatement, compact forms, technical references and deliberate orthographic mutation.",
+  "archetypes": {
+    "technical": [
+      "technical"
+    ],
+    "abstract": [
+      "abstract"
+    ],
+    "mythological": [
+      "mythological"
+    ],
+    "scifi": [
+      "scifi"
+    ],
+    "mundane": [
+      "mundane"
+    ],
+    "threatening": [
+      "threatening"
+    ],
+    "minimal": [
+      "minimal"
+    ],
+    "compound": [
+      "compound"
+    ],
+    "technical_myth": [
+      "technical_myth"
+    ],
+    "mundane_threat": [
+      "mundane_threat"
+    ],
+    "ironic": [
+      "ironic"
+    ],
+    "orthographic": [
+      "orthographic"
+    ],
+    "leet": [
+      "leet"
+    ],
+    "numeric": [
+      "numeric"
+    ],
+    "prefix": [
+      "prefix"
+    ],
+    "suffix": [
+      "suffix"
+    ]
+  },
+  "technical_terms": [
+    "opcode",
+    "stack",
+    "heap",
+    "daemon",
+    "shell",
+    "kernel",
+    "root",
+    "packet",
+    "socket",
+    "buffer",
+    "offset",
+    "pointer",
+    "segfault",
+    "overflow",
+    "underflow",
+    "syscall",
+    "register",
+    "bit",
+    "byte",
+    "hex",
+    "xor",
+    "null",
+    "pipe",
+    "fork",
+    "signal",
+    "trace",
+    "dump",
+    "core",
+    "inode",
+    "cache",
+    "cipher",
+    "hash",
+    "nonce",
+    "entropy",
+    "vector",
+    "process",
+    "thread",
+    "race",
+    "deadlock",
+    "wire",
+    "node",
+    "proxy",
+    "relay",
+    "payload",
+    "loader",
+    "stub",
+    "hook",
+    "patch",
+    "debug",
+    "strace",
+    "ptrace"
+  ],
+  "abstract_terms": [
+    "void",
+    "absence",
+    "noise",
+    "static",
+    "entropy",
+    "chaos",
+    "paradox",
+    "silence",
+    "echo",
+    "zero",
+    "shadow",
+    "ghost",
+    "signal",
+    "fracture",
+    "delta",
+    "nadir",
+    "axiom",
+    "anomaly",
+    "cipher",
+    "riddle",
+    "oracle",
+    "oblivion",
+    "afterimage"
+  ],
+  "mythology": [
+    "loki",
+    "hermes",
+    "anubis",
+    "janus",
+    "icarus",
+    "morpheus",
+    "orpheus",
+    "nyx",
+    "eris",
+    "atlas",
+    "hecate",
+    "charon",
+    "echo",
+    "daemon",
+    "prometheus"
+  ],
+  "scifi": [
+    "sprawl",
+    "neuromancer",
+    "wintermute",
+    "molly",
+    "case",
+    "akira",
+    "tyrell",
+    "replicant",
+    "deckard",
+    "gibson",
+    "console",
+    "matrix",
+    "orbital",
+    "cyberspace"
+  ],
+  "mundane": [
+    "accountant",
+    "gardener",
+    "plumber",
+    "milkman",
+    "janitor",
+    "librarian",
+    "mechanic",
+    "teacher",
+    "postman",
+    "butcher",
+    "dentist",
+    "farmer",
+    "driver",
+    "baker",
+    "clerk"
+  ],
+  "threatening": [
+    "razor",
+    "venom",
+    "grave",
+    "black",
+    "dead",
+    "frost",
+    "fang",
+    "scar",
+    "wraith",
+    "reaper",
+    "rot",
+    "ash",
+    "blade",
+    "thorn",
+    "viper",
+    "bruise"
+  ],
+  "cyberpunk": [
+    "chrome",
+    "neon",
+    "wire",
+    "ghost",
+    "static",
+    "grid",
+    "mesh",
+    "relay",
+    "node",
+    "proxy",
+    "zero",
+    "void",
+    "sprawl",
+    "deck",
+    "console",
+    "signal"
+  ],
+  "prefixes": [
+    "null",
+    "0x",
+    "neo",
+    "dead",
+    "ghost",
+    "x",
+    "cyber",
+    "hex",
+    "meta",
+    "anti"
+  ],
+  "suffixes": [
+    "null",
+    "void",
+    "x",
+    "404",
+    "13",
+    "0x0",
+    "exe",
+    "bin",
+    "sys",
+    "net"
+  ],
+  "separators": [
+    "",
+    "_",
+    "-"
+  ],
+  "digits": [
+    "0",
+    "1",
+    "3",
+    "7",
+    "13",
+    "17",
+    "23",
+    "42",
+    "64",
+    "88",
+    "101",
+    "127",
+    "1337",
+    "404",
+    "451",
+    "0x0"
+  ],
+  "allowed_chars": "abcdefghijklmnopqrstuvwxyz0123456789_-",
+  "max_length": 18,
+  "min_length": 3,
+  "preferred_lengths": [
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
+  ],
+  "transformations": [
+    "leet",
+    "drop-vowels",
+    "truncate",
+    "corrupt",
+    "lower",
+    "numeric"
+  ],
+  "forbidden": [
+    "hacker",
+    "hackers",
+    "cyberwarrior",
+    "hackmaster",
+    "elitehacker",
+    "anonymous",
+    "darkweb",
+    "darknet",
+    "ransomware",
+    "terrorist"
+  ],
+  "overused": [
+    "shadow",
+    "dark",
+    "cyber",
+    "hack",
+    "killer",
+    "elite",
+    "warrior",
+    "ghost",
+    "anonymous",
+    "1337",
+    "xX",
+    "Xx"
+  ],
+  "archetype_weights": {
+    "technical": 1.3,
+    "abstract": 1.2,
+    "compound": 1.5,
+    "ironic": 1.1,
+    "orthographic": 1.0,
+    "minimal": 1.0,
+    "mythological": 0.7,
+    "scifi": 0.7,
+    "mundane": 0.8,
+    "threatening": 0.6,
+    "technical_myth": 0.8,
+    "mundane_threat": 0.8,
+    "leet": 0.6,
+    "numeric": 0.7,
+    "prefix": 0.6,
+    "suffix": 0.6
+  }
+}

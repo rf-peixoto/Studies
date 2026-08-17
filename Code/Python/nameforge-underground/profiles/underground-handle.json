@@ -1,0 +1,35 @@
+{
+  "id": "underground-handle",
+  "given_name": "",
+  "middle_name": "",
+  "family_name": "",
+  "aliases": [],
+  "era": "1980s-2020s",
+  "geography": "international underground computing culture",
+  "culture": "hacker-underground",
+  "generation": "Internet-native",
+  "social_class": "mixed",
+  "family_structure": "",
+  "religion": "",
+  "profession": "underground computer operator",
+  "personality": [
+    "technical",
+    "irreverent",
+    "independent",
+    "curious",
+    "secretive"
+  ],
+  "public_identity": "ordinary Internet user",
+  "private_identity": "member of an underground technical community",
+  "contradiction": "The handle should reveal something about the character while concealing their mundane identity.",
+  "narrative_role": "underground operator",
+  "desired_impression": [
+    "technical",
+    "mysterious",
+    "irreverent",
+    "intelligent",
+    "memorable"
+  ],
+  "naming_system": "underground-hacker-handle",
+  "notes": "Favor organic aliases: technical references, obscure jokes, mythology, literary references, mundane irony, compact handles, and deliberate spelling mutations. Avoid generic cyber-warrior branding."
+}
