@@ -1,0 +1,55 @@
+{
+  "id": "adrian-vey",
+  "given_name": "Adrian",
+  "family_name": "Vey",
+  "aliases": [
+    "oracle"
+  ],
+  "handle_history": [
+    "cassandra_",
+    "orakel"
+  ],
+  "era": "1996-2011",
+  "first_online_year": 1996,
+  "geography": "Vienna; academic mailing lists",
+  "culture": "cypherpunk, academic",
+  "generation": "usenet",
+  "social_class": "upper middle class",
+  "profession": "cryptography researcher",
+  "languages": [
+    "german",
+    "english",
+    "latin"
+  ],
+  "personality": [
+    "intellectual",
+    "vain",
+    "erudite",
+    "unreliable"
+  ],
+  "interests": [
+    "cryptographic",
+    "literary",
+    "mythological"
+  ],
+  "public_identity": "a lecturer with a modest publication record",
+  "private_identity": "the one who names things, and enjoys it too much",
+  "contradiction": "Predicts everything correctly and is trusted by no one.",
+  "narrative_role": "antagonist-adjacent; the persuader",
+  "desired_impression": [
+    "literary",
+    "intelligent",
+    "mysterious"
+  ],
+  "avoid": [
+    "mildew",
+    "null"
+  ],
+  "seed_words": [
+    "vey",
+    "vienna",
+    "augury"
+  ],
+  "naming_system": "underground-hacker-handle",
+  "notes": "Self-mythologising: he would pick something classical and then defend the choice at length. The scorer's mythological archetype is his register."
+}

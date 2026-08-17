@@ -1,0 +1,55 @@
+{
+  "id": "elias-voss",
+  "given_name": "Elias",
+  "family_name": "Voss",
+  "aliases": [
+    "null"
+  ],
+  "handle_history": [
+    "nullbyte",
+    "nul"
+  ],
+  "era": "1989-2014",
+  "first_online_year": 1991,
+  "geography": "Rotterdam; international IRC",
+  "culture": "hacker-underground, phreak lineage",
+  "generation": "pre-web",
+  "social_class": "working class",
+  "profession": "telephone systems technician turned reverse engineer",
+  "languages": [
+    "dutch",
+    "english"
+  ],
+  "personality": [
+    "secretive",
+    "terse",
+    "technical",
+    "patient"
+  ],
+  "interests": [
+    "phreak",
+    "lowlevel",
+    "oldschool"
+  ],
+  "public_identity": "a contractor who services building phone systems",
+  "private_identity": "the person other operators check with before acting",
+  "contradiction": "Holds the most authority in the room and says the least.",
+  "narrative_role": "mentor; the older generation",
+  "desired_impression": [
+    "minimal",
+    "oldschool",
+    "technical",
+    "mysterious"
+  ],
+  "avoid": [
+    "ghost",
+    "shadow"
+  ],
+  "seed_words": [
+    "voss",
+    "rotterdam",
+    "exchange"
+  ],
+  "naming_system": "underground-hacker-handle",
+  "notes": "Took the handle in 1991, before the scene had branding. Anything that looks designed is wrong for him. Four characters or fewer reads correctly."
+}

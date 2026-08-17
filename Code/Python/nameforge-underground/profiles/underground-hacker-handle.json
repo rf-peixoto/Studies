@@ -1,231 +1,2668 @@
 {
   "id": "underground-hacker-handle",
-  "description": "Fictional Internet aliases inspired by BBS, IRC, warez, phreak, cypherpunk and underground computing cultures. The system favors specificity, wordplay, understatement, compact forms, technical references and deliberate orthographic mutation.",
+  "schema_version": 2,
+  "description": "Fictional Internet aliases inspired by BBS, IRC, warez, phreak, cypherpunk and underground computing cultures. Every term carries a gloss, semantic tags and a plausible period range, so the scorer can explain *why* a handle fits a character rather than just ranking it. The system deliberately favours specificity, wordplay and understatement over generic cyber-warrior branding.",
   "archetypes": {
-    "technical": [
-      "technical"
-    ],
-    "abstract": [
-      "abstract"
-    ],
-    "mythological": [
-      "mythological"
-    ],
-    "scifi": [
-      "scifi"
-    ],
-    "mundane": [
-      "mundane"
-    ],
-    "threatening": [
-      "threatening"
-    ],
-    "minimal": [
-      "minimal"
-    ],
-    "compound": [
-      "compound"
-    ],
-    "technical_myth": [
-      "technical_myth"
-    ],
-    "mundane_threat": [
-      "mundane_threat"
-    ],
-    "ironic": [
-      "ironic"
-    ],
-    "orthographic": [
-      "orthographic"
-    ],
-    "leet": [
-      "leet"
-    ],
-    "numeric": [
-      "numeric"
-    ],
-    "prefix": [
-      "prefix"
-    ],
-    "suffix": [
-      "suffix"
-    ]
+    "technical": {
+      "enabled": true
+    },
+    "abstract": {
+      "enabled": true
+    },
+    "mythological": {
+      "enabled": true
+    },
+    "scifi": {
+      "enabled": true
+    },
+    "mundane": {
+      "enabled": true
+    },
+    "threatening": {
+      "enabled": true
+    },
+    "minimal": {
+      "enabled": true
+    },
+    "compound": {
+      "enabled": true
+    },
+    "technical_myth": {
+      "enabled": true
+    },
+    "mundane_threat": {
+      "enabled": true
+    },
+    "ironic": {
+      "enabled": true
+    },
+    "orthographic": {
+      "enabled": true
+    },
+    "leet": {
+      "enabled": true
+    },
+    "numeric": {
+      "enabled": true
+    },
+    "prefix": {
+      "enabled": true
+    },
+    "suffix": {
+      "enabled": true
+    },
+    "acronym": {
+      "enabled": true
+    },
+    "phonetic": {
+      "enabled": true
+    },
+    "seeded": {
+      "enabled": true
+    }
   },
   "technical_terms": [
-    "opcode",
-    "stack",
-    "heap",
-    "daemon",
-    "shell",
-    "kernel",
-    "root",
-    "packet",
-    "socket",
-    "buffer",
-    "offset",
-    "pointer",
-    "segfault",
-    "overflow",
-    "underflow",
-    "syscall",
-    "register",
-    "bit",
-    "byte",
-    "hex",
-    "xor",
-    "null",
-    "pipe",
-    "fork",
-    "signal",
-    "trace",
-    "dump",
-    "core",
-    "inode",
-    "cache",
-    "cipher",
-    "hash",
-    "nonce",
-    "entropy",
-    "vector",
-    "process",
-    "thread",
-    "race",
-    "deadlock",
-    "wire",
-    "node",
-    "proxy",
-    "relay",
-    "payload",
-    "loader",
-    "stub",
-    "hook",
-    "patch",
-    "debug",
-    "strace",
-    "ptrace"
+    {
+      "term": "opcode",
+      "tags": [
+        "technical",
+        "lowlevel"
+      ],
+      "gloss": "a single machine instruction",
+      "since": 1975,
+      "weight": 1.3,
+      "register": "insider"
+    },
+    {
+      "term": "stack",
+      "tags": [
+        "technical",
+        "lowlevel"
+      ],
+      "gloss": "the call stack; also what you smash",
+      "weight": 1.2
+    },
+    {
+      "term": "heap",
+      "tags": [
+        "technical",
+        "lowlevel"
+      ],
+      "gloss": "dynamically allocated memory",
+      "since": 1975,
+      "register": "insider"
+    },
+    {
+      "term": "daemon",
+      "tags": [
+        "technical",
+        "mythological"
+      ],
+      "gloss": "a background process; the old spelling of demon",
+      "since": 1975,
+      "weight": 1.3,
+      "register": "insider"
+    },
+    {
+      "term": "kernel",
+      "tags": [
+        "technical",
+        "lowlevel"
+      ],
+      "gloss": "the core of the operating system",
+      "since": 1975,
+      "weight": 1.2
+    },
+    {
+      "term": "segfault",
+      "tags": [
+        "technical",
+        "lowlevel",
+        "irreverent"
+      ],
+      "gloss": "a memory access violation; failure as identity",
+      "since": 1985,
+      "weight": 1.2,
+      "register": "insider"
+    },
+    {
+      "term": "overflow",
+      "tags": [
+        "technical",
+        "lowlevel"
+      ],
+      "gloss": "writing past the end of a buffer",
+      "since": 1980,
+      "weight": 1.2
+    },
+    {
+      "term": "underflow",
+      "tags": [
+        "technical",
+        "lowlevel"
+      ],
+      "gloss": "arithmetic falling below representable range",
+      "since": 1980,
+      "register": "insider"
+    },
+    {
+      "term": "syscall",
+      "tags": [
+        "technical",
+        "lowlevel"
+      ],
+      "gloss": "a request from userland into the kernel",
+      "since": 1985,
+      "register": "insider"
+    },
+    {
+      "term": "register",
+      "tags": [
+        "technical",
+        "lowlevel"
+      ],
+      "gloss": "a slot inside the processor itself",
+      "since": 1975,
+      "register": "insider"
+    },
+    {
+      "term": "offset",
+      "tags": [
+        "technical",
+        "lowlevel"
+      ],
+      "gloss": "a distance from a base address",
+      "since": 1975
+    },
+    {
+      "term": "pointer",
+      "tags": [
+        "technical",
+        "lowlevel",
+        "abstract"
+      ],
+      "gloss": "an address standing in for a thing",
+      "since": 1975
+    },
+    {
+      "term": "nullptr",
+      "tags": [
+        "technical",
+        "abstract"
+      ],
+      "gloss": "the pointer that refers to nothing",
+      "since": 1990,
+      "register": "insider"
+    },
+    {
+      "term": "buffer",
+      "tags": [
+        "technical",
+        "lowlevel"
+      ],
+      "gloss": "the space between input and disaster",
+      "since": 1975
+    },
+    {
+      "term": "packet",
+      "tags": [
+        "technical",
+        "network"
+      ],
+      "gloss": "the unit of everything that moves",
+      "weight": 1.2
+    },
+    {
+      "term": "socket",
+      "tags": [
+        "technical",
+        "network"
+      ],
+      "gloss": "an endpoint of a connection",
+      "since": 1982
+    },
+    {
+      "term": "inode",
+      "tags": [
+        "technical",
+        "lowlevel"
+      ],
+      "gloss": "the filesystem's real name for a file",
+      "since": 1975,
+      "register": "insider"
+    },
+    {
+      "term": "sigkill",
+      "tags": [
+        "technical",
+        "threatening"
+      ],
+      "gloss": "the signal that cannot be caught or ignored",
+      "since": 1985,
+      "weight": 1.2,
+      "register": "insider"
+    },
+    {
+      "term": "sigint",
+      "tags": [
+        "technical",
+        "cryptographic"
+      ],
+      "gloss": "the interrupt signal; also a pun on intelligence work",
+      "since": 1985,
+      "register": "insider"
+    },
+    {
+      "term": "ptrace",
+      "tags": [
+        "technical",
+        "surveillance"
+      ],
+      "gloss": "the syscall that lets one process watch another",
+      "since": 1985,
+      "register": "insider"
+    },
+    {
+      "term": "strace",
+      "tags": [
+        "technical"
+      ],
+      "gloss": "the tool that prints what a program really does",
+      "since": 1992,
+      "register": "insider"
+    },
+    {
+      "term": "coredump",
+      "tags": [
+        "technical",
+        "macabre"
+      ],
+      "gloss": "the corpse a crashed program leaves behind",
+      "since": 1980,
+      "weight": 1.2,
+      "register": "insider"
+    },
+    {
+      "term": "deadlock",
+      "tags": [
+        "technical",
+        "abstract"
+      ],
+      "gloss": "two processes each waiting for the other forever",
+      "since": 1975,
+      "weight": 1.3
+    },
+    {
+      "term": "racecond",
+      "tags": [
+        "technical"
+      ],
+      "gloss": "a bug that depends on who arrives first",
+      "since": 1985,
+      "register": "insider"
+    },
+    {
+      "term": "mutex",
+      "tags": [
+        "technical",
+        "minimal"
+      ],
+      "gloss": "the lock that guarantees only one",
+      "since": 1985,
+      "register": "insider"
+    },
+    {
+      "term": "semaphore",
+      "tags": [
+        "technical",
+        "abstract"
+      ],
+      "gloss": "a signal flag, at sea and in memory",
+      "since": 1975,
+      "weight": 1.1
+    },
+    {
+      "term": "fork",
+      "tags": [
+        "technical",
+        "minimal"
+      ],
+      "gloss": "the call that splits a process in two",
+      "since": 1975,
+      "weight": 1.2
+    },
+    {
+      "term": "pipe",
+      "tags": [
+        "technical",
+        "minimal"
+      ],
+      "gloss": "output of one thing as input to the next",
+      "since": 1975
+    },
+    {
+      "term": "shim",
+      "tags": [
+        "technical",
+        "irreverent"
+      ],
+      "gloss": "a thin layer that makes two things fit",
+      "since": 1990
+    },
+    {
+      "term": "stub",
+      "tags": [
+        "technical",
+        "abstract"
+      ],
+      "gloss": "a placeholder that pretends to be the real thing",
+      "since": 1980
+    },
+    {
+      "term": "hook",
+      "tags": [
+        "technical",
+        "surveillance"
+      ],
+      "gloss": "code that intercepts something on its way past",
+      "since": 1985,
+      "weight": 1.2
+    },
+    {
+      "term": "payload",
+      "tags": [
+        "technical",
+        "threatening"
+      ],
+      "gloss": "the part that actually does something",
+      "since": 1985
+    },
+    {
+      "term": "loader",
+      "tags": [
+        "technical"
+      ],
+      "gloss": "the thing that puts code where it runs",
+      "since": 1980
+    },
+    {
+      "term": "bootstrap",
+      "tags": [
+        "technical",
+        "abstract"
+      ],
+      "gloss": "pulling yourself up by your own bootloader",
+      "since": 1975
+    },
+    {
+      "term": "firmware",
+      "tags": [
+        "technical",
+        "lowlevel"
+      ],
+      "gloss": "software that thinks it is hardware",
+      "since": 1980
+    },
+    {
+      "term": "bytecode",
+      "tags": [
+        "technical",
+        "abstract"
+      ],
+      "gloss": "instructions for a machine that does not exist",
+      "since": 1985,
+      "register": "insider"
+    },
+    {
+      "term": "checksum",
+      "tags": [
+        "technical",
+        "cryptographic"
+      ],
+      "gloss": "a small number that proves a large one",
+      "since": 1975
+    },
+    {
+      "term": "parity",
+      "tags": [
+        "technical",
+        "abstract"
+      ],
+      "gloss": "the bit that tells you something went wrong"
+    },
+    {
+      "term": "latency",
+      "tags": [
+        "technical",
+        "abstract"
+      ],
+      "gloss": "the delay you cannot engineer away",
+      "since": 1980,
+      "weight": 1.1
+    },
+    {
+      "term": "jitter",
+      "tags": [
+        "technical",
+        "abstract"
+      ],
+      "gloss": "variation in delay; nervousness as a metric",
+      "since": 1985
+    },
+    {
+      "term": "bitrot",
+      "tags": [
+        "technical",
+        "organic",
+        "abstract"
+      ],
+      "gloss": "data decaying quietly where nobody looks",
+      "since": 1985,
+      "weight": 1.3,
+      "register": "insider"
+    },
+    {
+      "term": "endian",
+      "tags": [
+        "technical",
+        "irreverent"
+      ],
+      "gloss": "which end of a number comes first; a war of taste",
+      "since": 1980,
+      "register": "insider"
+    },
+    {
+      "term": "hexdump",
+      "tags": [
+        "technical",
+        "lowlevel"
+      ],
+      "gloss": "the raw bytes, printed for humans",
+      "since": 1980,
+      "register": "insider"
+    },
+    {
+      "term": "scratch",
+      "tags": [
+        "technical",
+        "mundane"
+      ],
+      "gloss": "temporary space nobody backs up",
+      "since": 1975
+    },
+    {
+      "term": "spool",
+      "tags": [
+        "technical",
+        "bureaucratic"
+      ],
+      "gloss": "the queue nothing ever leaves on time",
+      "since": 1975
+    },
+    {
+      "term": "cronjob",
+      "tags": [
+        "technical",
+        "mundane"
+      ],
+      "gloss": "a task that runs whether anyone is watching or not",
+      "since": 1980,
+      "register": "insider"
+    },
+    {
+      "term": "chroot",
+      "tags": [
+        "technical",
+        "threatening"
+      ],
+      "gloss": "a cage a process cannot see out of",
+      "since": 1985,
+      "register": "insider"
+    },
+    {
+      "term": "symlink",
+      "tags": [
+        "technical",
+        "abstract"
+      ],
+      "gloss": "a name pointing at another name",
+      "since": 1985,
+      "register": "insider"
+    },
+    {
+      "term": "umask",
+      "tags": [
+        "technical",
+        "cryptographic"
+      ],
+      "gloss": "what a new file is not allowed to be",
+      "since": 1980,
+      "register": "insider"
+    },
+    {
+      "term": "trapdoor",
+      "tags": [
+        "technical",
+        "threatening"
+      ],
+      "gloss": "a way in that was left on purpose",
+      "since": 1980,
+      "weight": 1.2
+    },
+    {
+      "term": "kludge",
+      "tags": [
+        "technical",
+        "irreverent",
+        "oldschool"
+      ],
+      "gloss": "a fix that works and should not",
+      "since": 1975,
+      "weight": 1.2,
+      "register": "insider"
+    },
+    {
+      "term": "bogon",
+      "tags": [
+        "technical",
+        "irreverent",
+        "oldschool"
+      ],
+      "gloss": "a unit of bogosity; a packet that should not exist",
+      "since": 1980,
+      "weight": 1.2,
+      "register": "insider"
+    },
+    {
+      "term": "frob",
+      "tags": [
+        "technical",
+        "irreverent",
+        "oldschool"
+      ],
+      "gloss": "to adjust something with no idea of the units",
+      "since": 1975,
+      "register": "insider"
+    },
+    {
+      "term": "grep",
+      "tags": [
+        "technical",
+        "minimal"
+      ],
+      "gloss": "to search; used as a verb for thinking",
+      "since": 1975,
+      "weight": 1.1
+    },
+    {
+      "term": "nybble",
+      "tags": [
+        "technical",
+        "irreverent"
+      ],
+      "gloss": "half a byte, spelled for the joke",
+      "since": 1975,
+      "register": "insider"
+    },
+    {
+      "term": "quine",
+      "tags": [
+        "technical",
+        "literary",
+        "abstract"
+      ],
+      "gloss": "a program whose only output is itself",
+      "since": 1980,
+      "weight": 1.2,
+      "register": "insider"
+    },
+    {
+      "term": "nulldev",
+      "tags": [
+        "technical",
+        "abstract"
+      ],
+      "gloss": "the device that accepts everything and keeps nothing",
+      "since": 1975,
+      "register": "insider"
+    },
+    {
+      "term": "null",
+      "tags": [
+        "technical",
+        "abstract",
+        "minimal"
+      ],
+      "gloss": "the value that means: deliberately nothing",
+      "weight": 1.3
+    },
+    {
+      "term": "root",
+      "tags": [
+        "technical",
+        "minimal"
+      ],
+      "gloss": "total authority, named after a directory",
+      "since": 1975,
+      "weight": 1.2
+    },
+    {
+      "term": "core",
+      "tags": [
+        "technical",
+        "oldschool",
+        "minimal"
+      ],
+      "gloss": "memory, back when it was physically wound",
+      "weight": 1.2
+    },
+    {
+      "term": "zero",
+      "tags": [
+        "technical",
+        "abstract",
+        "minimal"
+      ],
+      "gloss": "the number that had to be argued for"
+    },
+    {
+      "term": "watchdog",
+      "tags": [
+        "technical",
+        "surveillance"
+      ],
+      "gloss": "the timer that reboots you if you go quiet",
+      "since": 1980
+    },
+    {
+      "term": "heartbeat",
+      "tags": [
+        "technical",
+        "organic",
+        "abstract"
+      ],
+      "gloss": "the packet that only means: still here",
+      "since": 1985,
+      "weight": 1.1
+    }
+  ],
+  "crypto_terms": [
+    {
+      "term": "cipher",
+      "tags": [
+        "cryptographic",
+        "abstract"
+      ],
+      "gloss": "a system for making meaning unreadable",
+      "weight": 1.3
+    },
+    {
+      "term": "nonce",
+      "tags": [
+        "cryptographic",
+        "minimal"
+      ],
+      "gloss": "a number used exactly once, then never again",
+      "since": 1980,
+      "weight": 1.3,
+      "register": "insider"
+    },
+    {
+      "term": "saltbyte",
+      "tags": [
+        "cryptographic"
+      ],
+      "gloss": "the randomness that makes two identical secrets differ",
+      "since": 1985,
+      "register": "insider"
+    },
+    {
+      "term": "keyring",
+      "tags": [
+        "cryptographic",
+        "mundane"
+      ],
+      "gloss": "the collection of who you are willing to trust",
+      "since": 1991,
+      "weight": 1.2
+    },
+    {
+      "term": "fingerprint",
+      "tags": [
+        "cryptographic",
+        "surveillance"
+      ],
+      "gloss": "a short proof of a long key",
+      "since": 1991
+    },
+    {
+      "term": "plaintext",
+      "tags": [
+        "cryptographic",
+        "minimal"
+      ],
+      "gloss": "the dangerous version",
+      "since": 1975,
+      "weight": 1.2
+    },
+    {
+      "term": "ciphertext",
+      "tags": [
+        "cryptographic"
+      ],
+      "gloss": "the safe version nobody can read",
+      "since": 1975
+    },
+    {
+      "term": "onerway",
+      "tags": [
+        "cryptographic",
+        "abstract"
+      ],
+      "gloss": "a function easy forward and hopeless backward",
+      "since": 1980,
+      "register": "insider"
+    },
+    {
+      "term": "padding",
+      "tags": [
+        "cryptographic",
+        "abstract"
+      ],
+      "gloss": "meaningless bytes that hide the shape of meaning",
+      "since": 1980
+    },
+    {
+      "term": "remailer",
+      "tags": [
+        "cryptographic",
+        "oldschool"
+      ],
+      "gloss": "a relay that forgets where mail came from",
+      "since": 1992,
+      "until": 2010,
+      "weight": 1.2,
+      "register": "insider"
+    },
+    {
+      "term": "deniable",
+      "tags": [
+        "cryptographic",
+        "abstract"
+      ],
+      "gloss": "encryption you can honestly claim is not there",
+      "since": 1997,
+      "weight": 1.2
+    },
+    {
+      "term": "passphrase",
+      "tags": [
+        "cryptographic",
+        "mundane"
+      ],
+      "gloss": "the sentence standing between them and everything",
+      "since": 1991
+    },
+    {
+      "term": "entropybit",
+      "tags": [
+        "cryptographic",
+        "abstract"
+      ],
+      "gloss": "the raw unpredictability everything else rests on",
+      "since": 1985,
+      "register": "insider"
+    },
+    {
+      "term": "tempest",
+      "tags": [
+        "cryptographic",
+        "surveillance",
+        "threatening"
+      ],
+      "gloss": "leakage of secrets through stray emissions",
+      "since": 1975,
+      "weight": 1.2,
+      "register": "insider"
+    },
+    {
+      "term": "blinding",
+      "tags": [
+        "cryptographic",
+        "abstract"
+      ],
+      "gloss": "hiding the input even from the one computing it",
+      "since": 1983,
+      "register": "insider"
+    },
+    {
+      "term": "shamir",
+      "tags": [
+        "cryptographic",
+        "literary"
+      ],
+      "gloss": "the shared secret that needs several people to open",
+      "since": 1979,
+      "register": "insider"
+    },
+    {
+      "term": "dropbox",
+      "tags": [
+        "cryptographic",
+        "mundane",
+        "threatening"
+      ],
+      "gloss": "a place to leave something without meeting",
+      "since": 1975,
+      "weight": 1.1
+    },
+    {
+      "term": "burnbag",
+      "tags": [
+        "cryptographic",
+        "threatening",
+        "mundane"
+      ],
+      "gloss": "the container for what must not survive the day",
+      "since": 1975,
+      "register": "insider"
+    },
+    {
+      "term": "coldkey",
+      "tags": [
+        "cryptographic",
+        "minimal"
+      ],
+      "gloss": "a key kept away from any network, on purpose",
+      "since": 1995
+    },
+    {
+      "term": "nullkey",
+      "tags": [
+        "cryptographic",
+        "abstract"
+      ],
+      "gloss": "a key that decrypts nothing; a deliberate dead end",
+      "since": 1985,
+      "register": "insider"
+    }
   ],
   "abstract_terms": [
-    "void",
-    "absence",
-    "noise",
-    "static",
-    "entropy",
-    "chaos",
-    "paradox",
-    "silence",
-    "echo",
-    "zero",
-    "shadow",
-    "ghost",
-    "signal",
-    "fracture",
-    "delta",
-    "nadir",
-    "axiom",
-    "anomaly",
-    "cipher",
-    "riddle",
-    "oracle",
-    "oblivion",
-    "afterimage"
+    {
+      "term": "entropy",
+      "tags": [
+        "abstract",
+        "scientific"
+      ],
+      "gloss": "the tendency of order to leave",
+      "weight": 1.4
+    },
+    {
+      "term": "void",
+      "tags": [
+        "abstract",
+        "minimal"
+      ],
+      "gloss": "the absence that has a name",
+      "weight": 1.2
+    },
+    {
+      "term": "absence",
+      "tags": [
+        "abstract",
+        "literary"
+      ],
+      "gloss": "the shape left by something removed"
+    },
+    {
+      "term": "static",
+      "tags": [
+        "abstract"
+      ],
+      "gloss": "noise that sounds like a signal from far away",
+      "weight": 1.2
+    },
+    {
+      "term": "noise",
+      "tags": [
+        "abstract",
+        "minimal"
+      ],
+      "gloss": "everything you did not mean to send"
+    },
+    {
+      "term": "paradox",
+      "tags": [
+        "abstract",
+        "literary"
+      ],
+      "gloss": "the statement that undoes itself"
+    },
+    {
+      "term": "silence",
+      "tags": [
+        "abstract",
+        "literary"
+      ],
+      "gloss": "the answer that cannot be quoted"
+    },
+    {
+      "term": "afterimage",
+      "tags": [
+        "abstract",
+        "literary"
+      ],
+      "gloss": "what stays behind the eyelids",
+      "weight": 1.2
+    },
+    {
+      "term": "nadir",
+      "tags": [
+        "abstract",
+        "literary",
+        "minimal"
+      ],
+      "gloss": "the lowest point, named precisely",
+      "weight": 1.1
+    },
+    {
+      "term": "axiom",
+      "tags": [
+        "abstract",
+        "literary"
+      ],
+      "gloss": "the thing assumed so everything else can follow",
+      "weight": 1.2
+    },
+    {
+      "term": "anomaly",
+      "tags": [
+        "abstract",
+        "scientific"
+      ],
+      "gloss": "the data point nobody can explain away"
+    },
+    {
+      "term": "riddle",
+      "tags": [
+        "abstract",
+        "literary"
+      ],
+      "gloss": "a question shaped like an insult"
+    },
+    {
+      "term": "oblivion",
+      "tags": [
+        "abstract",
+        "gothic"
+      ],
+      "gloss": "being forgotten, considered as a destination"
+    },
+    {
+      "term": "fracture",
+      "tags": [
+        "abstract",
+        "gothic"
+      ],
+      "gloss": "the line along which something will break"
+    },
+    {
+      "term": "delta",
+      "tags": [
+        "abstract",
+        "scientific",
+        "minimal"
+      ],
+      "gloss": "the difference between two states",
+      "weight": 1.1
+    },
+    {
+      "term": "asymptote",
+      "tags": [
+        "abstract",
+        "scientific",
+        "literary"
+      ],
+      "gloss": "approaching forever and never arriving",
+      "weight": 1.2
+    },
+    {
+      "term": "halflife",
+      "tags": [
+        "abstract",
+        "scientific"
+      ],
+      "gloss": "the time it takes for half of it to be gone",
+      "weight": 1.2
+    },
+    {
+      "term": "penumbra",
+      "tags": [
+        "abstract",
+        "literary",
+        "gothic"
+      ],
+      "gloss": "the partial shadow at the edge of the full one",
+      "weight": 1.2
+    },
+    {
+      "term": "interval",
+      "tags": [
+        "abstract",
+        "minimal"
+      ],
+      "gloss": "the gap that is also a measurement"
+    },
+    {
+      "term": "residue",
+      "tags": [
+        "abstract",
+        "organic"
+      ],
+      "gloss": "what is left after the reaction finishes",
+      "weight": 1.1
+    },
+    {
+      "term": "threshold",
+      "tags": [
+        "abstract",
+        "scientific"
+      ],
+      "gloss": "the point at which behaviour changes"
+    },
+    {
+      "term": "attractor",
+      "tags": [
+        "abstract",
+        "scientific"
+      ],
+      "gloss": "the state a system keeps falling back into",
+      "since": 1980,
+      "weight": 1.1,
+      "register": "insider"
+    },
+    {
+      "term": "aporia",
+      "tags": [
+        "abstract",
+        "literary"
+      ],
+      "gloss": "the impasse where reasoning stops",
+      "register": "insider"
+    },
+    {
+      "term": "lacuna",
+      "tags": [
+        "abstract",
+        "literary"
+      ],
+      "gloss": "a gap in a manuscript where text is missing",
+      "weight": 1.2,
+      "register": "insider"
+    },
+    {
+      "term": "umbra",
+      "tags": [
+        "abstract",
+        "gothic",
+        "minimal"
+      ],
+      "gloss": "the total shadow, where nothing gets through"
+    },
+    {
+      "term": "vestige",
+      "tags": [
+        "abstract",
+        "organic"
+      ],
+      "gloss": "the trace of something no longer functional"
+    },
+    {
+      "term": "erratum",
+      "tags": [
+        "abstract",
+        "bureaucratic",
+        "literary"
+      ],
+      "gloss": "the printed correction of a printed mistake",
+      "weight": 1.1
+    },
+    {
+      "term": "quietus",
+      "tags": [
+        "abstract",
+        "gothic",
+        "literary"
+      ],
+      "gloss": "a final settling; a discharge from obligation",
+      "register": "insider"
+    }
   ],
   "mythology": [
-    "loki",
-    "hermes",
-    "anubis",
-    "janus",
-    "icarus",
-    "morpheus",
-    "orpheus",
-    "nyx",
-    "eris",
-    "atlas",
-    "hecate",
-    "charon",
-    "echo",
-    "daemon",
-    "prometheus"
+    {
+      "term": "loki",
+      "tags": [
+        "mythological",
+        "irreverent"
+      ],
+      "gloss": "the trickster who is useful right up until he is not",
+      "weight": 1.2
+    },
+    {
+      "term": "hermes",
+      "tags": [
+        "mythological",
+        "network"
+      ],
+      "gloss": "messenger, and patron of thieves",
+      "weight": 1.2
+    },
+    {
+      "term": "anubis",
+      "tags": [
+        "mythological",
+        "gothic"
+      ],
+      "gloss": "the one who weighs what you were"
+    },
+    {
+      "term": "janus",
+      "tags": [
+        "mythological",
+        "literary"
+      ],
+      "gloss": "two faces, one head",
+      "weight": 1.3
+    },
+    {
+      "term": "icarus",
+      "tags": [
+        "mythological",
+        "literary"
+      ],
+      "gloss": "the cautionary tale everyone thinks is about someone else"
+    },
+    {
+      "term": "morpheus",
+      "tags": [
+        "mythological",
+        "literary"
+      ],
+      "gloss": "shaper of dreams",
+      "weight": 0.8,
+      "register": "pop"
+    },
+    {
+      "term": "orpheus",
+      "tags": [
+        "mythological",
+        "literary",
+        "gothic"
+      ],
+      "gloss": "the one who looked back",
+      "weight": 1.2
+    },
+    {
+      "term": "nyx",
+      "tags": [
+        "mythological",
+        "gothic",
+        "minimal"
+      ],
+      "gloss": "primordial night; short and unimprovable",
+      "weight": 1.3
+    },
+    {
+      "term": "eris",
+      "tags": [
+        "mythological",
+        "irreverent"
+      ],
+      "gloss": "discord, and the apple that started it",
+      "weight": 1.2
+    },
+    {
+      "term": "hecate",
+      "tags": [
+        "mythological",
+        "gothic"
+      ],
+      "gloss": "goddess of crossroads and things done at night"
+    },
+    {
+      "term": "charon",
+      "tags": [
+        "mythological",
+        "gothic"
+      ],
+      "gloss": "the ferryman who requires payment",
+      "weight": 1.2
+    },
+    {
+      "term": "prometheus",
+      "tags": [
+        "mythological",
+        "literary"
+      ],
+      "gloss": "punished specifically for sharing"
+    },
+    {
+      "term": "cassandra",
+      "tags": [
+        "mythological",
+        "literary"
+      ],
+      "gloss": "right every time, believed never",
+      "weight": 1.3
+    },
+    {
+      "term": "sisyphus",
+      "tags": [
+        "mythological",
+        "irreverent",
+        "literary"
+      ],
+      "gloss": "the patron saint of maintenance work",
+      "weight": 1.2
+    },
+    {
+      "term": "argus",
+      "tags": [
+        "mythological",
+        "surveillance"
+      ],
+      "gloss": "the watchman with a hundred eyes",
+      "weight": 1.2
+    },
+    {
+      "term": "mnemosyne",
+      "tags": [
+        "mythological",
+        "literary"
+      ],
+      "gloss": "memory, personified and inconveniently long",
+      "weight": 0.8
+    },
+    {
+      "term": "lethe",
+      "tags": [
+        "mythological",
+        "gothic",
+        "minimal"
+      ],
+      "gloss": "the river of forgetting",
+      "weight": 1.3
+    },
+    {
+      "term": "thoth",
+      "tags": [
+        "mythological",
+        "bureaucratic"
+      ],
+      "gloss": "scribe of the gods; keeper of records",
+      "weight": 1.1
+    },
+    {
+      "term": "golem",
+      "tags": [
+        "mythological",
+        "literary"
+      ],
+      "gloss": "a made thing that follows instructions too exactly",
+      "weight": 1.2
+    },
+    {
+      "term": "banshee",
+      "tags": [
+        "mythological",
+        "gothic",
+        "threatening"
+      ],
+      "gloss": "the one whose arrival is the message"
+    },
+    {
+      "term": "wyrm",
+      "tags": [
+        "mythological",
+        "gothic",
+        "oldschool"
+      ],
+      "gloss": "the older spelling of the older monster",
+      "weight": 1.2
+    },
+    {
+      "term": "kraken",
+      "tags": [
+        "mythological",
+        "threatening"
+      ],
+      "gloss": "the thing that is only ever released",
+      "weight": 0.9
+    },
+    {
+      "term": "nemesis",
+      "tags": [
+        "mythological",
+        "threatening"
+      ],
+      "gloss": "retribution as a personality",
+      "weight": 0.9
+    },
+    {
+      "term": "oracle",
+      "tags": [
+        "mythological",
+        "literary",
+        "technical"
+      ],
+      "gloss": "answers that are technically correct",
+      "weight": 1.2
+    },
+    {
+      "term": "chimera",
+      "tags": [
+        "mythological",
+        "literary"
+      ],
+      "gloss": "several animals arguing inside one body",
+      "weight": 1.1
+    },
+    {
+      "term": "moirai",
+      "tags": [
+        "mythological",
+        "gothic"
+      ],
+      "gloss": "the three who measure and cut the thread",
+      "register": "insider"
+    }
   ],
   "scifi": [
-    "sprawl",
-    "neuromancer",
-    "wintermute",
-    "molly",
-    "case",
-    "akira",
-    "tyrell",
-    "replicant",
-    "deckard",
-    "gibson",
-    "console",
-    "matrix",
-    "orbital",
-    "cyberspace"
-  ],
-  "mundane": [
-    "accountant",
-    "gardener",
-    "plumber",
-    "milkman",
-    "janitor",
-    "librarian",
-    "mechanic",
-    "teacher",
-    "postman",
-    "butcher",
-    "dentist",
-    "farmer",
-    "driver",
-    "baker",
-    "clerk"
-  ],
-  "threatening": [
-    "razor",
-    "venom",
-    "grave",
-    "black",
-    "dead",
-    "frost",
-    "fang",
-    "scar",
-    "wraith",
-    "reaper",
-    "rot",
-    "ash",
-    "blade",
-    "thorn",
-    "viper",
-    "bruise"
+    {
+      "term": "sprawl",
+      "tags": [
+        "cyberpunk",
+        "literary"
+      ],
+      "gloss": "unplanned urban growth, extended to the horizon",
+      "since": 1984,
+      "weight": 1.2
+    },
+    {
+      "term": "arcology",
+      "tags": [
+        "cyberpunk",
+        "literary"
+      ],
+      "gloss": "a city that is one building",
+      "weight": 1.2
+    },
+    {
+      "term": "offworld",
+      "tags": [
+        "cyberpunk",
+        "literary"
+      ],
+      "gloss": "anywhere that is not here",
+      "since": 1975
+    },
+    {
+      "term": "coldsleep",
+      "tags": [
+        "literary",
+        "gothic"
+      ],
+      "gloss": "the long unconsciousness between places",
+      "weight": 1.2
+    },
+    {
+      "term": "terraform",
+      "tags": [
+        "literary",
+        "scientific"
+      ],
+      "gloss": "editing a planet until it is survivable"
+    },
+    {
+      "term": "lagrange",
+      "tags": [
+        "scientific",
+        "literary"
+      ],
+      "gloss": "a point where the forces cancel and you can rest",
+      "weight": 1.2
+    },
+    {
+      "term": "sublight",
+      "tags": [
+        "literary",
+        "scientific"
+      ],
+      "gloss": "slower than the thing everyone wants to beat"
+    },
+    {
+      "term": "blacksite",
+      "tags": [
+        "threatening",
+        "cyberpunk"
+      ],
+      "gloss": "a facility that is not on any list",
+      "since": 1990,
+      "weight": 1.2
+    },
+    {
+      "term": "megablock",
+      "tags": [
+        "cyberpunk",
+        "mundane"
+      ],
+      "gloss": "housing stacked past the point of individual meaning",
+      "since": 1975
+    },
+    {
+      "term": "greyzone",
+      "tags": [
+        "cyberpunk",
+        "abstract"
+      ],
+      "gloss": "the territory where jurisdiction is unclear",
+      "since": 1985,
+      "weight": 1.2
+    },
+    {
+      "term": "orbital",
+      "tags": [
+        "scientific",
+        "literary"
+      ],
+      "gloss": "a thing that keeps falling and keeps missing"
+    },
+    {
+      "term": "gantry",
+      "tags": [
+        "literary",
+        "mundane"
+      ],
+      "gloss": "the scaffold that holds something up before it leaves"
+    },
+    {
+      "term": "vatgrown",
+      "tags": [
+        "cyberpunk",
+        "organic"
+      ],
+      "gloss": "manufactured biology; an insult with a technical basis",
+      "since": 1980,
+      "weight": 1.1
+    },
+    {
+      "term": "nulldrift",
+      "tags": [
+        "abstract",
+        "scientific"
+      ],
+      "gloss": "loss of position with nothing to correct against",
+      "since": 1980,
+      "register": "insider"
+    },
+    {
+      "term": "cryowake",
+      "tags": [
+        "literary",
+        "gothic"
+      ],
+      "gloss": "the bad hour after the long sleep",
+      "since": 1975,
+      "register": "insider"
+    },
+    {
+      "term": "faraday",
+      "tags": [
+        "scientific",
+        "cryptographic"
+      ],
+      "gloss": "the cage that keeps signals out or in",
+      "weight": 1.3
+    },
+    {
+      "term": "deadzone",
+      "tags": [
+        "cyberpunk",
+        "abstract"
+      ],
+      "gloss": "where nothing reaches you, for better or worse",
+      "since": 1980
+    },
+    {
+      "term": "hardlight",
+      "tags": [
+        "cyberpunk"
+      ],
+      "gloss": "the imaginary technology everyone borrowed",
+      "since": 1985,
+      "weight": 0.8,
+      "register": "pop"
+    },
+    {
+      "term": "longhaul",
+      "tags": [
+        "mundane",
+        "literary"
+      ],
+      "gloss": "the trip nobody volunteers for twice"
+    },
+    {
+      "term": "dustline",
+      "tags": [
+        "literary",
+        "gothic"
+      ],
+      "gloss": "the boundary weather draws across a place",
+      "weight": 1.1
+    }
   ],
   "cyberpunk": [
-    "chrome",
-    "neon",
-    "wire",
-    "ghost",
-    "static",
-    "grid",
-    "mesh",
-    "relay",
-    "node",
-    "proxy",
-    "zero",
-    "void",
-    "sprawl",
-    "deck",
-    "console",
-    "signal"
+    {
+      "term": "chrome",
+      "tags": [
+        "cyberpunk"
+      ],
+      "gloss": "surface glamour bolted onto something older",
+      "since": 1984,
+      "weight": 0.9,
+      "register": "pop"
+    },
+    {
+      "term": "neon",
+      "tags": [
+        "cyberpunk"
+      ],
+      "gloss": "the light that makes any street look like a genre",
+      "since": 1982,
+      "weight": 0.8,
+      "register": "pop"
+    },
+    {
+      "term": "grid",
+      "tags": [
+        "cyberpunk",
+        "network"
+      ],
+      "gloss": "the infrastructure everyone depends on and nobody sees",
+      "since": 1980,
+      "weight": 1.2
+    },
+    {
+      "term": "mesh",
+      "tags": [
+        "cyberpunk",
+        "network"
+      ],
+      "gloss": "a network with no centre to seize",
+      "since": 1995,
+      "weight": 1.2
+    },
+    {
+      "term": "relay",
+      "tags": [
+        "cyberpunk",
+        "network"
+      ],
+      "gloss": "a point that passes things along without reading them",
+      "since": 1975,
+      "weight": 1.2
+    },
+    {
+      "term": "node",
+      "tags": [
+        "cyberpunk",
+        "network",
+        "minimal"
+      ],
+      "gloss": "one of many, deliberately",
+      "since": 1975
+    },
+    {
+      "term": "proxy",
+      "tags": [
+        "cyberpunk",
+        "network"
+      ],
+      "gloss": "someone standing where you would otherwise be",
+      "since": 1990,
+      "weight": 1.3
+    },
+    {
+      "term": "exitnode",
+      "tags": [
+        "cyberpunk",
+        "network",
+        "cryptographic"
+      ],
+      "gloss": "the last hop, where anonymity ends",
+      "since": 1998,
+      "weight": 1.2,
+      "register": "insider"
+    },
+    {
+      "term": "deadrop",
+      "tags": [
+        "cyberpunk",
+        "threatening"
+      ],
+      "gloss": "a message left in a place instead of sent",
+      "since": 1975,
+      "weight": 1.3
+    },
+    {
+      "term": "cutout",
+      "tags": [
+        "cyberpunk",
+        "threatening"
+      ],
+      "gloss": "an intermediary who does not know both ends",
+      "weight": 1.2,
+      "register": "insider"
+    },
+    {
+      "term": "burner",
+      "tags": [
+        "cyberpunk",
+        "mundane"
+      ],
+      "gloss": "a thing designed to be discarded",
+      "since": 1995,
+      "weight": 1.2
+    },
+    {
+      "term": "skimmer",
+      "tags": [
+        "cyberpunk",
+        "threatening"
+      ],
+      "gloss": "a device that reads what was not offered",
+      "since": 1990
+    },
+    {
+      "term": "blackout",
+      "tags": [
+        "cyberpunk",
+        "abstract"
+      ],
+      "gloss": "the interval with no record",
+      "weight": 1.1
+    },
+    {
+      "term": "streetlevel",
+      "tags": [
+        "cyberpunk",
+        "mundane"
+      ],
+      "gloss": "where the technology actually gets used",
+      "since": 1984,
+      "weight": 1.1
+    },
+    {
+      "term": "offbook",
+      "tags": [
+        "cyberpunk",
+        "threatening"
+      ],
+      "gloss": "unrecorded, unauthorised, deniable",
+      "since": 1980,
+      "weight": 1.2
+    },
+    {
+      "term": "greymarket",
+      "tags": [
+        "cyberpunk",
+        "bureaucratic"
+      ],
+      "gloss": "legal enough to argue about",
+      "since": 1980
+    },
+    {
+      "term": "scrapyard",
+      "tags": [
+        "cyberpunk",
+        "mundane",
+        "organic"
+      ],
+      "gloss": "where the previous generation went"
+    },
+    {
+      "term": "wiretap",
+      "tags": [
+        "cyberpunk",
+        "surveillance",
+        "threatening"
+      ],
+      "gloss": "listening, made into a noun",
+      "weight": 1.2
+    }
+  ],
+  "phreak_terms": [
+    {
+      "term": "bluebox",
+      "tags": [
+        "oldschool",
+        "technical",
+        "phreak"
+      ],
+      "gloss": "the tone generator that made long distance free",
+      "since": 1971,
+      "until": 1995,
+      "weight": 1.3,
+      "register": "insider"
+    },
+    {
+      "term": "redbox",
+      "tags": [
+        "oldschool",
+        "technical",
+        "phreak"
+      ],
+      "gloss": "the one that imitated coins dropping",
+      "since": 1975,
+      "until": 1998,
+      "register": "insider"
+    },
+    {
+      "term": "trunkline",
+      "tags": [
+        "oldschool",
+        "technical"
+      ],
+      "gloss": "the shared circuit between exchanges",
+      "until": 2005
+    },
+    {
+      "term": "switchman",
+      "tags": [
+        "oldschool",
+        "mundane"
+      ],
+      "gloss": "the person who used to connect you by hand",
+      "until": 2000,
+      "weight": 1.2
+    },
+    {
+      "term": "dialtone",
+      "tags": [
+        "oldschool",
+        "minimal"
+      ],
+      "gloss": "the sound of a system waiting for instructions",
+      "until": 2005,
+      "weight": 1.3
+    },
+    {
+      "term": "busysignal",
+      "tags": [
+        "oldschool",
+        "irreverent"
+      ],
+      "gloss": "refusal, rendered as a tone",
+      "until": 2005,
+      "weight": 1.1
+    },
+    {
+      "term": "payphone",
+      "tags": [
+        "oldschool",
+        "mundane"
+      ],
+      "gloss": "infrastructure that took cash and asked nothing",
+      "until": 2008,
+      "weight": 1.2
+    },
+    {
+      "term": "partyline",
+      "tags": [
+        "oldschool",
+        "network"
+      ],
+      "gloss": "a circuit where everyone could hear everyone",
+      "until": 2000
+    },
+    {
+      "term": "acoustic",
+      "tags": [
+        "oldschool",
+        "technical"
+      ],
+      "gloss": "the coupler you pressed a handset into",
+      "until": 1995,
+      "register": "insider"
+    },
+    {
+      "term": "carrier",
+      "tags": [
+        "oldschool",
+        "technical"
+      ],
+      "gloss": "the tone that meant the other machine answered",
+      "since": 1975,
+      "until": 2005,
+      "weight": 1.3
+    },
+    {
+      "term": "handshake",
+      "tags": [
+        "oldschool",
+        "technical",
+        "network"
+      ],
+      "gloss": "two machines agreeing how to disagree",
+      "since": 1975,
+      "weight": 1.2
+    },
+    {
+      "term": "baudrate",
+      "tags": [
+        "oldschool",
+        "technical"
+      ],
+      "gloss": "how fast the old world could speak",
+      "since": 1975,
+      "until": 2000,
+      "register": "insider"
+    },
+    {
+      "term": "nodelist",
+      "tags": [
+        "oldschool",
+        "network",
+        "bureaucratic"
+      ],
+      "gloss": "the directory of everyone worth calling",
+      "since": 1984,
+      "until": 1998,
+      "register": "insider"
+    },
+    {
+      "term": "sysop",
+      "tags": [
+        "oldschool",
+        "bureaucratic"
+      ],
+      "gloss": "whoever owned the machine and therefore the rules",
+      "since": 1978,
+      "until": 2000,
+      "weight": 1.3,
+      "register": "insider"
+    },
+    {
+      "term": "ansiart",
+      "tags": [
+        "oldschool",
+        "irreverent"
+      ],
+      "gloss": "pictures drawn from text characters",
+      "since": 1985,
+      "until": 2000,
+      "register": "insider"
+    },
+    {
+      "term": "warez",
+      "tags": [
+        "oldschool",
+        "irreverent"
+      ],
+      "gloss": "software liberated from its price",
+      "since": 1980,
+      "until": 2010,
+      "weight": 1.1
+    },
+    {
+      "term": "courier",
+      "tags": [
+        "oldschool",
+        "mundane"
+      ],
+      "gloss": "the one who moved files before anyone else had them",
+      "since": 1985,
+      "until": 2005,
+      "weight": 1.2
+    },
+    {
+      "term": "scenewhore",
+      "tags": [
+        "oldschool",
+        "irreverent"
+      ],
+      "gloss": "someone in it for the reputation, said with contempt",
+      "since": 1990,
+      "until": 2008,
+      "weight": 0.7,
+      "register": "insider"
+    },
+    {
+      "term": "greetz",
+      "tags": [
+        "oldschool",
+        "irreverent"
+      ],
+      "gloss": "credits to friends, deliberately misspelled",
+      "since": 1988,
+      "until": 2005,
+      "weight": 1.1,
+      "register": "insider"
+    },
+    {
+      "term": "lamer",
+      "tags": [
+        "oldschool",
+        "irreverent"
+      ],
+      "gloss": "the period-accurate insult",
+      "since": 1985,
+      "until": 2005,
+      "weight": 0.8
+    }
+  ],
+  "mundane": [
+    {
+      "term": "accountant",
+      "tags": [
+        "mundane",
+        "irreverent"
+      ],
+      "gloss": "someone who knows exactly where everything went",
+      "weight": 1.2
+    },
+    {
+      "term": "gardener",
+      "tags": [
+        "mundane",
+        "organic"
+      ],
+      "gloss": "someone who prunes things quietly",
+      "weight": 1.2
+    },
+    {
+      "term": "plumber",
+      "tags": [
+        "mundane",
+        "irreverent"
+      ],
+      "gloss": "someone who deals with what flows underneath",
+      "weight": 1.3
+    },
+    {
+      "term": "milkman",
+      "tags": [
+        "mundane",
+        "oldschool"
+      ],
+      "gloss": "a job that stopped existing while nobody noticed",
+      "weight": 1.2
+    },
+    {
+      "term": "janitor",
+      "tags": [
+        "mundane",
+        "irreverent"
+      ],
+      "gloss": "the one with keys to every room",
+      "weight": 1.4
+    },
+    {
+      "term": "librarian",
+      "tags": [
+        "mundane",
+        "literary"
+      ],
+      "gloss": "the one who knows where everything is filed",
+      "weight": 1.3
+    },
+    {
+      "term": "locksmith",
+      "tags": [
+        "mundane",
+        "irreverent"
+      ],
+      "gloss": "a legitimate profession with an interesting skill set",
+      "weight": 1.3
+    },
+    {
+      "term": "postman",
+      "tags": [
+        "mundane",
+        "network"
+      ],
+      "gloss": "delivery, unquestioned",
+      "weight": 1.2
+    },
+    {
+      "term": "butcher",
+      "tags": [
+        "mundane",
+        "threatening"
+      ],
+      "gloss": "precise work with unsettling vocabulary",
+      "weight": 1.2
+    },
+    {
+      "term": "dentist",
+      "tags": [
+        "mundane",
+        "threatening",
+        "irreverent"
+      ],
+      "gloss": "unhurried proximity to pain",
+      "weight": 1.1
+    },
+    {
+      "term": "nightporter",
+      "tags": [
+        "mundane",
+        "gothic"
+      ],
+      "gloss": "whoever is awake at the desk at four",
+      "weight": 1.2
+    },
+    {
+      "term": "meterman",
+      "tags": [
+        "mundane",
+        "surveillance"
+      ],
+      "gloss": "someone with a reason to be in your garden",
+      "weight": 1.2
+    },
+    {
+      "term": "baker",
+      "tags": [
+        "mundane"
+      ],
+      "gloss": "up before everyone, gone before they arrive"
+    },
+    {
+      "term": "cobbler",
+      "tags": [
+        "mundane",
+        "oldschool"
+      ],
+      "gloss": "a trade name that outlived the trade"
+    },
+    {
+      "term": "ferryman",
+      "tags": [
+        "mundane",
+        "mythological"
+      ],
+      "gloss": "paid to take you across and not to ask",
+      "weight": 1.2
+    },
+    {
+      "term": "bookbinder",
+      "tags": [
+        "mundane",
+        "literary"
+      ],
+      "gloss": "someone who assembles what other people wrote",
+      "weight": 1.1
+    },
+    {
+      "term": "laundry",
+      "tags": [
+        "mundane",
+        "irreverent"
+      ],
+      "gloss": "where things are cleaned; also where money is",
+      "weight": 1.2
+    },
+    {
+      "term": "teakettle",
+      "tags": [
+        "mundane",
+        "irreverent"
+      ],
+      "gloss": "aggressively unthreatening",
+      "weight": 1.1
+    },
+    {
+      "term": "linoleum",
+      "tags": [
+        "mundane",
+        "irreverent"
+      ],
+      "gloss": "the least romantic surface available",
+      "weight": 1.2
+    },
+    {
+      "term": "thermostat",
+      "tags": [
+        "mundane",
+        "irreverent"
+      ],
+      "gloss": "quiet control over everyone's comfort",
+      "weight": 1.2
+    },
+    {
+      "term": "stapler",
+      "tags": [
+        "mundane",
+        "irreverent",
+        "minimal"
+      ],
+      "gloss": "so banal it becomes a statement",
+      "weight": 1.1
+    },
+    {
+      "term": "tuesday",
+      "tags": [
+        "mundane",
+        "irreverent",
+        "minimal"
+      ],
+      "gloss": "the least eventful day, claimed as a name",
+      "weight": 1.2
+    },
+    {
+      "term": "laundromat",
+      "tags": [
+        "mundane",
+        "irreverent"
+      ],
+      "gloss": "a public room where people wait"
+    },
+    {
+      "term": "porchlight",
+      "tags": [
+        "mundane",
+        "literary"
+      ],
+      "gloss": "left on for someone who may not come",
+      "weight": 1.1
+    }
+  ],
+  "bureaucratic_terms": [
+    {
+      "term": "addendum",
+      "tags": [
+        "bureaucratic",
+        "irreverent"
+      ],
+      "gloss": "the part added after everyone stopped reading",
+      "weight": 1.2
+    },
+    {
+      "term": "subclause",
+      "tags": [
+        "bureaucratic",
+        "irreverent"
+      ],
+      "gloss": "where the actual terms live",
+      "weight": 1.2
+    },
+    {
+      "term": "redacted",
+      "tags": [
+        "bureaucratic",
+        "cryptographic"
+      ],
+      "gloss": "present, unreadable, and obviously important",
+      "since": 1975,
+      "weight": 1.3
+    },
+    {
+      "term": "footnote",
+      "tags": [
+        "bureaucratic",
+        "literary"
+      ],
+      "gloss": "the small print that turns out to matter",
+      "weight": 1.2
+    },
+    {
+      "term": "errata",
+      "tags": [
+        "bureaucratic",
+        "literary"
+      ],
+      "gloss": "the official list of what was wrong"
+    },
+    {
+      "term": "archivist",
+      "tags": [
+        "bureaucratic",
+        "literary"
+      ],
+      "gloss": "whoever decides what is kept",
+      "weight": 1.3
+    },
+    {
+      "term": "registry",
+      "tags": [
+        "bureaucratic",
+        "technical"
+      ],
+      "gloss": "the list that makes a thing official"
+    },
+    {
+      "term": "nihilobstat",
+      "tags": [
+        "bureaucratic",
+        "literary"
+      ],
+      "gloss": "the stamp meaning nothing objectionable was found",
+      "weight": 0.8,
+      "register": "insider"
+    },
+    {
+      "term": "proforma",
+      "tags": [
+        "bureaucratic",
+        "irreverent"
+      ],
+      "gloss": "done for the form of it, not the substance",
+      "weight": 1.1
+    },
+    {
+      "term": "sundry",
+      "tags": [
+        "bureaucratic",
+        "minimal"
+      ],
+      "gloss": "the category for everything that fits nowhere",
+      "weight": 1.2
+    },
+    {
+      "term": "quorum",
+      "tags": [
+        "bureaucratic",
+        "minimal"
+      ],
+      "gloss": "the minimum number of people required to decide",
+      "weight": 1.1
+    },
+    {
+      "term": "intransit",
+      "tags": [
+        "bureaucratic",
+        "abstract"
+      ],
+      "gloss": "officially between two places and therefore nowhere",
+      "weight": 1.2
+    },
+    {
+      "term": "pending",
+      "tags": [
+        "bureaucratic",
+        "abstract",
+        "minimal"
+      ],
+      "gloss": "the status that never resolves",
+      "weight": 1.2
+    },
+    {
+      "term": "nofault",
+      "tags": [
+        "bureaucratic",
+        "irreverent"
+      ],
+      "gloss": "the finding that assigns blame to no one"
+    },
+    {
+      "term": "caseworker",
+      "tags": [
+        "bureaucratic",
+        "mundane"
+      ],
+      "gloss": "the person assigned to your file",
+      "weight": 1.1
+    }
+  ],
+  "organic_terms": [
+    {
+      "term": "mildew",
+      "tags": [
+        "organic",
+        "irreverent"
+      ],
+      "gloss": "quiet damage in a place nobody airs out",
+      "weight": 1.4
+    },
+    {
+      "term": "lichen",
+      "tags": [
+        "organic",
+        "scientific"
+      ],
+      "gloss": "two organisms pretending to be one",
+      "weight": 1.3
+    },
+    {
+      "term": "spore",
+      "tags": [
+        "organic",
+        "threatening",
+        "minimal"
+      ],
+      "gloss": "small, patient, and everywhere already",
+      "weight": 1.3
+    },
+    {
+      "term": "mycelium",
+      "tags": [
+        "organic",
+        "network"
+      ],
+      "gloss": "the network under everything, doing the actual work",
+      "weight": 1.3
+    },
+    {
+      "term": "compost",
+      "tags": [
+        "organic",
+        "irreverent"
+      ],
+      "gloss": "controlled rot that produces something useful",
+      "weight": 1.2
+    },
+    {
+      "term": "rustbelt",
+      "tags": [
+        "organic",
+        "mundane"
+      ],
+      "gloss": "corrosion as an economic region",
+      "since": 1980,
+      "weight": 1.1
+    },
+    {
+      "term": "moss",
+      "tags": [
+        "organic",
+        "minimal"
+      ],
+      "gloss": "slow, soft, and eventually structural",
+      "weight": 1.2
+    },
+    {
+      "term": "bracken",
+      "tags": [
+        "organic",
+        "gothic"
+      ],
+      "gloss": "the undergrowth you cannot walk through"
+    },
+    {
+      "term": "marrow",
+      "tags": [
+        "organic",
+        "gothic"
+      ],
+      "gloss": "the living part inside the structural part",
+      "weight": 1.2
+    },
+    {
+      "term": "tinder",
+      "tags": [
+        "organic",
+        "threatening"
+      ],
+      "gloss": "dry material waiting for one spark",
+      "weight": 1.2
+    },
+    {
+      "term": "bloom",
+      "tags": [
+        "organic",
+        "scientific"
+      ],
+      "gloss": "sudden overwhelming growth; usually algae, usually bad",
+      "weight": 1.2
+    },
+    {
+      "term": "hivemind",
+      "tags": [
+        "organic",
+        "network",
+        "cyberpunk"
+      ],
+      "gloss": "coordination without a coordinator",
+      "since": 1980,
+      "weight": 0.9
+    },
+    {
+      "term": "driftwood",
+      "tags": [
+        "organic",
+        "literary"
+      ],
+      "gloss": "carried a long way and worn smooth",
+      "weight": 1.1
+    },
+    {
+      "term": "silt",
+      "tags": [
+        "organic",
+        "abstract",
+        "minimal"
+      ],
+      "gloss": "what settles when the current stops",
+      "weight": 1.2
+    },
+    {
+      "term": "cicada",
+      "tags": [
+        "organic",
+        "literary"
+      ],
+      "gloss": "seventeen years underground, then all at once",
+      "weight": 1.3
+    },
+    {
+      "term": "nettle",
+      "tags": [
+        "organic",
+        "threatening"
+      ],
+      "gloss": "harmless-looking and not",
+      "weight": 1.2
+    },
+    {
+      "term": "fallow",
+      "tags": [
+        "organic",
+        "abstract",
+        "minimal"
+      ],
+      "gloss": "deliberately unused, for now",
+      "weight": 1.2
+    },
+    {
+      "term": "weevil",
+      "tags": [
+        "organic",
+        "threatening",
+        "irreverent"
+      ],
+      "gloss": "small, unwelcome, and already inside",
+      "weight": 1.2
+    },
+    {
+      "term": "brackish",
+      "tags": [
+        "organic",
+        "abstract"
+      ],
+      "gloss": "neither one thing nor the other",
+      "weight": 1.1
+    },
+    {
+      "term": "carrion",
+      "tags": [
+        "organic",
+        "gothic",
+        "threatening"
+      ],
+      "gloss": "what the scavengers are for"
+    }
+  ],
+  "threatening": [
+    {
+      "term": "razor",
+      "tags": [
+        "threatening",
+        "minimal"
+      ],
+      "gloss": "minimal and unambiguous",
+      "weight": 1.1
+    },
+    {
+      "term": "venom",
+      "tags": [
+        "threatening"
+      ],
+      "gloss": "delivered, not thrown",
+      "weight": 0.8
+    },
+    {
+      "term": "grave",
+      "tags": [
+        "threatening",
+        "gothic"
+      ],
+      "gloss": "both a noun and an adjective"
+    },
+    {
+      "term": "frost",
+      "tags": [
+        "threatening",
+        "gothic"
+      ],
+      "gloss": "damage that looks like decoration",
+      "weight": 1.1
+    },
+    {
+      "term": "scar",
+      "tags": [
+        "threatening",
+        "gothic"
+      ],
+      "gloss": "evidence of something already survived",
+      "weight": 1.1
+    },
+    {
+      "term": "wraith",
+      "tags": [
+        "threatening",
+        "gothic"
+      ],
+      "gloss": "a threat with no body to fight",
+      "weight": 0.8
+    },
+    {
+      "term": "reaper",
+      "tags": [
+        "threatening",
+        "gothic"
+      ],
+      "gloss": "over-used but structurally sound",
+      "weight": 0.6
+    },
+    {
+      "term": "ashfall",
+      "tags": [
+        "threatening",
+        "gothic",
+        "organic"
+      ],
+      "gloss": "the aftermath, drifting down",
+      "weight": 1.2
+    },
+    {
+      "term": "blade",
+      "tags": [
+        "threatening",
+        "minimal"
+      ],
+      "gloss": "simple, physical, and dated",
+      "weight": 0.8
+    },
+    {
+      "term": "thorn",
+      "tags": [
+        "threatening",
+        "organic",
+        "minimal"
+      ],
+      "gloss": "defensive rather than aggressive",
+      "weight": 1.2
+    },
+    {
+      "term": "viper",
+      "tags": [
+        "threatening",
+        "organic"
+      ],
+      "gloss": "patient and territorial",
+      "weight": 0.9
+    },
+    {
+      "term": "bruise",
+      "tags": [
+        "threatening",
+        "organic",
+        "irreverent"
+      ],
+      "gloss": "the aftermath rather than the act",
+      "weight": 1.3
+    },
+    {
+      "term": "gallows",
+      "tags": [
+        "threatening",
+        "gothic",
+        "irreverent"
+      ],
+      "gloss": "the joke you make when it is too late",
+      "weight": 1.2
+    },
+    {
+      "term": "tourniquet",
+      "tags": [
+        "threatening",
+        "organic"
+      ],
+      "gloss": "harm applied to prevent worse harm",
+      "weight": 1.2
+    },
+    {
+      "term": "quarantine",
+      "tags": [
+        "threatening",
+        "bureaucratic"
+      ],
+      "gloss": "isolation imposed for everyone else's sake",
+      "weight": 1.2
+    },
+    {
+      "term": "blacklist",
+      "tags": [
+        "threatening",
+        "bureaucratic"
+      ],
+      "gloss": "the list you cannot appeal",
+      "weight": 1.1
+    }
   ],
   "prefixes": [
     "null",
     "0x",
-    "neo",
     "dead",
-    "ghost",
-    "x",
-    "cyber",
-    "hex",
-    "meta",
-    "anti"
+    "un",
+    "sub",
+    "anti",
+    "para",
+    "post",
+    "counter",
+    "de",
+    "non"
   ],
   "suffixes": [
     "null",
@@ -233,16 +2670,21 @@
     "x",
     "404",
     "13",
-    "0x0",
     "exe",
     "bin",
     "sys",
-    "net"
+    "net",
+    "org",
+    "ish",
+    "wise",
+    "less",
+    "core"
   ],
   "separators": [
     "",
     "_",
-    "-"
+    "-",
+    "."
   ],
   "digits": [
     "0",
@@ -257,10 +2699,10 @@
     "88",
     "101",
     "127",
-    "1337",
     "404",
     "451",
-    "0x0"
+    "512",
+    "1024"
   ],
   "allowed_chars": "abcdefghijklmnopqrstuvwxyz0123456789_-",
   "max_length": 18,
@@ -281,8 +2723,9 @@
     "drop-vowels",
     "truncate",
     "corrupt",
-    "lower",
-    "numeric"
+    "numeric",
+    "phonetic",
+    "separator"
   ],
   "forbidden": [
     "hacker",
@@ -305,27 +2748,44 @@
     "elite",
     "warrior",
     "ghost",
-    "anonymous",
+    "phantom",
+    "ninja",
     "1337",
-    "xX",
-    "Xx"
+    "xx",
+    "matrix",
+    "neo"
+  ],
+  "generic_branding": [
+    "hacker",
+    "cyber",
+    "cyberwarrior",
+    "hackmaster",
+    "elitehacker",
+    "anonymous",
+    "darkweb",
+    "cybersecurity",
+    "elitecoder"
   ],
   "archetype_weights": {
     "technical": 1.3,
     "abstract": 1.2,
-    "compound": 1.5,
-    "ironic": 1.1,
+    "compound": 1.4,
+    "ironic": 1.2,
     "orthographic": 1.0,
-    "minimal": 1.0,
-    "mythological": 0.7,
+    "minimal": 1.1,
+    "mythological": 0.8,
     "scifi": 0.7,
-    "mundane": 0.8,
-    "threatening": 0.6,
-    "technical_myth": 0.8,
+    "mundane": 1.0,
+    "threatening": 0.5,
+    "technical_myth": 0.9,
     "mundane_threat": 0.8,
-    "leet": 0.6,
+    "leet": 0.5,
     "numeric": 0.7,
     "prefix": 0.6,
-    "suffix": 0.6
-  }
+    "suffix": 0.6,
+    "acronym": 0.6,
+    "phonetic": 0.8,
+    "seeded": 1.5
+  },
+  "score_weights": {}
 }

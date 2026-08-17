@@ -1,0 +1,55 @@
+{
+  "id": "mara-vale",
+  "given_name": "Mara",
+  "family_name": "Vale",
+  "aliases": [
+    "mildew"
+  ],
+  "handle_history": [
+    "m1ldew"
+  ],
+  "era": "2003-2019",
+  "first_online_year": 2003,
+  "geography": "São Paulo; Lusophone and English forums",
+  "culture": "hacker-underground, forum culture",
+  "generation": "broadband native",
+  "social_class": "lower middle class",
+  "profession": "building maintenance scheduler",
+  "languages": [
+    "portuguese",
+    "english"
+  ],
+  "personality": [
+    "irreverent",
+    "deadpan",
+    "analytical",
+    "contrarian"
+  ],
+  "interests": [
+    "organic",
+    "mundane",
+    "irreverent"
+  ],
+  "public_identity": "someone who books contractors for a housing block",
+  "private_identity": "the operator with the deepest access and the worst handle",
+  "contradiction": "Chose a name that sounds like a complaint, and made it feared.",
+  "narrative_role": "protagonist",
+  "desired_impression": [
+    "irreverent",
+    "mundane",
+    "memorable",
+    "understated"
+  ],
+  "avoid": [
+    "dark",
+    "cyber",
+    "elite"
+  ],
+  "seed_words": [
+    "vale",
+    "damp",
+    "ninth floor"
+  ],
+  "naming_system": "underground-hacker-handle",
+  "notes": "The thesis case for the ironic archetype: the handle tells you nothing, so reputation has to fill it in. Never let her explain the joke on the page."
+}

@@ -1,0 +1,47 @@
+{
+  "id": "kyle-brennan",
+  "given_name": "Kyle",
+  "family_name": "Brennan",
+  "aliases": [
+    "darkphantomx"
+  ],
+  "handle_history": [
+    "xXphantomXx",
+    "cyberphantom"
+  ],
+  "era": "2009-2013",
+  "first_online_year": 2009,
+  "geography": "suburban Ohio; game servers and skid forums",
+  "culture": "aspirational hacker-underground",
+  "generation": "forum era",
+  "social_class": "middle class",
+  "profession": "student",
+  "languages": [
+    "english"
+  ],
+  "personality": [
+    "eager",
+    "loud",
+    "insecure",
+    "imitative"
+  ],
+  "interests": [
+    "threatening",
+    "cyberpunk"
+  ],
+  "public_identity": "a teenager who claims more than he has done",
+  "private_identity": "a teenager who has done less than he claims",
+  "contradiction": "The only one whose handle announces exactly what he wants to be.",
+  "narrative_role": "liability; the outsider who wants in",
+  "desired_impression": [
+    "threatening",
+    "cyberpunk"
+  ],
+  "avoid": [],
+  "seed_words": [
+    "brennan",
+    "ohio"
+  ],
+  "naming_system": "underground-hacker-handle",
+  "notes": "Deliberate negative example. Run `score` on his aliases to see the generic-branding and overused penalties fire; that gap is the point of his character."
+}

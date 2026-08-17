@@ -1,0 +1,46 @@
+{
+  "id": "underground-character",
+  "given_name": "",
+  "middle_name": "",
+  "family_name": "",
+  "aliases": [],
+  "era": "1998-2012",
+  "first_online_year": 2001,
+  "geography": "international IRC / BBS / underground forum culture",
+  "culture": "hacker-underground",
+  "generation": "early Internet",
+  "social_class": "mixed",
+  "profession": "reverse engineer",
+  "languages": [
+    "english",
+    "portuguese"
+  ],
+  "personality": [
+    "technical",
+    "irreverent",
+    "secretive",
+    "intelligent",
+    "curious"
+  ],
+  "interests": [
+    "lowlevel",
+    "cryptographic",
+    "literary"
+  ],
+  "public_identity": "an unremarkable Internet user with a dull job",
+  "private_identity": "an experienced operator whose reputation precedes the name",
+  "contradiction": "More dangerous and far better read than the handle suggests.",
+  "narrative_role": "underground operator",
+  "desired_impression": [
+    "technical",
+    "oldschool",
+    "mysterious",
+    "intelligent",
+    "irreverent"
+  ],
+  "handle_history": [],
+  "avoid": [],
+  "seed_words": [],
+  "naming_system": "underground-hacker-handle",
+  "notes": "Generic starting point. Copy this file per character and edit. The fields that move the score most are desired_impression, interests, contradiction, first_online_year and seed_words."
+}

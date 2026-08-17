@@ -1,0 +1,52 @@
+{
+  "id": "teodora-lim",
+  "given_name": "Teodora",
+  "family_name": "Lim",
+  "aliases": [
+    "nonce"
+  ],
+  "handle_history": [],
+  "era": "2011-2024",
+  "first_online_year": 2011,
+  "geography": "Manila; encrypted group chats",
+  "culture": "cypherpunk, privacy activism",
+  "generation": "mobile native",
+  "social_class": "middle class",
+  "profession": "security auditor",
+  "languages": [
+    "tagalog",
+    "english"
+  ],
+  "personality": [
+    "paranoid",
+    "precise",
+    "independent",
+    "impatient"
+  ],
+  "interests": [
+    "cryptographic",
+    "technical",
+    "bureaucratic"
+  ],
+  "public_identity": "a compliance auditor who files reports on time",
+  "private_identity": "runs the infrastructure the others depend on",
+  "contradiction": "Trusts no one and is the only one everyone trusts.",
+  "narrative_role": "the operator who keeps the lights on",
+  "desired_impression": [
+    "cryptographic",
+    "technical",
+    "minimal",
+    "intelligent"
+  ],
+  "avoid": [
+    "anon",
+    "priv"
+  ],
+  "seed_words": [
+    "lim",
+    "manila",
+    "audit"
+  ],
+  "naming_system": "underground-hacker-handle",
+  "notes": "Post-2010 character: leet and orthographic archetypes will read as parody on her and the era scorer will say so. Use crypto and bureaucratic vocabulary."
+}
