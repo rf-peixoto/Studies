@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Novel Timeline</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<div id="app">
+    <header class="topbar">
+        <span class="brand">novel-timeline<span class="blink">_</span></span>
+        <select id="project-select" title="Switch project"></select>
+        <button class="btn small" id="btn-new-project">+ new</button>
+        <button class="btn small" id="btn-edit-project" title="Rename / settings">settings</button>
+        <span class="spacer"></span>
+        <button class="btn small" id="btn-import">import</button>
+        <button class="btn small" id="btn-export">export</button>
+        <button class="btn small danger" id="btn-delete-project">delete</button>
+        <input type="file" id="import-file" accept="application/json" hidden>
+    </header>
+
+    <div class="main">
+        <aside class="sidebar">
+            <div class="side-section">
+                <div class="side-head">
+                    <span>Characters <span class="count" id="char-count">0</span></span>
+                    <button class="icon-btn" id="btn-add-char" title="Add character">＋</button>
+                </div>
+                <div class="side-list" id="char-list"></div>
+            </div>
+            <div class="side-section">
+                <div class="side-head">
+                    <span>Threads <span class="count" id="thread-count">0</span></span>
+                    <button class="icon-btn" id="btn-add-thread" title="Add plot thread">＋</button>
+                </div>
+                <div class="side-list" id="thread-list"></div>
+            </div>
+            <div class="side-section">
+                <div class="side-head">
+                    <span>Locations <span class="count" id="loc-count">0</span></span>
+                    <button class="icon-btn" id="btn-add-loc" title="Add location tag">＋</button>
+                </div>
+                <div class="side-list" id="loc-list"></div>
+            </div>
+        </aside>
+
+        <div class="content">
+            <nav class="tabs" id="tabs">
+                <button class="tab active" data-view="timeline">Timeline</button>
+                <button class="tab" data-view="day">Day / Now</button>
+                <button class="tab" data-view="matrix">Co-occurrence</button>
+                <button class="tab" data-view="events">Events</button>
+            </nav>
+            <div class="view-wrap" id="view"></div>
+        </div>
+    </div>
+</div>
+
+<!-- generic modal -->
+<div class="modal-backdrop" id="modal-backdrop">
+    <div class="modal">
+        <div class="modal-head">
+            <span class="m-title" id="modal-title">Edit</span>
+            <button class="icon-btn" id="modal-close">✕</button>
+        </div>
+        <div class="modal-body" id="modal-body"></div>
+        <div class="modal-foot" id="modal-foot"></div>
+    </div>
+</div>
+
+<div class="tl-tooltip" id="tooltip"></div>
+<div class="toast" id="toast"></div>
+
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
