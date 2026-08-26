@@ -1,0 +1,5 @@
+requests>=2.28
+cryptography>=41.0
+pyOpenSSL>=23.0
+mmh3>=4.0
+pyjarm>=0.0.5
