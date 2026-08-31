@@ -502,9 +502,9 @@ def scan_url(session, url, methods, timeout, verify, probe_root, do_poc, keep_po
     return result
 
 
-def scan_target(target, scheme_mode, methods, timeout, verify, probe_root, do_poc, keep_poc, exts):
+def scan_target(target, scheme_mode, methods, timeout, verify, probe_root, do_poc, keep_poc, exts, user_agent):
     session = requests.Session()
-    session.headers.update({"User-Agent": "http-methods-scan/3.0"})
+    session.headers.update({"User-Agent": user_agent})
     last = None
     for url in build_urls(target, scheme_mode):
         last = scan_url(session, url, methods, timeout, verify, probe_root, do_poc, keep_poc, exts)
@@ -663,6 +663,9 @@ def main():
                    help="Comma-separated extensions the PUT PoC should try, e.g. "
                         ".txt,.html,.svg,.php — flags stored-XSS (served as html/svg) "
                         "and code-exec (script upload accepted). Content is always inert.")
+    p.add_argument("--user-agent", default="http-methods-scan/3.0",
+                   help="User-Agent sent on all requests (handy for spotting your "
+                        "tests in the target's logs)")
     p.add_argument("--no-color", action="store_true")
     args = p.parse_args()
 
@@ -704,7 +707,8 @@ def main():
     results = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=args.threads) as ex:
         futs = {ex.submit(scan_target, t, args.scheme, methods, args.timeout,
-                          verify, args.probe_root, do_poc, keep_poc, exts): t for t in targets}
+                          verify, args.probe_root, do_poc, keep_poc, exts, args.user_agent): t
+                for t in targets}
         for fut in concurrent.futures.as_completed(futs):
             r = fut.result()
             results.append(r)
