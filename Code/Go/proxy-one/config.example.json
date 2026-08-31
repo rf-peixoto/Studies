@@ -1,0 +1,15 @@
+{
+  "http_addr": ":8080",
+  "socks_addr": ":1080",
+  "token_db": "/etc/proxyd/tokens.json",
+  "log_file": "/var/log/proxyd/proxyd.log",
+  "log_all": false,
+  "pid_file": "/run/proxyd/proxyd.pid",
+  "ssrf_protect": true,
+  "extra_blocked_cidrs": [],
+  "dial_timeout_sec": 15,
+  "idle_timeout_sec": 300,
+  "handshake_timeout_sec": 15,
+  "preauth_ip_rate": 50,
+  "preauth_ip_burst": 100
+}
