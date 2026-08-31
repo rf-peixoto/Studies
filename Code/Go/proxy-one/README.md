@@ -1,4 +1,4 @@
-# proxyd
+# proxy-one
 
 An authenticated HTTP / HTTPS / SOCKS5 forward proxy for a VPS, written in Go
 with **zero external dependencies** (standard library only). Ships with bash
