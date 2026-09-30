@@ -1,0 +1,31 @@
+{
+  "telegram": {
+    "bot_token": "bot token",
+    "chat_id": "mychatid"
+  },
+  "targets": [
+    "github.com/rf-peixoto",
+    "linkedin.com/in/rf-peixoto",
+    "the-street.xyz"
+  ],
+  "exclude": [
+    "linkedin.com/posts/rf-peixoto",
+    "gist.github.com/rf-peixoto"
+  ],
+  "extra_queries": [],
+  "match_terms": {},
+  "require_match": true,
+  "show_common": true,
+  "database": "monitor.db",
+  "retention_days": 90,
+  "retries": 2,
+  "sources": {
+    "duckduckgo": { "enabled": true, "region": "wt-wt", "time_filter": "", "max_pages": 1, "delay_seconds": [40, 70] },
+    "bing":       { "enabled": true, "market": "en-US", "delay_seconds": [10, 20] },
+    "marginalia": { "enabled": true, "delay_seconds": [5, 10] },
+    "mojeek":     { "enabled": false, "max_pages": 1, "delay_seconds": [8, 15] },
+    "github":     { "enabled": true, "token": "", "delay_seconds": [7, 10] },
+    "hackernews": { "enabled": true, "delay_seconds": [2, 4] },
+    "reddit":     { "enabled": true, "delay_seconds": [5, 10] }
+  }
+}
