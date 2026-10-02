@@ -1,0 +1,425 @@
+{
+  "sources": [
+    {
+      "name": "AAPKs",
+      "domains": ["aapks.com", "aapks.app"],
+      "type": "apk_marketplace",
+      "status": "active_redirect",
+      "enabled": true
+    },
+    {
+      "name": "AndroidAPKsBox",
+      "domains": ["androidapksbox.com"],
+      "type": "apk_marketplace",
+      "status": "active",
+      "enabled": true
+    },
+    {
+      "name": "AndroidAPKsFree",
+      "domains": ["androidapksfree.com", "androidapks.com"],
+      "type": "apk_marketplace",
+      "status": "active_redirect",
+      "enabled": true
+    },
+    {
+      "name": "AndroidLista",
+      "domains": ["androidlista.com.br"],
+      "type": "apk_marketplace",
+      "status": "active",
+      "enabled": true
+    },
+    {
+      "name": "AppsAPK",
+      "domains": ["appsapk.com"],
+      "type": "apk_marketplace",
+      "status": "active",
+      "enabled": true
+    },
+    {
+      "name": "APKGK",
+      "domains": ["apkgk.com"],
+      "type": "apk_downloader",
+      "status": "active",
+      "enabled": true
+    },
+    {
+      "name": "APK Support / MI9",
+      "domains": ["apk.support", "mi9.com"],
+      "type": "apk_marketplace",
+      "status": "active_redirect",
+      "enabled": true
+    },
+    {
+      "name": "APKHere / APKBE",
+      "domains": ["apkhere.com", "apkbe.com"],
+      "type": "apk_marketplace",
+      "status": "active_redirect",
+      "enabled": true
+    },
+    {
+      "name": "A2ZAPK",
+      "domains": ["a2zapk.com", "a2zapk.dev"],
+      "type": "apk_marketplace",
+      "status": "active_redirect",
+      "enabled": true
+    },
+    {
+      "name": "HappyMod APK Baixar",
+      "domains": ["happymodapkbaixar.com"],
+      "type": "mod_marketplace",
+      "status": "active",
+      "enabled": true
+    },
+    {
+      "name": "APKToy",
+      "domains": ["apktoy.com"],
+      "type": "apk_downloader",
+      "status": "active",
+      "enabled": true
+    },
+    {
+      "name": "APKFuture",
+      "domains": ["apkfuture.com"],
+      "type": "mod_marketplace",
+      "status": "active",
+      "enabled": true
+    },
+    {
+      "name": "APKMirror",
+      "domains": ["apkmirror.com"],
+      "type": "apk_marketplace",
+      "status": "active",
+      "enabled": true
+    },
+    {
+      "name": "Uptodown",
+      "domains": ["uptodown.com"],
+      "type": "apk_marketplace",
+      "status": "active",
+      "enabled": true
+    },
+    {
+      "name": "GameLoop",
+      "domains": ["gameloop.com"],
+      "type": "app_catalog",
+      "status": "active",
+      "enabled": true
+    },
+    {
+      "name": "LDPlayer",
+      "domains": [
+        "ldplayer.net",
+        "apk.ldplayer.net"
+      ],
+      "type": "apk_marketplace",
+      "status": "active",
+      "enabled": true
+    },
+    {
+      "name": "Aptoide",
+      "domains": [
+        "aptoide.com",
+        "br.aptoide.com"
+      ],
+      "type": "apk_marketplace",
+      "status": "active",
+      "enabled": true
+    },
+    {
+      "name": "UpdateStar",
+      "domains": ["updatestar.com"],
+      "type": "software_catalog",
+      "status": "active",
+      "enabled": true
+    },
+    {
+      "name": "Softonic BR",
+      "domains": ["softonic.com.br"],
+      "type": "software_catalog",
+      "status": "active",
+      "enabled": true
+    },
+    {
+      "name": "F-Droid",
+      "domains": ["f-droid.org"],
+      "type": "apk_marketplace",
+      "status": "active",
+      "enabled": true
+    },
+    {
+      "name": "AndroidFreeware",
+      "domains": ["androidfreeware.net"],
+      "type": "apk_marketplace",
+      "status": "active",
+      "enabled": true
+    },
+    {
+      "name": "AppAgg",
+      "domains": ["appagg.com"],
+      "type": "app_catalog",
+      "status": "active",
+      "enabled": true
+    },
+    {
+      "name": "Apps-APK",
+      "domains": ["apps-apk.net"],
+      "type": "apk_marketplace",
+      "status": "active",
+      "enabled": true
+    },
+    {
+      "name": "APKCafe UA",
+      "domains": ["apkcafe.com.ua"],
+      "type": "apk_marketplace",
+      "status": "active",
+      "enabled": true
+    },
+    {
+      "name": "APKCafe PT",
+      "domains": ["apkcafe.pt"],
+      "type": "apk_marketplace",
+      "status": "active",
+      "enabled": true
+    },
+    {
+      "name": "APKEasy",
+      "domains": ["apkeasy.com"],
+      "type": "apk_marketplace",
+      "status": "reachable",
+      "enabled": true
+    },
+    {
+      "name": "APKGold",
+      "domains": ["apkgold.in"],
+      "type": "apk_marketplace",
+      "status": "active",
+      "enabled": true
+    },
+    {
+      "name": "APKTada",
+      "domains": ["apktada.com"],
+      "type": "apk_marketplace",
+      "status": "reachable",
+      "enabled": true
+    },
+    {
+      "name": "APKFab",
+      "domains": ["apkfab.com"],
+      "type": "apk_marketplace",
+      "status": "active",
+      "enabled": true
+    },
+    {
+      "name": "APKsFull",
+      "domains": ["apksfull.com"],
+      "type": "apk_marketplace",
+      "status": "reachable",
+      "enabled": true
+    },
+    {
+      "name": "APK Store",
+      "domains": ["apk-store.org"],
+      "type": "apk_marketplace",
+      "status": "active",
+      "enabled": true
+    },
+    {
+      "name": "APKTurbo",
+      "domains": ["apkturbo.com"],
+      "type": "apk_downloader",
+      "status": "active",
+      "enabled": true
+    },
+    {
+      "name": "APKCombo",
+      "domains": ["apkcombo.com"],
+      "type": "apk_marketplace",
+      "status": "active",
+      "enabled": true
+    },
+    {
+      "name": "APKPure",
+      "domains": [
+        "apkpure.com",
+        "apkpure.net"
+      ],
+      "type": "apk_marketplace",
+      "status": "known_active_or_historical",
+      "enabled": true
+    },
+    {
+      "name": "Huawei AppGallery",
+      "domains": ["appgallery.huawei.com"],
+      "type": "official_alternative_store",
+      "status": "active",
+      "enabled": true
+    },
+    {
+      "name": "Baixaki",
+      "domains": ["baixaki.com.br"],
+      "type": "software_catalog",
+      "status": "active",
+      "enabled": true
+    },
+    {
+      "name": "FilePlanet / Download.it",
+      "domains": [
+        "fileplanet.com",
+        "download.it"
+      ],
+      "type": "software_catalog",
+      "status": "active_redirect",
+      "enabled": true
+    },
+    {
+      "name": "NAPKForPC",
+      "domains": ["napkforpc.com"],
+      "type": "app_catalog",
+      "status": "active",
+      "enabled": true
+    },
+    {
+      "name": "SoftMany",
+      "domains": ["softmany.com"],
+      "type": "software_catalog",
+      "status": "active",
+      "enabled": true
+    },
+    {
+      "name": "StorePlayAPK",
+      "domains": ["storeplayapk.com"],
+      "type": "apk_marketplace",
+      "status": "active",
+      "enabled": true
+    },
+    {
+      "name": "Uoldown",
+      "domains": ["uoldown.com"],
+      "type": "apk_marketplace",
+      "status": "active",
+      "enabled": true
+    },
+    {
+      "name": "VEApps",
+      "domains": ["veapps.me"],
+      "type": "app_catalog",
+      "status": "reachable",
+      "enabled": true
+    },
+
+    {
+      "name": "MediaFire",
+      "domains": ["mediafire.com"],
+      "type": "file_host",
+      "status": "active",
+      "enabled": true
+    },
+    {
+      "name": "MEGA",
+      "domains": ["mega.nz"],
+      "type": "file_host",
+      "status": "known_active",
+      "enabled": true
+    },
+    {
+      "name": "4shared",
+      "domains": ["4shared.com"],
+      "type": "file_host",
+      "status": "known_active",
+      "enabled": true
+    },
+
+    {
+      "name": "Sensor Tower",
+      "domains": ["app.sensortower.com"],
+      "type": "metadata",
+      "status": "active",
+      "enabled": true
+    },
+    {
+      "name": "AppBrain",
+      "domains": ["appbrain.com"],
+      "type": "metadata",
+      "status": "active",
+      "enabled": true
+    },
+    {
+      "name": "AppRecs",
+      "domains": ["apprecs.com"],
+      "type": "metadata",
+      "status": "active",
+      "enabled": true
+    }
+  ],
+
+  "disabled_or_repurposed": [
+    {
+      "domain": "applatest.com",
+      "reason": "domain for sale"
+    },
+    {
+      "domain": "apkleecher.com",
+      "reason": "redirects to unrelated website"
+    },
+    {
+      "domain": "apksoul.net",
+      "reason": "coming soon / no active APK catalogue"
+    },
+    {
+      "domain": "baixefacil.com.br",
+      "reason": "repurposed as IPTV website"
+    },
+    {
+      "domain": "ld-space.com",
+      "reason": "redirects to LDShop, no longer APK marketplace"
+    },
+    {
+      "domain": "androidappsapk.co",
+      "reason": "repurposed / unrelated content"
+    }
+  ],
+
+  "unverified": [
+    "apk-store-br.rf.gd",
+    "appsdrop.com",
+    "apklinker.com",
+    "apk.world",
+    "apkdownload.com",
+    "apk.watch",
+    "apkmage.com",
+    "apkfollow.com",
+    "apkfun.com",
+    "appbundledownload.com",
+    "apkpure.vip",
+    "apkamp.com",
+    "androidlist.co.kr",
+    "matjarapk.com",
+    "steprimo.com",
+    "apkzoid.com",
+    "apkmody.io",
+    "apk4free.org",
+    "apkonline.net",
+    "modapkdown.com",
+    "pcmac.download",
+    "9apps.com",
+    "apkdl.in",
+    "apkaio.com",
+    "a2zapk.io",
+    "apkeureka.com",
+    "outpan.com",
+    "apk-pure.live",
+    "baixarparaandroid.com",
+    "apkmonk.com",
+    "apkstore.site",
+    "apk-dl.com",
+    "apk4k.fun",
+    "apkmarket.se",
+    "appadvice.com",
+    "appsonwindows.com",
+    "apklatestversion.com",
+    "chipapk.com",
+    "mobileapkfree.com",
+    "playmods.net",
+    "modapkdown.com"
+  ]
+}
