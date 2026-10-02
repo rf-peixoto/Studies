@@ -1,0 +1,110 @@
+{
+  "apps": [
+    {
+      "enabled": true,
+      "name": "XPTO",
+      "package": "com.package.name.android",
+      "aliases": [
+        "XPTO",
+        "xpto"
+      ],
+      "official_domains": [
+        "example.com.br",
+      	"example.com"
+      ],
+      "known_versions": [
+        "8.49.0",
+        "8.63.1"
+      ]
+    },
+    {
+      "enabled": true,
+      "name": "name",
+      "package": "com.package.name.android",
+      "aliases": [
+        "keyword a",
+        "keyword b",
+        "keyword c"
+      ],
+      "official_domains": [
+        "example.com",
+	      "example.com.ru"
+      ],
+      "known_versions": [
+        "9.11.2",
+        "9.28.4"
+      ]
+    },
+    {
+      "enabled": true,
+      "name": "name",
+      "package": "com.package.name.androidp",
+      "aliases": [
+        "keyword a",
+        "keyword b",
+        "keyword c"
+      ],
+      "official_domains": [
+        "example.com"
+      ],
+      "known_versions": []
+    },
+    {
+      "enabled": true,
+      "name": "name",
+      "package": "com.package.name.android",
+      "aliases": [
+        "keyword a",
+        "keyword b",
+        "keyword c"
+      ],
+      "official_domains": [
+        "example.com"
+      ],
+      "known_versions": []
+    },
+    {
+      "enabled": true,
+      "name": "name",
+      "package": "com.package.name.android",
+      "aliases": [
+        "keyword a",
+        "keyword b",
+        "keyword c"
+      ],
+      "official_domains": [
+        "example.com"
+      ],
+      "known_versions": []
+    },
+    {
+      "enabled": true,
+      "name": "name",
+      "package": "com.apple",
+      "aliases": [
+        "keyword a",
+        "keyword b",
+        "keyword c"
+      ],
+      "official_domains": [
+        "example.xyz",
+      	"example.com"
+      ],
+      "known_versions": []
+    },
+    {
+      "enabled": true,
+      "name": "Name",
+      "package": "com.package.name.android",
+      "aliases": [
+        "keyword a",
+        "keyword b",
+        "keyword c"
+      ],
+      "official_domains": [
+        "example.com"
+      ],
+      "known_versions": []
+    }
+  ]
+}
