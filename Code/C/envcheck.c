@@ -161,7 +161,8 @@ static void check_mac(env_report_t *r){
         for (struct if_nameindex *p=ifs;p->if_name;++p){
             struct ifreq q;memset(&q,0,sizeof(q));strncpy(q.ifr_name,p->if_name,IFNAMSIZ-1);
             if (ioctl(fd,SIOCGIFHWADDR,&q)==0&&mac_is_virtual((unsigned char*)q.ifr_hwaddr.sa_data)){r->vm_mac_prefix=1;break;}}
-    if (fd>=0) close(fd); if (ifs) if_freenameindex(ifs);
+    if (fd>=0) close(fd);
+    if (ifs) if_freenameindex(ifs);
 #endif
 }
 static int str_has_vm_keyword(const char *s){
@@ -368,9 +369,9 @@ static void check_analysis_tools(env_report_t *r){
             if (rp){int ppid=0;sscanf(rp+1," %*c %d",&ppid);
                 if (ppid>0){char pp[64];snprintf(pp,sizeof(pp),"/proc/%d/comm",ppid);
                     int pf=open(pp,O_RDONLY);
-                    if (pf>=0){char c[128];ssize_t m=read(pf,c,sizeof(c)-1);close(pf);
+                    if (pf>=0){char c[64];ssize_t m=read(pf,c,sizeof(c)-1);close(pf);
                         if (m>0){c[m]='\0';char *nl=strchr(c,'\n');if (nl)*nl='\0';
-                            strncpy(r->parent_name,c,sizeof(r->parent_name)-1);
+                            snprintf(r->parent_name,sizeof(r->parent_name),"%s",c);
                             char tmp[64]={0};
                             if (name_is_analysis(c,tmp,sizeof(tmp))) r->parent_process_suspicious=1;}}}}}}
 #endif
