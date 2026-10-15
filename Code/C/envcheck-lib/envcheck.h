@@ -2,22 +2,6 @@
  *
  * Software-protection / anti-reversing environment inspector.
  *
- * DESIGN CONTRACT
- *   Every check INSPECTS and REPORTS into env_report_t. Nothing here kills the
- *   process, branches your logic, wipes data, phones home, or hides its own
- *   activity. The caller reads the struct and decides what (if anything) to do.
- *   Nothing is obfuscated. A handful of probes deliberately raise-and-catch a
- *   CPU fault/exception internally, or (opt-in) change thread/process state;
- *   each is flagged in env_options_t and in the source. They only record a
- *   boolean — your program's behaviour is unchanged.
- *
- * REALITY CHECK
- *   A speed bump, not a wall. It raises the cost of casual analysis and defeats
- *   many automated sandboxes. A skilled analyst on bare metal, or one who
- *   patches the checks out, gets through. Several signals also fire on
- *   legitimate hosts (cloud dev boxes, WSL, containers, CI runners, low-spec
- *   laptops). Weigh the aggregate scores; never treat one hit as proof.
- *
  * USAGE
  *     #include "envcheck.h"
  *     env_report_t r = env_inspect(NULL);            // NULL => default options
