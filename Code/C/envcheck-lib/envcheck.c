@@ -1,8 +1,4 @@
-/* envcheck.c  —  environment inspection library (implementation)
- *
- * See envcheck.h for the API, the design contract, and the reality check.
- * Every function here inspects and records; none alters program behaviour.
- */
+// envcheck.c  —  environment inspection library (implementation)
 
 #ifndef _GNU_SOURCE
 #  define _GNU_SOURCE   /* must precede all includes: REG_RIP/REG_EIP in <ucontext.h> */
