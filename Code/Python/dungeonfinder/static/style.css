@@ -1,0 +1,189 @@
+/* DungeonFinder - Shadowrun Sixth World visual identity
+   teal-black field, magenta + cyan + acid-green neon, angular glitch HUD. */
+:root{
+  --bg:#04100e;
+  --bg2:#071917;
+  --panel:#081e1b;
+  --panel2:#0b2b27;
+  --panel-edge:#12403a;
+  --ink:#cfeae6;
+  --ink-dim:#6f9490;
+  --magenta:#ff2e88;
+  --magenta-dk:#b7175e;
+  --cyan:#17e0d6;
+  --cyan-dk:#0f9b95;
+  --acid:#b6ff3a;
+  --amber:#ffb020;
+  --danger:#ff4d4d;
+  --grid:rgba(23,224,214,.06);
+}
+:root:not([data-theme="light"]) { color-scheme: dark; }
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  background:
+    radial-gradient(1200px 600px at 80% -10%, rgba(255,46,136,.10), transparent 60%),
+    radial-gradient(900px 500px at -10% 110%, rgba(23,224,214,.10), transparent 55%),
+    linear-gradient(180deg,#04100e,#030b0a);
+  background-attachment:fixed;
+  color:var(--ink);
+  font-family:"Rajdhani",system-ui,sans-serif;
+  font-size:16px; line-height:1.5;
+  min-height:100vh;
+}
+.scanlines{position:fixed;inset:0;pointer-events:none;z-index:9;
+  background:repeating-linear-gradient(0deg,rgba(0,0,0,.18) 0 1px,transparent 1px 3px);
+  mix-blend-mode:multiply;opacity:.5}
+a{color:var(--cyan);text-decoration:none}
+a:hover{color:var(--acid)}
+h1,h2,h3{font-weight:700;letter-spacing:.04em;margin:.2em 0 .5em;text-transform:uppercase}
+code,.mono,pre,.hex{font-family:"Share Tech Mono",ui-monospace,monospace}
+
+/* ---- top bar ---- */
+.topbar{display:flex;justify-content:space-between;align-items:center;gap:1rem;
+  padding:.8rem 1.2rem;border-bottom:1px solid var(--panel-edge);
+  background:linear-gradient(90deg,rgba(8,30,27,.9),rgba(8,30,27,.4));
+  position:sticky;top:0;z-index:10;backdrop-filter:blur(6px)}
+.brand{display:flex;align-items:center;gap:.5rem;color:var(--ink)}
+.brand-mark{color:var(--magenta);font-size:1.3rem;text-shadow:0 0 12px var(--magenta)}
+.brand-name{font-size:1.25rem;letter-spacing:.14em;font-weight:600}
+.brand-name b{color:var(--cyan);font-weight:700}
+.brand-sub{color:var(--ink-dim);font-size:.72rem;letter-spacing:.2em;text-transform:uppercase}
+.nav{display:flex;gap:1.1rem;font-size:.82rem;letter-spacing:.18em}
+.nav a{color:var(--ink-dim)}
+.nav a:hover{color:var(--acid)}
+
+.wrap{max-width:1040px;margin:0 auto;padding:1.6rem 1.1rem 3rem}
+
+/* ---- panels ---- */
+.panel{position:relative;background:linear-gradient(180deg,rgba(13,40,36,.75),rgba(6,20,18,.75));
+  border:1px solid var(--panel-edge);padding:1.2rem 1.3rem;margin:0 0 1.3rem;
+  clip-path:polygon(0 0,calc(100% - 16px) 0,100% 16px,100% 100%,16px 100%,0 calc(100% - 16px))}
+.panel::before{content:"";position:absolute;left:0;top:0;width:3px;height:100%;
+  background:linear-gradient(180deg,var(--magenta),var(--cyan))}
+.panel h2{color:var(--cyan)}
+.panel h2 .tag{color:var(--magenta);font-size:.7rem;letter-spacing:.2em;margin-left:.6rem}
+
+.hero h1{font-size:2.5rem;line-height:1;letter-spacing:.06em;margin-bottom:.1em}
+.hero h1 .glow{color:var(--magenta);text-shadow:0 0 18px rgba(255,46,136,.6)}
+.hero .lede{color:var(--ink-dim);max-width:60ch}
+
+/* ---- forms ---- */
+label{display:block;font-size:.76rem;letter-spacing:.14em;text-transform:uppercase;color:var(--cyan);margin:.9rem 0 .3rem}
+input[type=text],input[type=number],input[type=password],textarea,select{
+  width:100%;background:#041512;border:1px solid var(--panel-edge);color:var(--ink);
+  padding:.55rem .7rem;font-family:"Share Tech Mono",monospace;font-size:.9rem}
+input:focus,textarea:focus,select:focus{outline:none;border-color:var(--cyan);box-shadow:0 0 0 1px var(--cyan-dk),0 0 14px rgba(23,224,214,.25)}
+textarea{min-height:3.2rem;resize:vertical}
+.row{display:flex;gap:1rem;flex-wrap:wrap}
+.row>div{flex:1 1 150px}
+.check{display:flex;align-items:center;gap:.5rem;margin:.6rem 0;color:var(--ink);text-transform:none;letter-spacing:0;font-size:.95rem}
+.check input{width:auto}
+.hint{color:var(--ink-dim);font-size:.78rem;margin-top:.25rem}
+details.adv{margin-top:.6rem;border:1px dashed var(--panel-edge);padding:.2rem .8rem .8rem}
+details.adv summary{cursor:pointer;color:var(--acid);letter-spacing:.14em;font-size:.8rem;text-transform:uppercase;padding:.6rem 0}
+
+.btn{display:inline-flex;align-items:center;gap:.5rem;cursor:pointer;border:none;
+  font-family:"Rajdhani";font-weight:700;letter-spacing:.14em;text-transform:uppercase;
+  padding:.7rem 1.4rem;font-size:.95rem;color:#04100e;
+  background:linear-gradient(90deg,var(--magenta),var(--cyan));
+  clip-path:polygon(0 0,calc(100% - 10px) 0,100% 10px,100% 100%,10px 100%,0 calc(100% - 10px))}
+.btn:hover{filter:brightness(1.15);box-shadow:0 0 18px rgba(23,224,214,.4)}
+.btn:disabled{opacity:.5;cursor:not-allowed;filter:grayscale(.4)}
+.btn.ghost{background:transparent;color:var(--cyan);border:1px solid var(--cyan-dk)}
+.btn.danger{background:linear-gradient(90deg,var(--danger),var(--amber));color:#200}
+
+/* ---- dropzone ---- */
+.drop{border:1.5px dashed var(--cyan-dk);background:rgba(23,224,214,.04);
+  padding:1.6rem;text-align:center;cursor:pointer;transition:.15s}
+.drop.hover{border-color:var(--magenta);background:rgba(255,46,136,.07)}
+.drop .big{font-size:1.1rem;letter-spacing:.08em}
+.drop .fname{color:var(--acid);font-family:"Share Tech Mono",monospace;margin-top:.5rem}
+
+/* ---- pow meter ---- */
+.pow{margin-top:1rem;border:1px solid var(--panel-edge);padding:.7rem .9rem;background:#041512;display:none}
+.pow.active{display:block}
+.pow .bar{height:10px;background:#07211d;margin-top:.5rem;overflow:hidden}
+.pow .bar>i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--magenta),var(--acid));transition:width .1s}
+.pow .meta{display:flex;justify-content:space-between;font-family:"Share Tech Mono",monospace;font-size:.78rem;color:var(--ink-dim)}
+
+/* ---- meta grid ---- */
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.7rem}
+.stat{background:#041512;border:1px solid var(--panel-edge);padding:.7rem .8rem}
+.stat .k{font-size:.68rem;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-dim)}
+.stat .v{font-family:"Share Tech Mono",monospace;font-size:1.1rem;color:var(--acid);overflow-wrap:anywhere;word-break:normal;line-height:1.25}
+.stat .v.mag{color:var(--magenta)}
+.stat .v.cy{color:var(--cyan)}
+
+/* ---- tables ---- */
+table{width:100%;border-collapse:collapse;font-family:"Share Tech Mono",monospace;font-size:.84rem}
+th,td{text-align:left;padding:.4rem .6rem;border-bottom:1px solid var(--panel-edge)}
+th{color:var(--cyan);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem;position:sticky;top:0;background:#07191a}
+tbody tr:hover{background:rgba(23,224,214,.05)}
+td .pad{color:var(--acid)} td .code{color:var(--magenta)}
+.tablewrap{max-height:460px;overflow:auto;border:1px solid var(--panel-edge)}
+.badge{display:inline-block;padding:.05rem .45rem;font-size:.7rem;letter-spacing:.08em;border:1px solid currentColor}
+.badge.pad{color:var(--acid)} .badge.code{color:var(--magenta)}
+
+/* ---- cave map (two aligned tracks + ruler) ---- */
+.cavemap{margin:.4rem 0 .2rem}
+.tracklabel{font-size:.62rem;letter-spacing:.2em;color:var(--ink-dim);margin:.5rem 0 .2rem}
+.track{position:relative;height:40px;background:#041512;border:1px solid var(--panel-edge);overflow:hidden}
+.track.caves{height:30px}
+.block{position:absolute;top:0;height:100%;overflow:hidden}
+.block.sec{opacity:.55;border-right:1px solid rgba(2,8,7,.6)}
+.block.sec:hover{opacity:.85}
+.block .blabel{position:absolute;bottom:2px;left:4px;font-size:.6rem;font-family:"Share Tech Mono";color:#04100e;font-weight:700;text-shadow:0 0 2px rgba(255,255,255,.4);white-space:nowrap}
+.block.cave{background:var(--magenta);box-shadow:0 0 7px rgba(255,46,136,.7);min-width:1px;border-left:1px solid rgba(255,255,255,.2)}
+.block.cave.codey{background:var(--cyan);box-shadow:0 0 7px rgba(23,224,214,.7)}
+.block.cave:hover{filter:brightness(1.3)}
+.mapempty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--ink-dim);font-size:.75rem;font-family:"Share Tech Mono"}
+.ruler{position:relative;height:16px;margin-top:2px}
+.ruler .tick{position:absolute;top:0;width:1px;height:5px;background:var(--panel-edge)}
+.ruler .tick span{position:absolute;top:5px;left:0;transform:translateX(-50%);font-size:.58rem;font-family:"Share Tech Mono";color:var(--ink-dim);white-space:nowrap}
+.legend{display:flex;gap:1.1rem;flex-wrap:wrap;font-size:.72rem;color:var(--ink-dim);margin-top:.9rem}
+.legend i{display:inline-block;width:11px;height:11px;margin-right:.3rem;vertical-align:-1px}
+.legend i.heat{background:linear-gradient(90deg,#17e0d6,#ffb020,#ff2e88);width:26px}
+
+/* ---- hashes ---- */
+.hashlist{display:flex;flex-direction:column;gap:.5rem}
+.hashrow{display:flex;flex-direction:column;gap:.15rem;border-left:2px solid var(--panel-edge);padding:.1rem 0 .1rem .7rem}
+.hashrow .halgo{font-size:.66rem;letter-spacing:.16em;color:var(--cyan);text-transform:uppercase}
+.hval{display:block;color:var(--ink);word-break:break-all;font-size:.82rem;transition:.15s}
+.hval:hover{color:var(--acid)}
+.hval.copied{color:var(--acid);text-shadow:0 0 8px rgba(182,255,58,.6)}
+.hval.copied::after{content:" \2713 copied";color:var(--acid);font-size:.7rem}
+
+/* ---- histogram ---- */
+.hist{display:flex;flex-direction:column;gap:.25rem;font-family:"Share Tech Mono",monospace;font-size:.76rem}
+.hist .hrow{display:flex;align-items:center;gap:.6rem}
+.hist .hlabel{width:150px;color:var(--ink-dim);text-align:right;white-space:nowrap}
+.hist .hbar{flex:1;background:#07211d;height:14px;position:relative}
+.hist .hbar>i{display:block;height:100%;background:linear-gradient(90deg,var(--cyan),var(--acid))}
+.hist .hcount{width:46px;color:var(--acid)}
+
+/* ---- entropy pill ---- */
+.ent{font-family:"Share Tech Mono";padding:.05rem .4rem;border-radius:2px}
+.ent.lo{color:var(--cyan)} .ent.mid{color:var(--amber)} .ent.hi{color:var(--magenta)}
+
+/* ---- recent feed ---- */
+.feedwrap{border:1px solid var(--panel-edge);max-height:360px;overflow:auto}
+table.feed{width:100%;border-collapse:collapse;font-family:"Share Tech Mono",monospace;font-size:.82rem}
+table.feed th{color:var(--cyan);text-transform:uppercase;letter-spacing:.1em;font-size:.68rem;text-align:left;padding:.45rem .7rem;position:sticky;top:0;background:#07191a;border-bottom:1px solid var(--panel-edge)}
+table.feed td{padding:.4rem .7rem;border-bottom:1px solid var(--panel-edge)}
+table.feed tbody tr:hover{background:rgba(23,224,214,.05)}
+.feed .feedhash{color:var(--ink)}
+.feed .ttl{color:var(--acid)}
+.feedempty{padding:1rem;text-align:center;color:var(--ink-dim);font-family:"Share Tech Mono";font-size:.8rem}
+.hidden{display:none}
+
+/* ---- misc ---- */
+.flashwrap{max-width:1040px;margin:1rem auto 0;padding:0 1.1rem}
+.flash{background:rgba(255,176,32,.1);border:1px solid var(--amber);color:var(--amber);padding:.5rem .8rem;margin-bottom:.4rem;font-size:.9rem}
+.foot{display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap;max-width:1040px;margin:0 auto;padding:1.2rem 1.1rem;border-top:1px solid var(--panel-edge);color:var(--ink-dim);font-size:.74rem;letter-spacing:.1em;text-transform:uppercase}
+.dim{color:var(--ink-dim)}
+.notice{border-left:3px solid var(--cyan);padding:.4rem .9rem;background:rgba(23,224,214,.05);color:var(--ink-dim);font-size:.85rem;margin:.6rem 0}
+.err-code{font-family:"Share Tech Mono";font-size:4rem;color:var(--magenta);text-shadow:0 0 22px rgba(255,46,136,.5)}
+.pillrow{display:flex;gap:.5rem;flex-wrap:wrap;margin:.4rem 0}
+.pill{border:1px solid var(--panel-edge);padding:.15rem .6rem;font-family:"Share Tech Mono";font-size:.78rem;color:var(--cyan)}
+@media(max-width:640px){.hero h1{font-size:1.8rem}.hist .hlabel{width:92px}.brand-sub{display:none}}

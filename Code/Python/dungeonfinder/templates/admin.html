@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Console &middot; DungeonFinder{% endblock %}
+{% block content %}
+<section class="panel">
+  <h2>Operator console <span class="tag">// live</span></h2>
+  <div class="grid">
+    <div class="stat"><div class="k">Pending uploads</div><div class="v cy">{{ stats.uploads_pending }}</div></div>
+    <div class="stat"><div class="k">Live reports</div><div class="v cy">{{ stats.reports_live }}</div></div>
+    <div class="stat"><div class="k">Current PoW bits</div><div class="v mag">{{ stats.current_bits }}</div></div>
+  </div>
+  {% if env_pw %}<div class="notice">Admin password is supplied via environment variable; the stored hash is ignored while it is set.</div>{% endif %}
+</section>
+
+<form class="panel" method="post">
+  <h2>Intake policy</h2>
+  <div class="row">
+    <div>
+      <label>Max upload size (MB)</label>
+      <input type="number" name="max_file_size_mb" min="1" max="1024" value="{{ cfg.max_file_size_mb }}">
+      <div class="hint">1&ndash;1024 MB</div>
+    </div>
+    <div>
+      <label>Retention (minutes)</label>
+      <input type="number" name="retention_minutes" min="1" max="10080" value="{{ cfg.retention_minutes }}">
+      <div class="hint">files &amp; reports auto-delete after this</div>
+    </div>
+  </div>
+  <label class="check"><input type="checkbox" name="force_extension" {{ 'checked' if cfg.force_extension }}> Force extension matching (reject files whose bytes disagree with their extension)</label>
+
+  <h2 style="margin-top:1.4rem">Anti-bot / hashcash</h2>
+  <label class="check"><input type="checkbox" name="hashcash_adaptive" {{ 'checked' if cfg.hashcash_adaptive }}> Adaptive difficulty (scale with load &amp; per-IP rate)</label>
+  <div class="row">
+    <div>
+      <label>Base difficulty (bits)</label>
+      <input type="number" name="hashcash_base_bits" min="1" max="30" value="{{ cfg.hashcash_base_bits }}">
+      <div class="hint">~2^bits hashes per upload (18 &asymp; 1&ndash;2s)</div>
+    </div>
+    <div>
+      <label>Max difficulty (bits)</label>
+      <input type="number" name="hashcash_max_bits" min="1" max="30" value="{{ cfg.hashcash_max_bits }}">
+      <div class="hint">adaptive hard cap</div>
+    </div>
+  </div>
+  <h2 style="margin-top:1.4rem">Recent-recon feed</h2>
+  <label class="check"><input type="checkbox" name="feed_enabled" {{ 'checked' if cfg.feed_enabled }}> Show the public recent-analysis feed on the scan page</label>
+  <div class="row">
+    <div>
+      <label>Digest shown in feed</label>
+      <select name="feed_hash">
+        {% for h in feed_hashes %}
+          <option value="{{ h }}" {{ 'selected' if cfg.feed_hash==h }}>{{ h|upper }}</option>
+        {% endfor %}
+      </select>
+      <div class="hint">only this hash is exposed &mdash; never filenames</div>
+    </div>
+    <div>
+      <label>Max feed entries</label>
+      <input type="number" name="feed_max" min="1" max="100" value="{{ cfg.feed_max }}">
+    </div>
+  </div>
+
+  <div style="margin-top:1.1rem"><button class="btn" type="submit">&#9671; SAVE SETTINGS</button></div>
+</form>
+
+<form class="panel" method="post" action="{{ url_for('admin_purge') }}"
+      onsubmit="return confirm('Delete all uploads and reports now?')">
+  <h2>Maintenance</h2>
+  <p class="dim">Immediately delete every stored upload and report.</p>
+  <button class="btn danger" type="submit">&#9888; PURGE ALL NOW</button>
+</form>
+{% endblock %}

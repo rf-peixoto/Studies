@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Error {{ code }} &middot; DungeonFinder{% endblock %}
+{% block content %}
+<section class="panel" style="text-align:center;max-width:620px;margin:2rem auto">
+  <div class="err-code">{{ code }}</div>
+  <h2 style="justify-content:center">Run aborted</h2>
+  <p class="dim">{{ message }}</p>
+  <div style="margin-top:1.2rem"><a class="btn" href="{{ url_for('index') }}">&#8635; BACK TO SCAN</a></div>
+</section>
+{% endblock %}

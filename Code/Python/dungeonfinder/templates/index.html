@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+{% block content %}
+<form class="panel" id="scanForm" method="post" action="{{ url_for('scan') }}" enctype="multipart/form-data">
+  <h2>Target <span class="tag">// drop a binary</span></h2>
+
+  <div class="drop" id="drop">
+    <div class="big">&#9671; DROP BINARY HERE</div>
+    <div class="hint">or click to browse &middot; max {{ cfg.max_file_size_mb }} MB &middot; PE / ELF / Mach-O (extension optional)</div>
+    <div class="fname" id="fname"></div>
+    <input type="file" id="file" name="file" hidden required>
+  </div>
+
+  <details class="adv">
+    <summary>Scan parameters</summary>
+    <div class="row">
+      <div>
+        <label>Padding patterns</label>
+        <textarea name="patterns" placeholder="\x00&#10;\xCC&#10;90">\x00</textarea>
+        <div class="hint">one per line &middot; \x00, hex (CC), or 0x90</div>
+      </div>
+      <div>
+        <label>Min cave size (bytes)</label>
+        <input type="number" name="min_size" value="32" min="1">
+        <label>Top N by size (blank = all)</label>
+        <input type="text" name="top" placeholder="e.g. 20">
+      </div>
+    </div>
+    <div class="row">
+      <div><label>Scan sections only</label><input type="text" name="scan_sections" placeholder=".data,.rsrc"></div>
+      <div><label>Skip sections</label><input type="text" name="skip_sections" placeholder=".text"></div>
+    </div>
+    <div class="row">
+      <div><label>Min offset</label><input type="text" name="min_offset" placeholder="0x1000"></div>
+      <div><label>Max offset</label><input type="text" name="max_offset" placeholder="0x40000"></div>
+      <div><label>Alignment</label><input type="text" name="align" placeholder="0x10"></div>
+    </div>
+    <label class="check"><input type="checkbox" name="disasm_filter" id="disasm"> Disassembly classification (flag caves that look like code)</label>
+    <label class="check"><input type="checkbox" name="exclude_code"> &mdash; and drop the code-like ones from results</label>
+  </details>
+
+  <!-- hashcash fields -->
+  <input type="hidden" name="hc_token"><input type="hidden" name="hc_bits">
+  <input type="hidden" name="hc_ts"><input type="hidden" name="hc_sig">
+  <input type="hidden" name="hc_nonce">
+
+  <div class="pow" id="pow">
+    <div class="meta"><span id="powLabel">PROOF-OF-WORK</span><span id="powStat"></span></div>
+    <div class="bar"><i id="powBar"></i></div>
+  </div>
+
+  <div style="margin-top:1.1rem">
+    <button class="btn" id="go" type="submit">&#9654; RUN SCAN</button>
+  </div>
+  <div class="notice">Proof-of-work runs in your browser to keep bots out. Difficulty scales up automatically under load.</div>
+</form>
+
+{% if cfg.feed_enabled %}
+<section class="panel" id="feedPanel">
+  <h2>Recent recon <span class="tag">// live feed</span></h2>
+  <div class="feedwrap">
+    <table class="feed">
+      <thead><tr>
+        <th>{{ cfg.feed_hash|upper }}</th><th>Fmt</th><th>Size</th><th>Caves</th><th>Expires in</th>
+      </tr></thead>
+      <tbody id="feedBody">
+        {% for row in feed %}
+        <tr data-ttl="{{ row.ttl }}">
+          <td class="hex feedhash" title="{{ row.hash }}">{{ row.hash[:24] }}{% if row.hash|length > 24 %}&hellip;{% endif %}</td>
+          <td>{{ row.format }}</td>
+          <td class="pad">{{ row.size_human }}</td>
+          <td class="mag">{{ row.caves }}</td>
+          <td class="ttl" data-ttl="{{ row.ttl }}">{{ row.ttl }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <div class="feedempty {{ 'hidden' if feed }}" id="feedEmpty">No files analyzed yet.</div>
+  </div>
+  <div class="hint">Shows only the {{ cfg.feed_hash|upper }} digest, size, cave count and time left before auto-deletion.</div>
+</section>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='hashcash.js') }}"></script>
+<script>
+(function(){
+  const drop=document.getElementById('drop'), file=document.getElementById('file'),
+        fname=document.getElementById('fname'), form=document.getElementById('scanForm'),
+        go=document.getElementById('go');
+  drop.addEventListener('click',()=>file.click());
+  ['dragover','dragenter'].forEach(e=>drop.addEventListener(e,ev=>{ev.preventDefault();drop.classList.add('hover');}));
+  ['dragleave','drop'].forEach(e=>drop.addEventListener(e,ev=>{ev.preventDefault();drop.classList.remove('hover');}));
+  drop.addEventListener('drop',ev=>{ if(ev.dataTransfer.files.length){file.files=ev.dataTransfer.files; show();}});
+  file.addEventListener('change',show);
+  function show(){ fname.textContent = file.files.length ? '> '+file.files[0].name : ''; }
+
+  form.addEventListener('submit', async (ev)=>{
+    if(form.dataset.solved==='1') return;           // already have PoW, let it submit
+    ev.preventDefault();
+    if(!file.files.length){ alert('Select a binary first.'); return; }
+    go.disabled=true;
+    try{
+      await DungeonHashcash.solveInto(form, {
+        powEl:document.getElementById('pow'),
+        barEl:document.getElementById('powBar'),
+        statEl:document.getElementById('powStat'),
+        labelEl:document.getElementById('powLabel'),
+      });
+      form.dataset.solved='1';
+      form.submit();
+    }catch(e){
+      go.disabled=false;
+      alert('Proof-of-work failed: '+e.message);
+    }
+  });
+})();
+
+// ---- recent recon feed ----
+(function(){
+  const body=document.getElementById('feedBody');
+  if(!body) return;
+  const empty=document.getElementById('feedEmpty');
+  const algoLabel = {{ cfg.feed_hash|tojson }}.toUpperCase();
+  function fmtTtl(s){
+    s=Math.max(0,s|0);
+    const m=Math.floor(s/60), sec=s%60;
+    if(m>=60){ const h=Math.floor(m/60); return h+'h '+(m%60)+'m'; }
+    return m+'m '+String(sec).padStart(2,'0')+'s';
+  }
+  function render(rows){
+    body.innerHTML='';
+    if(!rows.length){ empty.classList.remove('hidden'); return; }
+    empty.classList.add('hidden');
+    for(const r of rows){
+      const tr=document.createElement('tr');
+      const short=(r.hash||'').slice(0,24)+((r.hash||'').length>24?'…':'');
+      tr.innerHTML=`<td class="hex feedhash" title="${r.hash||''}">${short}</td>`
+        +`<td>${r.format||'?'}</td><td class="pad">${r.size_human||''}</td>`
+        +`<td class="mag">${r.caves}</td>`
+        +`<td class="ttl" data-ttl="${r.ttl}">${fmtTtl(r.ttl)}</td>`;
+      body.appendChild(tr);
+    }
+  }
+  // format whatever the server rendered on first paint
+  body.querySelectorAll('.ttl').forEach(td=>{ td.textContent=fmtTtl(parseInt(td.dataset.ttl,10)); });
+  // tick down every second
+  setInterval(()=>{
+    body.querySelectorAll('tr').forEach(tr=>{
+      const td=tr.querySelector('.ttl'); if(!td) return;
+      let t=parseInt(td.dataset.ttl,10)-1;
+      if(t<=0){ tr.remove(); if(!body.children.length) empty.classList.remove('hidden'); return; }
+      td.dataset.ttl=t; td.textContent=fmtTtl(t);
+    });
+  },1000);
+  // refresh from server periodically
+  async function refresh(){
+    try{ const r=await fetch('/api/feed',{headers:{'X-Requested-With':'DungeonFinder'}});
+      if(r.ok) render(await r.json()); }catch(e){}
+  }
+  setInterval(refresh, 15000);
+})();
+</script>
+{% endblock %}

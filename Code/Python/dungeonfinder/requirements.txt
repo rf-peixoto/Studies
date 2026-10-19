@@ -1,0 +1,3 @@
+Flask>=3.0
+lief>=0.14
+capstone>=5.0

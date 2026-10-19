@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% block title %}Report {{ r.id[:8] }} &middot; DungeonFinder{% endblock %}
+{% block content %}
+
+<section class="panel">
+  <h2>Dossier <span class="tag">// {{ r.filename }}</span></h2>
+  <div class="grid">
+    <div class="stat"><div class="k">Format</div><div class="v mag">{{ r.format }}</div></div>
+    <div class="stat"><div class="k">Architecture</div><div class="v cy">{{ r.architecture }} &middot; {{ r.bits }}-bit</div></div>
+    <div class="stat"><div class="k">Entry point</div><div class="v">{{ r.entrypoint }}</div></div>
+    <div class="stat"><div class="k">Size</div><div class="v">{{ r.size_human }}</div></div>
+    <div class="stat"><div class="k">Exact size</div><div class="v">{{ '{:,}'.format(r.size) }} B</div></div>
+    <div class="stat"><div class="k">Section align</div><div class="v">{{ r.section_alignment }}</div></div>
+    <div class="stat"><div class="k">Caves found</div><div class="v mag">{{ r.caves|length }}</div></div>
+  </div>
+  <div class="pillrow">
+    <span class="pill">patterns: {{ r.patterns|join(' ') }}</span>
+    {% if r.stats %}<span class="pill">cave bytes: {{ '{:,}'.format(r.stats.total_bytes) }}</span>{% endif %}
+    <span class="pill">auto-delete in ~{{ (ttl_left // 60) }}m {{ (ttl_left % 60) }}s</span>
+  </div>
+  {% if r.warnings %}{% for w in r.warnings %}<div class="notice">! {{ w }}</div>{% endfor %}{% endif %}
+</section>
+
+<section class="panel">
+  <h2>Cave map <span class="tag">// by file offset</span></h2>
+  <div class="cavemap" id="cavemap">
+    <div class="tracklabel">SECTIONS</div>
+    <div class="track" id="trackSections"></div>
+    <div class="ruler" id="ruler"></div>
+    <div class="tracklabel">CAVES</div>
+    <div class="track caves" id="trackCaves"></div>
+  </div>
+  <div class="legend">
+    <span><i style="background:var(--magenta)"></i>padding cave</span>
+    <span><i style="background:var(--cyan)"></i>code-like</span>
+    <span><i class="heat"></i>section shaded by entropy (low&rarr;high)</span>
+    <span class="dim">hover any block for details</span>
+  </div>
+</section>
+
+<div class="row" style="align-items:flex-start">
+  <section class="panel" style="flex:1 1 360px">
+    <h2>Hashes</h2>
+    <div class="hashlist">
+      {% for algo, label in [('md5','MD5'),('sha256','SHA-256'),('sha512','SHA-512'),('blake2b','BLAKE2b')] %}
+      {% if r.hashes.get(algo) %}
+      <div class="hashrow">
+        <div class="halgo">{{ label }}</div>
+        <code class="hex hval" data-copy="{{ r.hashes[algo] }}" title="click to copy">{{ r.hashes[algo] }}</code>
+      </div>
+      {% endif %}
+      {% endfor %}
+    </div>
+    <div class="hint">click a digest to copy</div>
+  </section>
+
+  {% if r.stats %}
+  <section class="panel" style="flex:1 1 360px">
+    <h2>Cave stats</h2>
+    <div class="grid">
+      <div class="stat"><div class="k">count</div><div class="v">{{ r.stats.count }}</div></div>
+      <div class="stat"><div class="k">min / max</div><div class="v">{{ r.stats.min }} / {{ r.stats.max }}</div></div>
+      <div class="stat"><div class="k">mean</div><div class="v">{{ r.stats.mean }}</div></div>
+      <div class="stat"><div class="k">median</div><div class="v">{{ r.stats.median }}</div></div>
+      <div class="stat"><div class="k">75th pct</div><div class="v">{{ r.stats.percentiles['75'] }}</div></div>
+      <div class="stat"><div class="k">90th pct</div><div class="v">{{ r.stats.percentiles['90'] }}</div></div>
+    </div>
+  </section>
+  {% endif %}
+</div>
+
+{% if r.stats and r.stats.histogram %}
+<section class="panel">
+  <h2>Size distribution</h2>
+  <div class="hist" id="hist"></div>
+</section>
+{% endif %}
+
+<section class="panel">
+  <h2>Sections <span class="tag">// {{ r.sections|length }}</span></h2>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Name</th><th>Offset</th><th>Size</th><th>VAddr</th><th>Entropy</th><th>Flags</th></tr></thead>
+      <tbody>
+      {% for s in r.sections %}
+        <tr>
+          <td class="pad">{{ s.name }}</td>
+          <td>{{ s.offset_hex }}</td>
+          <td>{{ '{:,}'.format(s.size) }}</td>
+          <td>{{ s.virtual_address_hex }}</td>
+          <td>{% set e = s.entropy %}<span class="ent {{ 'hi' if e>=6.5 else ('mid' if e>=3 else 'lo') }}">{{ '%.2f'|format(e) }}</span></td>
+          <td class="dim">{{ s.flags }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="hint">High entropy (&ge;6.5) often marks packed or encrypted data; low entropy marks padding/text.</div>
+</section>
+
+<section class="panel">
+  <h2>Caves <span class="tag">// {{ r.caves|length }}</span></h2>
+  <div style="margin-bottom:.7rem">
+    <a class="btn ghost" href="{{ url_for('download', rid=r.id, fmt='json') }}">&#8681; JSON</a>
+    <a class="btn ghost" href="{{ url_for('download', rid=r.id, fmt='csv') }}">&#8681; CSV</a>
+  </div>
+  {% if r.caves %}
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>#</th><th>Offset</th><th>End</th><th>Size</th><th>Section</th><th>Pattern</th><th>Class</th></tr></thead>
+      <tbody>
+      {% for c in r.caves %}
+        <tr>
+          <td class="dim">{{ loop.index }}</td>
+          <td>{{ c.offset_hex }}</td>
+          <td>{{ c.end_hex }}</td>
+          <td class="pad">{{ '{:,}'.format(c.size) }}</td>
+          <td>{{ c.section }}</td>
+          <td class="dim">{{ c.pattern }}</td>
+          <td>{% if c.is_code is none %}<span class="dim">&mdash;</span>
+              {% elif c.is_code %}<span class="badge code">CODE?</span>
+              {% else %}<span class="badge pad">PAD</span>{% endif %}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    <p class="dim">No caves matched the given parameters.</p>
+  {% endif %}
+</section>
+
+<div style="text-align:center;margin-top:1rem"><a class="btn" href="{{ url_for('index') }}">&#8635; SCAN ANOTHER</a></div>
+
+<script id="report-data" type="application/json">{{ {'size': r.size, 'sections': r.sections, 'caves': r.caves, 'histogram': (r.stats.histogram if r.stats else [])}|tojson }}</script>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='dungeon.js') }}"></script>
+{% endblock %}

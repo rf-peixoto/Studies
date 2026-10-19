@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Admin &middot; DungeonFinder{% endblock %}
+{% block content %}
+<section class="panel" style="max-width:460px;margin:2rem auto">
+  <h2>Admin access <span class="tag">// restricted</span></h2>
+  {% if not configured %}
+    <div class="notice">No admin password is set. Set one with
+    <code>python app.py set-password</code> or the
+    <code>DUNGEONFINDER_ADMIN_PASSWORD</code> environment variable, then reload.</div>
+  {% endif %}
+  <form method="post">
+    <label>Password</label>
+    <input type="password" name="password" autofocus {{ 'disabled' if not configured }}>
+    <div style="margin-top:1rem">
+      <button class="btn" type="submit" {{ 'disabled' if not configured }}>&#9654; AUTHENTICATE</button>
+    </div>
+  </form>
+</section>
+{% endblock %}

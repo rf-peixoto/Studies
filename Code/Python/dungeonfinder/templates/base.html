@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}DungeonFinder{% endblock %}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<div class="scanlines" aria-hidden="true"></div>
+<header class="topbar">
+  <a class="brand" href="{{ url_for('index') }}">
+    <span class="brand-mark">&#9671;</span>
+    <span class="brand-name">DUNGEON<b>FINDER</b></span>
+    <span class="brand-sub">// code-cave recon</span>
+  </a>
+  <nav class="nav">
+    <a href="{{ url_for('index') }}">SCAN</a>
+    {% if admin %}
+      <a href="{{ url_for('admin') }}">CONSOLE</a>
+      <a href="{{ url_for('admin_logout') }}">LOGOUT</a>
+    {% else %}
+      <a href="{{ url_for('admin_login') }}">ADMIN</a>
+    {% endif %}
+  </nav>
+</header>
+
+{% with messages = get_flashed_messages() %}
+  {% if messages %}
+    <div class="flashwrap">
+    {% for m in messages %}<div class="flash">{{ m }}</div>{% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
+
+<main class="wrap">
+  {% block content %}{% endblock %}
+</main>
+
+{% block scripts %}{% endblock %}
+</body>
+</html>

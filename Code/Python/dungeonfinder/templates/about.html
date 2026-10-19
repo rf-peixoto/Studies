@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Intel &middot; DungeonFinder{% endblock %}
+{% block content %}
+<section class="panel">
+  <h2>What is a code cave?</h2>
+  <p>A <b>code cave</b> is a contiguous run of padding bytes (commonly <code class="hex">0x00</code>,
+  <code class="hex">0xCC</code>, or <code class="hex">0x90</code>) left inside a compiled binary &mdash;
+  the slack between sections, alignment gaps, or zeroed data regions. Reverse engineers and
+  malware analysts study them to understand a file's layout and to spot where foreign code
+  <i>could</i> be hidden.</p>
+  <p>DungeonFinder locates and characterizes those caves. It is strictly a
+  <b>detection and identification</b> tool.</p>
+</section>
+
+<section class="panel">
+  <h2>What DungeonFinder does</h2>
+  <ul>
+    <li>Parses PE, ELF and Mach-O headers (via LIEF): format, architecture, entry point, section table.</li>
+    <li>Computes per-section Shannon entropy to flag packed/encrypted regions.</li>
+    <li>Fingerprints the file with MD5 / SHA-1 / SHA-256.</li>
+    <li>Scans for padding runs on one or more byte patterns, with section, offset and alignment filters.</li>
+    <li>Optionally runs a Capstone disassembly pass to tell padding apart from stray code.</li>
+    <li>Reports statistics, a size distribution, an offset-accurate cave map, and JSON/CSV export.</li>
+  </ul>
+  <div class="pillrow">{% for e in allowed.split(', ') %}<span class="pill">{{ e }}</span>{% endfor %}</div>
+</section>
+
+<section class="panel">
+  <h2>What it does <span style="color:var(--magenta)">not</span> do</h2>
+  <p>DungeonFinder never modifies a binary. There is no shellcode injection, no new-section
+  creation, no entry-point redirection, no certificate stripping and no checksum patching.
+  Every upload is opened read-only, analyzed, and deleted after the retention window.</p>
+  <div class="notice">Use it on files you are authorized to analyze.</div>
+</section>
+{% endblock %}
