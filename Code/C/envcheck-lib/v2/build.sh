@@ -11,23 +11,35 @@ set -euo pipefail
 
 CC="${CC:-cc}"
 CFLAGS="${CFLAGS:--O2 -Wall -Wextra}"
-OUT="report"
-SRC="report.c envcheck.c"
 
 if [ "${1:-}" = "clean" ]; then
-    rm -f "$OUT" envcheck.o report.o
+    rm -f report guard envcheck.o report.o guard.o
     echo "cleaned."
     exit 0
 fi
 
-echo "Compiling with: $CC $CFLAGS $SRC -o $OUT"
+# 1) report  — prints the per-signal breakdown, scores and percentage.
+echo "Compiling: $CC $CFLAGS report.c envcheck.c -o report"
 # shellcheck disable=SC2086
-"$CC" $CFLAGS $SRC -o "$OUT"
-echo "Built ./$OUT"
+"$CC" $CFLAGS report.c envcheck.c -o report
+
+# 2) guard   — ENFORCEMENT example: self-deletes the binary and halts if the
+#              combined score >= GUARD_THRESHOLD (default 7). Override at build
+#              time, e.g.:  CFLAGS="-O2 -DGUARD_THRESHOLD=14" ./build.sh
+echo "Compiling: $CC $CFLAGS guard.c envcheck.c -o guard"
+# shellcheck disable=SC2086
+"$CC" $CFLAGS guard.c envcheck.c -o guard
+
 echo
-echo "Run it:"
-echo "  ./$OUT                 # full breakdown + score + percentage"
-echo "  ./$OUT --json          # raw JSON report"
-echo "  ./$OUT --sleep-skew    # also run the time-acceleration probe"
-echo "  ./$OUT --no-backdoor   # skip the VMware I/O backdoor probe"
-echo "  ./$OUT --no-ptrace     # skip the PTRACE_TRACEME self-probe"
+echo "Built ./report and ./guard"
+echo
+echo "report (safe, read-only):"
+echo "  ./report               # full breakdown + score + percentage"
+echo "  ./report --json        # raw JSON report"
+echo "  ./report --sleep-skew  # also run the time-acceleration probe"
+echo "  ./report --no-backdoor # skip the VMware I/O backdoor probe"
+echo "  ./report --no-ptrace   # skip the PTRACE_TRACEME self-probe"
+echo
+echo "guard (DESTRUCTIVE — deletes its own binary if score >= ${GUARD_THRESHOLD:-7}):"
+echo "  GUARD_DRY_RUN=1 ./guard  # report what it WOULD do, delete nothing  <-- test first!"
+echo "  ./guard                  # live: self-deletes + exits if tripped"

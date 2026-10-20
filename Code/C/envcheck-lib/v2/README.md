@@ -20,7 +20,8 @@ decide what to do.
 | `envcheck.c` | Implementation (no `main`; drop into your project). |
 | `example.c`  | Minimal driver that prints the report as JSON. |
 | `report.c`   | Test harness: per-signal breakdown, scores, and a VM/controlled-env percentage. |
-| `build.sh`   | One-command Linux build of the `report` harness. |
+| `guard.c`    | **Destructive** enforcement example: self-deletes the binary and halts if the combined score ≥ `GUARD_THRESHOLD` (default 7). Test with `GUARD_DRY_RUN=1` first. |
+| `build.sh`   | One-command Linux build of both `report` and `guard`. |
 
 ## Build
 
