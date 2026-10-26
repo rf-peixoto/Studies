@@ -10,13 +10,14 @@ from typing import List, Optional
 from . import __version__
 from . import static_analysis as S
 from . import dynamic_analysis as D
+from . import robustness as R
 from . import tools as T
 from .report import Report
 from .util import make_color
 
 # Static stage name -> callable(path, tools, outdir) wrapper key.
 STATIC_STAGES = [
-    "fileid", "hashes", "header", "entropy", "packing",
+    "fileid", "hashes", "header", "robustness", "entropy", "packing",
     "strings", "imports", "anomalies",
 ]
 
@@ -40,6 +41,11 @@ def build_parser() -> argparse.ArgumentParser:
                    help="add checksec-style mitigation analysis (static)")
     g.add_argument("--entropy-check", action="store_true", dest="entropy_check",
                    help="static: block-by-block entropy map with a table")
+    g.add_argument("--disasm", action="store_true",
+                   help="static: disassemble code and extract behavioral signals")
+    g.add_argument("--netsim", action="store_true",
+                   help="EXECUTE sample with fake network services; logs the "
+                        "destinations it tried to reach")
     g.add_argument("--dynamic", action="store_true",
                    help="EXECUTE sample: strace + ltrace (+ optional capture)")
     g.add_argument("--supervise", action="store_true",
@@ -54,7 +60,8 @@ def build_parser() -> argparse.ArgumentParser:
                    help="run everything, including interactive stages")
     g.add_argument("--only", metavar="LIST",
                    help="comma-separated static stages to run exclusively "
-                        f"(choices: {','.join(STATIC_STAGES)},mitigations)")
+                        f"(choices: {','.join(STATIC_STAGES)},mitigations). "
+                        "disasm/entropy map are separate flags.")
 
     # Dynamic / behavior options.
     d = p.add_argument_group("execution options")
@@ -131,6 +138,8 @@ def run_static(target: str, tools, outdir: str, report: Report,
         report.add(S.analyze_hashes(target))
     if "header" in sel:
         report.add(S.analyze_header(target))
+    if "robustness" in sel:
+        report.add(R.analyze_robustness(target))
     if do_mitigations or (selected and "mitigations" in selected):
         report.add(S.analyze_mitigations(target))
     if "entropy" in sel:
@@ -153,21 +162,27 @@ def analyze_one(target: str, args, tools, outdir: str) -> Report:
     if args.only:
         selected = [s.strip() for s in args.only.split(",") if s.strip()]
 
+    # Non-execution stages that run the target: none. These all stay static.
+    dynamic_requested = (args.dynamic or args.supervise or args.gdb
+                         or args.memdump or args.tcpdump or args.netsim)
+
     # --- static (default on unless an exclusive non-static stage chosen) --- #
     want_static = (args.static or args.all or args.only or args.mitigations
-                   or args.entropy_check
-                   or not (args.dynamic or args.supervise or args.gdb
-                           or args.memdump or args.tcpdump))
+                   or args.entropy_check or args.disasm
+                   or not dynamic_requested)
 
-    # Block entropy map is its own opt-in stage (not in the default set).
+    # Opt-in self-contained static stages (not in the default suite).
     if args.entropy_check or args.all:
         report.add(S.analyze_block_entropy(target, block_size=args.block_size))
+    if args.disasm or args.all:
+        from . import disasm as DIS
+        report.add(DIS.analyze_disasm(target, outdir))
 
-    # If entropy-check is the ONLY static thing asked for, don't also run the
-    # whole default static suite -- just the map (plus anything else requested).
-    only_entropy = (args.entropy_check and not (args.static or args.all
-                    or args.only or args.mitigations))
-    run_full_static = want_static and not only_entropy
+    # If only these opt-in static stages were asked for, skip the full suite.
+    only_optin = ((args.entropy_check or args.disasm)
+                  and not (args.static or args.all or args.only
+                           or args.mitigations))
+    run_full_static = want_static and not only_optin
 
     if run_full_static:
         run_static(target, tools, outdir, report, selected,
@@ -201,6 +216,17 @@ def analyze_one(target: str, args, tools, outdir: str) -> Report:
             report.add(D.run_tcpdump(target, args.args, tools, outdir, args.timeout))
         if args.memdump:
             report.add(D.run_memdump(target, args.args, outdir, args.timeout))
+
+    # --- network emulation (executes the target) --------------------------- #
+    if args.netsim or args.all:
+        if D._confirm_exec(target, args.yes):
+            from . import netsim as NS
+            report.add(NS.run_netsim(target, args.args, outdir, args.timeout))
+        else:
+            from .util import StageResult
+            r = StageResult("netsim")
+            r.error = "user declined execution"
+            report.add(r)
 
     # --- interactive syscall gate ------------------------------------------ #
     if args.supervise or args.all:
