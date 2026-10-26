@@ -1,0 +1,5 @@
+# Core static ELF parsing
+pyelftools>=0.31
+
+# Interactive syscall gate (ptrace supervisor). Linux-only.
+python-ptrace>=0.9.9
