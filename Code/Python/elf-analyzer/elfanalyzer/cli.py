@@ -38,6 +38,8 @@ def build_parser() -> argparse.ArgumentParser:
                    help="run static analysis (default when no stage is given)")
     g.add_argument("--mitigations", action="store_true",
                    help="add checksec-style mitigation analysis (static)")
+    g.add_argument("--entropy-check", action="store_true", dest="entropy_check",
+                   help="static: block-by-block entropy map with a table")
     g.add_argument("--dynamic", action="store_true",
                    help="EXECUTE sample: strace + ltrace (+ optional capture)")
     g.add_argument("--supervise", action="store_true",
@@ -60,6 +62,9 @@ def build_parser() -> argparse.ArgumentParser:
                    help="arguments passed to the sample (must be last)")
     d.add_argument("--timeout", type=int, default=20,
                    help="per-stage timeout for dynamic runs (s, default 20)")
+    d.add_argument("--block-size", type=int, default=0, dest="block_size",
+                   help="--entropy-check block size in bytes (0 = auto-scale "
+                        "to the file so the table stays readable)")
     d.add_argument("--unpack", action="store_true",
                    help="if UPX-packed and upx is present, unpack and re-run "
                         "static analysis on the unpacked copy")
@@ -149,10 +154,22 @@ def analyze_one(target: str, args, tools, outdir: str) -> Report:
         selected = [s.strip() for s in args.only.split(",") if s.strip()]
 
     # --- static (default on unless an exclusive non-static stage chosen) --- #
-    want_static = (args.static or args.all or args.only
+    want_static = (args.static or args.all or args.only or args.mitigations
+                   or args.entropy_check
                    or not (args.dynamic or args.supervise or args.gdb
                            or args.memdump or args.tcpdump))
-    if want_static:
+
+    # Block entropy map is its own opt-in stage (not in the default set).
+    if args.entropy_check or args.all:
+        report.add(S.analyze_block_entropy(target, block_size=args.block_size))
+
+    # If entropy-check is the ONLY static thing asked for, don't also run the
+    # whole default static suite -- just the map (plus anything else requested).
+    only_entropy = (args.entropy_check and not (args.static or args.all
+                    or args.only or args.mitigations))
+    run_full_static = want_static and not only_entropy
+
+    if run_full_static:
         run_static(target, tools, outdir, report, selected,
                    do_mitigations=args.mitigations or args.all)
 
@@ -243,6 +260,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             rep = analyze_one(fpath, batch_args, tools, sub_out)
             rep.write_json()
             if not args.json_only:
+                rep.print_entropy_map(color_force)
                 rep.print_summary(color_force)
         print(f"\nBatch complete: {count} ELF file(s). Reports under {root_out}/")
         return 0
@@ -270,5 +288,6 @@ def main(argv: Optional[List[str]] = None) -> int:
     if args.json_only:
         print(json_path)
     else:
+        report.print_entropy_map(color_force)
         report.print_summary(color_force)
     return 0

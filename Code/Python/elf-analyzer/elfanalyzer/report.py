@@ -138,6 +138,59 @@ class Report:
         print(c.dim(f" artifacts  : {self.outdir}/"))
         print(c.bold("=" * 70))
 
+    def print_entropy_map(self, color_force=None, bar_width: int = 34,
+                          max_rows: int = 160):
+        """Render the --entropy-check block map as a table with a visual bar."""
+        stage = self._stage("entropy_map")
+        if not stage or stage.error or not stage.data:
+            if stage and stage.error:
+                c = make_color(color_force)
+                print(c.dim(f" entropy map: {stage.error}"))
+            return
+        c = make_color(color_force)
+        d = stage.data
+        blocks = d["blocks"]
+
+        print()
+        print(c.bold("=" * 70))
+        print(c.bold(f" ENTROPY MAP — {os.path.basename(self.target)}"))
+        print(c.bold("=" * 70))
+        print(f" block size : {d['block_size']} bytes   "
+              f"blocks: {d['num_blocks']}   file: {d['file_size']} bytes")
+        print(f" entropy    : min {d['min_entropy']:.2f}  "
+              f"mean {d['mean_entropy']:.2f}  max {d['max_entropy']:.2f}  "
+              "(bits/byte, 0-8)")
+        print(c.dim(" offset        entropy  level"))
+
+        # Downsample display if there are a lot of blocks (findings already use
+        # the full-resolution series; this only trims the printed table).
+        step = max(1, (len(blocks) + max_rows - 1) // max_rows)
+        if step > 1:
+            print(c.dim(f" (showing every {step}th block; full data in report.json)"))
+
+        for i in range(0, len(blocks), step):
+            b = blocks[i]
+            ent = b["entropy"]
+            filled = int(round((ent / 8.0) * bar_width))
+            bar = "█" * filled + "·" * (bar_width - filled)
+            # Color the bar by band.
+            if ent >= 7.2:
+                bar = c.red(bar)
+            elif ent >= 6.5:
+                bar = c.yellow(bar)
+            elif ent >= 5.0:
+                bar = c.cyan(bar)
+            else:
+                bar = c.green(bar)
+            print(f" {b['offset']:#010x}  {bar} {ent:5.2f}")
+
+        print(c.dim(" legend: "
+                    + c.green("low") + "  "
+                    + c.cyan("structured") + "  "
+                    + c.yellow("dense") + "  "
+                    + c.red(">=7.2 packed/encrypted")))
+        print(c.bold("=" * 70))
+
     def _stage(self, name: str):
         for s in self.stages:
             if s.name == name:

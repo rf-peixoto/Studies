@@ -30,6 +30,7 @@ sudo apt-get install -y binutils file strace ltrace tcpdump gdb binwalk upx-ucl
 ```bash
 ./start.sh <elf>                    # static analysis (safe, default)
 ./start.sh <elf> --mitigations      # add checksec-style mitigation report
+./start.sh <elf> --entropy-check    # block-by-block entropy map (table)
 ./start.sh <elf> --only strings,imports     # run a subset of static stages
 ./start.sh <elf> --dynamic -y       # strace + ltrace (executes the sample)
 ./start.sh <elf> --dynamic --tcpdump --memdump --timeout 30
@@ -68,6 +69,27 @@ privilege calls; everything else is auto-allowed so the program runs at speed.
 Standing decisions are remembered (drop every `connect`, allow all file writes,
 etc.). Requires `python-ptrace` and a Linux x86-64 / aarch64 host.
 
+## The entropy map (`--entropy-check`)
+
+Splits the file into fixed-size blocks ("sectors") and computes Shannon entropy
+(0–8 bits/byte) for each, then prints a table with a color bar:
+
+```
+ offset        entropy  level
+ 0x00000000  ··································  0.00   <- null padding
+ 0x00001000  ████████████████████████████████··  7.58   <- random/encrypted
+ 0x00002000  ███████████████████···············  4.49   <- ASCII text
+ legend: low  structured  dense  >=7.2 packed/encrypted
+```
+
+Blocks at or above 7.2 bits/byte are compressed/encrypted/packed data; a flat 0
+is padding; code and text sit in the middle. Sustained high-entropy runs become
+findings (with their offset range and share of the file), so appended payloads
+and whole-file packing stand out at the raw byte level — independent of the ELF
+section view. Block size auto-scales to the file so the table stays readable;
+override it with `--block-size N` (e.g. `--block-size 512` for disk-sector
+granularity). The full per-block series is always in `report.json`.
+
 ## What the static analysis covers
 
 | Stage         | What it does                                                        |
@@ -77,6 +99,7 @@ etc.). Requires `python-ptrace` and a Linux x86-64 / aarch64 host.
 | `header`      | class/arch/endianness, type, entry, interpreter, PIE/static/stripped |
 | `mitigations` | NX, PIE, RELRO, stack canary, FORTIFY, RPATH/RUNPATH (`--mitigations`) |
 | `entropy`     | Shannon entropy per section; flags likely packed/encrypted regions  |
+| `entropy_map` | `--entropy-check`: Shannon entropy per fixed-size file block, as a visual table over raw offsets; flags sustained high-entropy regions |
 | `packing`     | UPX detection (optional `--unpack` to unpack and re-scan)          |
 | `strings`     | categorized strings: URLs, IPs, domains, tmp paths, shell, crypto, persistence |
 | `imports`     | undefined dynamic symbols bucketed by behavior (network/exec/anti-debug/...) |

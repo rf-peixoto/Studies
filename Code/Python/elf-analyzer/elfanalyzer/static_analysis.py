@@ -211,7 +211,141 @@ def shannon_entropy(data: bytes) -> float:
         return 0.0
     counts = Counter(data)
     length = len(data)
-    return -sum((c / length) * math.log2(c / length) for c in counts.values())
+    ent = -sum((c / length) * math.log2(c / length) for c in counts.values())
+    return abs(ent)  # normalize -0.0 -> 0.0 (entropy is always >= 0)
+
+
+# --------------------------------------------------------------------------- #
+# Block entropy map (--entropy-check)                                          #
+# --------------------------------------------------------------------------- #
+# Classify a Shannon entropy value (bits/byte, range 0..8) into a label. These
+# bands are the conventional interpretation used by entropy-mapping tools:
+#   ~0        : runs of a single byte (null padding, filler)
+#   up to ~5  : structured data (code, tables, ASCII)
+#   ~5-6.5    : mixed / lightly compressed
+#   ~6.5-7.2  : high (compressed or dense)
+#   >=7.2     : very high -> compressed / encrypted / packed payload
+ENTROPY_BANDS = [
+    (0.50, "null/padding"),
+    (5.00, "low (structured)"),
+    (6.50, "medium"),
+    (7.20, "high"),
+    (8.01, "very high (packed/encrypted)"),
+]
+
+VERY_HIGH_ENTROPY = 7.2  # threshold for "likely packed/encrypted" blocks
+
+
+def classify_entropy(value: float) -> str:
+    for ceiling, label in ENTROPY_BANDS:
+        if value < ceiling:
+            return label
+    return ENTROPY_BANDS[-1][1]
+
+
+def _pick_block_size(filesize: int, requested: Optional[int],
+                     target_rows: int) -> int:
+    """Choose a block size.
+
+    If the caller requested one, honor it. Otherwise auto-scale so the map has
+    roughly ``target_rows`` rows (minimum 256 bytes/block), which keeps the
+    printed table readable for files of any size.
+    """
+    if requested and requested > 0:
+        return requested
+    if filesize <= 0:
+        return 256
+    size = max(256, math.ceil(filesize / max(1, target_rows)))
+    # Round up to a tidy power-of-two-ish boundary for nicer offsets.
+    tidy = 256
+    while tidy < size:
+        tidy *= 2
+    return tidy
+
+
+def analyze_block_entropy(path: str, block_size: Optional[int] = None,
+                          target_rows: int = 96) -> StageResult:
+    """Compute Shannon entropy over fixed-size file blocks ("sectors").
+
+    Produces a per-block entropy series plus findings for sustained high-entropy
+    regions, which is how packed/encrypted payloads and appended data reveal
+    themselves at the raw byte-offset level (independent of ELF sections).
+    """
+    res = StageResult("entropy_map")
+    try:
+        with open(path, "rb") as fh:
+            blob = fh.read()
+    except OSError as exc:
+        res.error = f"entropy map read failed: {exc}"
+        return res
+
+    filesize = len(blob)
+    if filesize == 0:
+        res.error = "empty file"
+        return res
+
+    bs = _pick_block_size(filesize, block_size, target_rows)
+
+    blocks = []
+    values = []
+    for off in range(0, filesize, bs):
+        chunk = blob[off:off + bs]
+        ent = shannon_entropy(chunk)
+        values.append(ent)
+        blocks.append({
+            "offset": off,
+            "size": len(chunk),
+            "entropy": round(ent, 4),
+            "label": classify_entropy(ent),
+        })
+
+    mean = sum(values) / len(values)
+    res.data = {
+        "block_size": bs,
+        "num_blocks": len(blocks),
+        "file_size": filesize,
+        "min_entropy": round(min(values), 4),
+        "max_entropy": round(max(values), 4),
+        "mean_entropy": round(mean, 4),
+        "blocks": blocks,
+    }
+
+    # --- findings: contiguous runs of very-high entropy --------------------- #
+    runs = []  # (start_offset, end_offset, nblocks)
+    run_start = None
+    for i, ent in enumerate(values):
+        if ent >= VERY_HIGH_ENTROPY:
+            if run_start is None:
+                run_start = i
+        else:
+            if run_start is not None:
+                runs.append((run_start, i - 1))
+                run_start = None
+    if run_start is not None:
+        runs.append((run_start, len(values) - 1))
+
+    high_bytes = 0
+    for start_i, end_i in runs:
+        start_off = blocks[start_i]["offset"]
+        end_off = blocks[end_i]["offset"] + blocks[end_i]["size"]
+        span = end_off - start_off
+        high_bytes += span
+        # A single high block can be a coincidence; a sustained run is not.
+        if (end_i - start_i + 1) >= 2 or span >= 2048:
+            frac = span / filesize
+            sev = Severity.HIGH if frac >= 0.40 else Severity.MEDIUM
+            res.add(sev, "entropy",
+                    f"High-entropy region {start_off:#x}-{end_off:#x}",
+                    f"{span} bytes (~{frac*100:.0f}% of file) at/above "
+                    f"{VERY_HIGH_ENTROPY} bits/byte — likely "
+                    "compressed/encrypted/packed.")
+
+    if filesize and (high_bytes / filesize) >= 0.85:
+        res.add(Severity.HIGH, "entropy",
+                "Almost the whole file is high-entropy",
+                "Consistent with a packed or encrypted binary.")
+
+    return res
 
 
 # Section names expected in ordinary toolchain output. Anything else is "odd".
