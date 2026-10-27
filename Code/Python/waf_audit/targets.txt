@@ -1,0 +1,3 @@
+# One domain or URL per line
+example.com
+https://www.example.org
