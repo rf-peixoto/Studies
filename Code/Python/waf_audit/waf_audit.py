@@ -9,6 +9,7 @@ import concurrent.futures
 import csv
 import ipaddress
 import json
+from functools import lru_cache
 import re
 import shutil
 import socket
@@ -151,14 +152,72 @@ def active_detect(url, timeout):
         return '', '', f'active scan error: {exc}'
 
 
-def inspect(item, timeout, verify, active):
+
+# Official provider IP inventories (CDN attribution, NOT evidence of enabled WAF).
+# Keep scope explicit: unknown hosting providers are not automatically "unprotected".
+IP_SOURCES = {
+    'Cloudflare': ('https://www.cloudflare.com/ips-v4', 'https://www.cloudflare.com/ips-v6'),
+    'Fastly': ('https://api.fastly.com/public-ip-list',),
+}
+
+
+def load_ip_ranges(timeout):
+    networks, warnings = [], []
+    for provider, urls in IP_SOURCES.items():
+        for url in urls:
+            try:
+                response = requests.get(url, timeout=timeout, headers={'User-Agent': UA})
+                response.raise_for_status()
+                if provider == 'Fastly':
+                    obj = response.json()
+                    prefixes = obj.get('addresses', []) + obj.get('ipv6_addresses', [])
+                else:
+                    prefixes = response.text.splitlines()
+                parsed = [ipaddress.ip_network(x.strip(), strict=False) for x in prefixes if x.strip()]
+                if not parsed:
+                    raise ValueError('empty prefix list')
+                networks.extend((net, provider) for net in parsed)
+            except (requests.RequestException, ValueError, KeyError) as exc:
+                warnings.append(f'{provider} ranges unavailable ({url}): {exc}')
+    return networks, warnings
+
+
+def match_ip_providers(ips, networks):
+    providers = set()
+    for text in ips:
+        address = ipaddress.ip_address(text)
+        for net, provider in networks:
+            if address in net:
+                providers.add(provider)
+    return sorted(providers)
+
+
+def classify_focus(row):
+    status = row.get('classification', '')
+    # Conservative triage. Only DNS+HTTP completed with no recognizable signal
+    # can be candidates. This is never definitive proof of no WAF/CDN.
+    if (status == 'NO_WAF_EVIDENCE' and row.get('ip_lookup_status') == 'ok'
+            and (row.get('ipv4') or row.get('ipv6')) and not row.get('error')):
+        return 'CANDIDATE_NO_WAF_CDN'
+    if status in ('WAF_LIKELY', 'WAF_POSSIBLE', 'WAF_DETECTED_ACTIVE',
+                  'CDN_OR_PROXY_ONLY', 'DNS_CDN_HINT_ONLY', 'IP_CDN_DETECTED'):
+        return 'PROTECTED_OR_CDN_INDICATED'
+    return 'INCONCLUSIVE'
+
+def inspect(item, timeout, verify, active, networks=None, ip_lookup_status="disabled"):
     raw, url, host = item
     row = dict(input=raw, url=url, hostname=host, ipv4='', ipv6='', cname='',
-               http_status='', final_url='', classification='', provider='', evidence='', error='')
+               http_status='', final_url='', classification='', provider='', evidence='', error='',
+               ip_provider='', ip_lookup_status=ip_lookup_status, focus_status='')
     ips, aliases, err = lookup(host, timeout)
     row['ipv4'] = ';'.join(x for x in ips if ':' not in x)
     row['ipv6'] = ';'.join(x for x in ips if ':' in x)
     row['cname'] = ';'.join(aliases)
+    if networks is not None:
+        ip_providers = match_ip_providers(ips, networks)
+        row['ip_provider'] = '; '.join(ip_providers)
+        if ip_providers:
+            row['evidence'] = 'IP matches published provider range: ' + ', '.join(ip_providers)
     if err and not ips:
         row['error'] = err
     try:
@@ -170,7 +229,8 @@ def inspect(item, timeout, verify, active):
             row['final_url'] = resp.url
             # Bound memory and wire reads (up to 8 KiB response content).
             resp._content = next(resp.iter_content(chunk_size=8192), b'')
-            row['classification'], row['provider'], row['evidence'] = fingerprint(resp, aliases)
+            row['classification'], row['provider'], http_evidence = fingerprint(resp, aliases)
+            row['evidence'] = '; '.join(filter(None, [row['evidence'], http_evidence]))
             resp.close()
     except requests.RequestException as exc:
         row['classification'] = 'HTTP_ERROR'
@@ -181,7 +241,7 @@ def inspect(item, timeout, verify, active):
                 if re.search(pattern, cname, re.I):
                     row['classification'] = 'DNS_CDN_HINT_ONLY'
                     row['provider'] = provider
-                    row['evidence'] = f'CNAME {cname}'
+                    row['evidence'] = '; '.join(filter(None, [row['evidence'], f'CNAME {cname}']))
                     break
     if active:
         status, provider, error = active_detect(url, timeout)
@@ -191,6 +251,13 @@ def inspect(item, timeout, verify, active):
             row['evidence'] = (row['evidence'] + '; wafw00f signature').strip('; ')
         if error:
             row['error'] = (row['error'] + '; ' + error).strip('; ')
+    if row['ip_provider']:
+        existing = set(filter(None, (x.strip() for x in row['provider'].split(','))))
+        existing.update(x.strip() for x in row['ip_provider'].split(';'))
+        row['provider'] = ', '.join(sorted(existing))
+        if row['classification'] in ('NO_WAF_EVIDENCE', 'HTTP_ERROR', 'SECURITY_BLOCK_POSSIBLE'):
+            row['classification'] = 'IP_CDN_DETECTED'
+    row['focus_status'] = classify_focus(row)
     return row
 
 
@@ -202,6 +269,8 @@ def main():
     parser.add_argument('-t', '--timeout', type=float, default=8)
     parser.add_argument('--active', action='store_true', help='Run wafw00f probes (authorized targets only)')
     parser.add_argument('--insecure', action='store_true', help='Disable TLS certificate validation')
+    parser.add_argument('--ip-check', action='store_true', help='Match resolved IPs against published Cloudflare/Fastly CDN ranges')
+    parser.add_argument('--focus-unprotected', action='store_true', help='Also export likely non-WAF/non-CDN candidates, and inconclusive targets, to separate files; implies --ip-check')
     args = parser.parse_args()
     if args.workers < 1 or args.timeout <= 0:
         parser.error('workers and timeout must be positive')
@@ -220,9 +289,18 @@ def main():
                     items.append((raw, *normalized))
             except (ValueError, UnicodeError) as exc:
                 invalid.append((n, raw, str(exc)))
+    networks = None
+    ip_lookup_status = 'disabled'
+    if args.ip_check or args.focus_unprotected:
+        networks, warnings = load_ip_ranges(args.timeout)
+        for warning in warnings:
+            print('WARNING:', warning, file=sys.stderr)
+        ip_lookup_status = 'ok' if not warnings else 'partial'
+        if not networks:
+            ip_lookup_status = 'failed'
     rows = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=args.workers) as pool:
-        futures = {pool.submit(inspect, item, args.timeout, not args.insecure, args.active): item for item in items}
+        futures = {pool.submit(inspect, item, args.timeout, not args.insecure, args.active, networks, ip_lookup_status): item for item in items}
         for fut in concurrent.futures.as_completed(futures):
             item = futures[fut]
             try:
@@ -233,12 +311,28 @@ def main():
             rows.append(row)
             print(f'[{len(rows)}/{len(items)}] {row["hostname"]}: {row["classification"]} {row.get("provider", "")}', flush=True)
     columns = ['input', 'url', 'hostname', 'ipv4', 'ipv6', 'cname', 'http_status',
-               'final_url', 'classification', 'provider', 'evidence', 'error']
+               'final_url', 'classification', 'provider', 'ip_provider', 'ip_lookup_status', 'focus_status', 'evidence', 'error']
     with open(args.output, 'w', encoding='utf-8', newline='') as f:
         writer = csv.DictWriter(f, fieldnames=columns, extrasaction='ignore')
         writer.writeheader()
         writer.writerows(sorted(rows, key=lambda x: x['hostname']))
     print(f'\nSaved {len(rows)} results to {args.output}; skipped {len(invalid)} invalid lines.')
+    if args.focus_unprotected:
+        from pathlib import Path
+        output = Path(args.output)
+        candidates = sorted((r for r in rows if r.get('focus_status') == 'CANDIDATE_NO_WAF_CDN'), key=lambda r: r['hostname'])
+        uncertain = sorted((r for r in rows if r.get('focus_status') == 'INCONCLUSIVE'), key=lambda r: r['hostname'])
+        for path, selected in ((output.with_name(output.stem + '_candidates.csv'), candidates),
+                               (output.with_name(output.stem + '_inconclusive.csv'), uncertain)):
+            with path.open('w', encoding='utf-8', newline='') as file:
+                writer = csv.DictWriter(file, fieldnames=columns, extrasaction='ignore')
+                writer.writeheader()
+                writer.writerows(selected)
+            print(f'Saved {len(selected)} entries to {path}')
+        # Ready-to-reuse URLs for further review, preserving original target scheme.
+        path = output.with_name(output.stem + '_candidates.txt')
+        path.write_text(''.join(r['url'] + '\n' for r in candidates), encoding='utf-8')
+        print(f'Saved candidate URL list to {path}')
     for line, raw, reason in invalid:
         print(f'Invalid line {line}: {raw!r} ({reason})', file=sys.stderr)
 
