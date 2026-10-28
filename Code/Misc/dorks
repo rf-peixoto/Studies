@@ -5,6 +5,9 @@
 Shodan camera bypass:
 http://127.0.0.1:8000/jpgmulreq/1/image.jpg?key=&lq=1
 
+Discord public messages (prototype):
+site:discord.com "keyword"
+
 intitle:"index of" "web.config"
 inurl:"web.config" ext:config
 
